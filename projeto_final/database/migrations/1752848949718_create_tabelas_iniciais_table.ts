@@ -4,10 +4,16 @@ export default class extends BaseSchema {
   protected tableName = 'tabelas_iniciais'
 
   async up() {
-    this.schema.createTable('especializacoes', (table) => {
+
+    this.schema.createTable('clientes', (table) => {
       table.increments('id')
       table.string('nome', 40).notNullable()
-      table.float('valor').notNullable()
+      table.enum('genero', ['MASCULINO', 'FEMININO']).notNullable()
+      table.integer('idade').notNullable()
+      table.string('cpf').notNullable().unique()
+      // table.string('rg').notNullable
+      table.string('email').notNullable().unique()
+      table.string('senha').notNullable()
       table.timestamp('created_at')
       table.timestamp('updated_at')
     })
@@ -19,58 +25,84 @@ export default class extends BaseSchema {
       table.timestamp('updated_at')
     })
 
+    this.schema.createTable('especializacoes', (table) => {
+      table.increments('id')
+      table.string('nome', 40).notNullable()
+      table.timestamp('created_at')
+      table.timestamp('updated_at')
+    })
+
     this.schema.createTable('profissionais', (table) => {
       table.increments('id')
-      table.integer('especializacao_id').notNullable().references('especializacoes.id')
-      table.integer('funcao_id').notNullable().references('funcoes.id')
-      table.string('nome', 40).notNullable
-      table.enum('genero', ['MASCULINO', 'FEMININO']).notNullable
-      table.integer('idade').notNullable
-      table.string('cpf').notNullable
-      table.string('email').notNullable
-      table.string('senha').notNullable
+      //table.integer('especializacao_id').notNullable().references('especializacoes.id')
+      table.integer('funcao_id').unsigned().notNullable().references('funcoes.id')
+      table.string('nome', 40).notNullable()
+      table.enum('genero', ['MASCULINO', 'FEMININO']).notNullable()
+      table.integer('idade').notNullable()
+      table.string('cpf').notNullable().unique()
+      table.string('email').notNullable().unique()
+      table.string('senha').notNullable()
+      table.timestamp('created_at')
+      table.timestamp('updated_at')
+    })
+
+    this.schema.createTable('especializacoes_profissionais', (table) => {
+      table.increments('id')
+      table.integer('especializacao_id').unsigned().notNullable().references('especializacoes.id').onDelete('CASCADE')
+      table.integer('profissional_id').unsigned().notNullable().references('profissionais.id').onDelete('CASCADE')
+      table.timestamp('created_at')
+      table.timestamp('updated_at')
+    })
+
+    this.schema.createTable('disponibilidades', (table) => {
+      table.increments('id')
+      table.integer('profissional_id').unsigned().notNullable().references('profissionais.id').onDelete('CASCADE')
+      //"Dia x, o profissional atende do horario_comeco ao horario_fim".
+      table.integer('dia').notNullable()
+      table.time('horario_comeco').notNullable()
+      table.time('horario_termino').notNullable()
       table.timestamp('created_at')
       table.timestamp('updated_at')
     })
 
     this.schema.createTable('salas', (table) => {
       table.increments('id')
-      table.integer('profissional_id').notNullable().references('profissionais.id')
-      table.string('nome', 40).notNullable()
-      table.float('preco_aluguel').notNullable()
+      //Não tem o notnullable pois a sala pode ter nenhum profissional ligado a ela.
+      table.integer('profissional_id').unsigned().references('profissionais.id')
+      table.string('nome', 20).notNullable()
+      table.decimal('preco_aluguel', 10, 2).notNullable()
       table.date('data_disponibilidade').notNullable()
-      table.timestamp('created_at')
-      table.timestamp('updated_at')
-    })
-
-    this.schema.createTable('clientes', (table) => {
-      table.increments('id')
-      table.string('nome', 40).notNullable()
-      table.enum('genero', ['MASCULINO', 'FEMININO']).notNullable
-      table.integer('idade').notNullable
-      table.string('cpf').notNullable
-      // table.string('rg').notNullable
-      table.string('email').notNullable
-      table.string('senha').notNullable
       table.timestamp('created_at')
       table.timestamp('updated_at')
     })
 
     this.schema.createTable('atendimentos', (table) => {
       table.increments('id')
-      table.string('nome', 40).notNullable()
-      table.integer('profissional_id').notNullable().references('profissionais.id')
-      table.integer('cliente_id').notNullable().references('cliente.id')
-      table.time('horario_comeco').notNullable
-      table.time('horario_termino').notNullable
-      table.date('data').notNullable
-      table.boolean('validado').notNullable
+      table.integer('profissional_id').unsigned().notNullable().references('profissionais.id').onDelete('CASCADE')
+      table.integer('cliente_id').unsigned().notNullable().references('clientes.id').onDelete('CASCADE')
+      table.time('horario_comeco').notNullable()
+      table.time('horario_termino').notNullable()
+      table.date('data').notNullable()
+      table.decimal('valor', 10, 2).notNullable()
+      table.enum('forma_pagamento', ['DINHEIRO', 'PIX', 'CREDITO', 'DEBITO'])
+      //Tirei o validado pois todas os atendimentos que forem criados, 
+      //já passaram por etapas de validação
+      //table.boolean('validado').notNullable()
+      table.boolean('feito').notNullable()
       table.timestamp('created_at')
       table.timestamp('updated_at')
     })
   }
 
   async down() {
-    this.schema.dropTable(this.tableName)
+    //this.schema.dropTable(this.historico_atendimentos)
+    this.schema.dropTable('atendimentos')
+    this.schema.dropTable('salas')
+    this.schema.dropTable('disponibilidades')
+    this.schema.dropTable('especializacoes_profissionais')
+    this.schema.dropTable('profissionais')
+    this.schema.dropTable('especializacoes')
+    this.schema.dropTable('funcoes')
+    this.schema.dropTable('clientes')
   }
 }
