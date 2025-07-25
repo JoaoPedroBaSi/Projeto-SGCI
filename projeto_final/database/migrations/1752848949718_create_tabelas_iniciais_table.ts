@@ -4,7 +4,6 @@ export default class extends BaseSchema {
   protected tableName = 'tabelas_iniciais'
 
   async up() {
-
     this.schema.createTable('clientes', (table) => {
       table.increments('id')
       table.string('nome', 40).notNullable()
@@ -48,15 +47,30 @@ export default class extends BaseSchema {
 
     this.schema.createTable('especializacoes_profissionais', (table) => {
       table.increments('id')
-      table.integer('especializacao_id').unsigned().notNullable().references('especializacoes.id').onDelete('CASCADE')
-      table.integer('profissional_id').unsigned().notNullable().references('profissionais.id').onDelete('CASCADE')
+      table
+        .integer('especializacao_id')
+        .unsigned()
+        .notNullable()
+        .references('especializacoes.id')
+        .onDelete('CASCADE')
+      table
+        .integer('profissional_id')
+        .unsigned()
+        .notNullable()
+        .references('profissionais.id')
+        .onDelete('CASCADE')
       table.timestamp('created_at')
       table.timestamp('updated_at')
     })
 
     this.schema.createTable('disponibilidades', (table) => {
       table.increments('id')
-      table.integer('profissional_id').unsigned().notNullable().references('profissionais.id').onDelete('CASCADE')
+      table
+        .integer('profissional_id')
+        .unsigned()
+        .notNullable()
+        .references('profissionais.id')
+        .onDelete('CASCADE')
       //"Dia x, o profissional atende do horario_comeco ao horario_fim".
       table.integer('dia').notNullable()
       table.time('horario_comeco').notNullable()
@@ -78,8 +92,18 @@ export default class extends BaseSchema {
 
     this.schema.createTable('atendimentos', (table) => {
       table.increments('id')
-      table.integer('profissional_id').unsigned().notNullable().references('profissionais.id').onDelete('CASCADE')
-      table.integer('cliente_id').unsigned().notNullable().references('clientes.id').onDelete('CASCADE')
+      table
+        .integer('profissional_id')
+        .unsigned()
+        .notNullable()
+        .references('profissionais.id')
+        .onDelete('CASCADE')
+      table
+        .integer('cliente_id')
+        .unsigned()
+        .notNullable()
+        .references('clientes.id')
+        .onDelete('CASCADE')
       table.time('horario_comeco').notNullable()
       table.time('horario_termino').notNullable()
       table.date('data').notNullable()
