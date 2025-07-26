@@ -4,7 +4,15 @@ import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import Profissional from '#models/profissional'
 import Cliente from '#models/cliente'
 
+export enum FormaPagamento {
+  DINHEIRO = 'DINHEIRO',
+  PIX = 'PIX',
+  CREDITO = 'CREDITO',
+  DEBITO = 'DEBITO',
+}
+
 export default class Atendimento extends BaseModel {
+  //atributos
   @column({ isPrimary: true })
   declare id: number
 
@@ -27,11 +35,12 @@ export default class Atendimento extends BaseModel {
   declare valor: number
 
   @column()
-  declare formaPagamento: 'DINHEIRO' | 'PIX' | 'CREDITO' | 'DEBITO'
+  declare formaPagamento: FormaPagamento
 
   @column()
   declare feito: boolean
 
+  //relacionamentos
   @belongsTo(() => Profissional)
   declare profissional: BelongsTo<typeof Profissional>
 

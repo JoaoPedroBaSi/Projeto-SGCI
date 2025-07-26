@@ -4,12 +4,14 @@ import type { ManyToMany } from '@adonisjs/lucid/types/relations'
 import Profissional from '#models/profissional'
 
 export default class Especializacao extends BaseModel {
+  //atributos
   @column({ isPrimary: true })
   declare id: number
 
   @column()
   declare nome: string
 
+  //relacionamentos
   @manyToMany(() => Profissional, {
     pivotTable: 'especializacoes_profissionais',
   })

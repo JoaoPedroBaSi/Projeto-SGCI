@@ -1,13 +1,15 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column, belongsTo, manyToMany, hasMany } from '@adonisjs/lucid/orm'
-import type { BelongsTo, ManyToMany, HasMany } from '@adonisjs/lucid/types/relations'
+import { BaseModel, column, belongsTo, manyToMany, hasMany, hasOne } from '@adonisjs/lucid/orm'
+import type { BelongsTo, ManyToMany, HasMany, HasOne } from '@adonisjs/lucid/types/relations'
 import Funcao from '#models/funcao'
 import Especializacao from '#models/especializacao'
 import Disponibilidade from '#models/disponibilidade'
 import Sala from '#models/sala'
 import Atendimento from '#models/atendimento'
+import { Genero } from '#models/cliente'
 
 export default class Profissional extends BaseModel {
+  //atributos
   @column({ isPrimary: true })
   declare id: number
 
@@ -18,7 +20,7 @@ export default class Profissional extends BaseModel {
   declare nome: string
 
   @column()
-  declare genero: 'MASCULINO' | 'FEMININO'
+  declare genero: Genero
 
   @column()
   declare idade: number
@@ -32,6 +34,7 @@ export default class Profissional extends BaseModel {
   @column()
   declare senha: string
 
+  //relacionamentos
   @belongsTo(() => Funcao)
   declare funcao: BelongsTo<typeof Funcao>
 
@@ -43,8 +46,8 @@ export default class Profissional extends BaseModel {
   @hasMany(() => Disponibilidade)
   declare disponibilidades: HasMany<typeof Disponibilidade>
 
-  @hasMany(() => Sala)
-  declare salas: HasMany<typeof Sala>
+  @hasOne(() => Sala)
+  declare sala: HasOne<typeof Sala>
 
   @hasMany(() => Atendimento)
   declare atendimentos: HasMany<typeof Atendimento>

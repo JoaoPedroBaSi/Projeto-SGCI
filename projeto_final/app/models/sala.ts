@@ -4,6 +4,7 @@ import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import Profissional from '#models/profissional'
 
 export default class Sala extends BaseModel {
+  //atributos
   @column({ isPrimary: true })
   declare id: number
 
@@ -19,6 +20,7 @@ export default class Sala extends BaseModel {
   @column()
   declare dataDisponibilidade: string
 
+  //relacionamentos
   @belongsTo(() => Profissional)
   declare profissional: BelongsTo<typeof Profissional>
 
