@@ -4,6 +4,9 @@ import type { HasMany } from '@adonisjs/lucid/types/relations'
 import Profissional from '#models/profissional'
 
 export default class Funcao extends BaseModel {
+  // atualiza a tabela para seu nome correto
+  public static table = 'funcoes'
+
   //atributos
   @column({ isPrimary: true })
   declare id: number

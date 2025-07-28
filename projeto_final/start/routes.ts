@@ -14,3 +14,6 @@ router.get('/', async () => {
     hello: 'world',
   }
 })
+
+router.resource('/funcao', '#controllers/funcaos_controller').except(['create', 'edit'])
+router.post('/funcao/:id/profissionais', '#controllers/funcaos_controller.associarProfissional')

@@ -9,6 +9,8 @@ import Atendimento from '#models/atendimento'
 import { Genero } from '#models/cliente'
 
 export default class Profissional extends BaseModel {
+  public static table = 'profissionais'
+
   //atributos
   @column({ isPrimary: true })
   declare id: number
