@@ -3,7 +3,7 @@ import Funcao from '#models/funcao'
 import { storeFuncaoValidator } from '#validators/store_funcao'
 import { updateFuncaoValidator } from '#validators/update_funcao'
 
-export default class FuncaosController {
+export default class FuncoesController {
   // Testado
   // Lista todas as funções
   public async index({}: HttpContext) {
@@ -29,7 +29,7 @@ export default class FuncaosController {
 
   public async update({ request, params, response }: HttpContext) {
     // Testado
-    // Atualiza os dados de uma função existente
+    // Atualiza os dados de uma função existente após a validação
     const payload = await request.validateUsing(updateFuncaoValidator)
 
     const funcao = await Funcao.findOrFail(params.id)

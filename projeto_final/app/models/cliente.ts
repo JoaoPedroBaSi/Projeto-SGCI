@@ -17,7 +17,7 @@ export default class Cliente extends BaseModel {
   declare nome: string
 
   @column()
-  declare genero: Genero
+  declare genero: string
 
   @column()
   declare idade: number

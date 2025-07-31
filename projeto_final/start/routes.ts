@@ -16,4 +16,5 @@ router.get('/', async () => {
 })
 
 router.resource('/funcao', '#controllers/funcaos_controller').except(['create', 'edit'])
-router.post('/funcao/:id/profissionais', '#controllers/funcaos_controller.associarProfissional')
+router.resource('/cliente', '#controllers/clientes_controller').except(['create', 'edit'])
+
