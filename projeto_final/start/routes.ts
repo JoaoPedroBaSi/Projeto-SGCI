@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 /*
 |--------------------------------------------------------------------------
 | Routes file
@@ -15,6 +16,8 @@ router.get('/', async () => {
   }
 })
 
-router.resource('/funcao', '#controllers/funcaos_controller').except(['create', 'edit'])
+router.resource('/funcao', '#controllers/funcoes_controller').except(['create', 'edit'])
+router.resource('/especializacao', '#controllers/especializacoes_controller').except(['create', 'edit'])
 router.resource('/cliente', '#controllers/clientes_controller').except(['create', 'edit'])
+router.resource('/profissional', '#controllers/profissionais_controller').except(['create', 'edit'])
 

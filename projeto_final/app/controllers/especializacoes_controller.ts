@@ -1,8 +1,10 @@
 /* eslint-disable prettier/prettier */
 import type { HttpContext } from '@adonisjs/core/http'
 import Especializacao from '#models/especializacao'
+import { storeEspecializacaoValidator } from '#validators/validator_especializacao'
+import { updateEspecializacaoValidator } from '#validators/validator_especializacao'
 
-export default class EspecializacoesController {
+export default class EspecializacaoController {
   //Testado
   //Lista todas as especializações
   public async index({}: HttpContext) {
@@ -11,37 +13,23 @@ export default class EspecializacoesController {
   //Testado
   //Cria novas especializações
   public async store({request, response}: HttpContext) {
-
-    // Cria uma variável, que recebe o que foi digitado pelo usuário. 
-    // Fazer isso facilita a verificação dos dados.
-    const especializacaoCriada = request.only(['nome'])
-    
-    //Verifica se a variável especializacaoCriada realmente existe/não é nulo,
-    // e verifica se o tamanho do 'nome' da especializacao é maior ou igual a 4.
-    if (especializacaoCriada && especializacaoCriada.nome.length >= 4) {
-      //Antes de criar a especialização, formata o 'nome' 
-      // digitado para que a primeira letra seja maiúscula, 
-      // e o restante das letras seja minúscula.
-        especializacaoCriada.nome = especializacaoCriada.nome.charAt(0).toUpperCase() 
-        + especializacaoCriada.nome.slice(1).toLowerCase()
-
-        //Retorna a variável especializacaoCriada com o 
-        // objeto Especializacao que acabou de ser criado.
-        return await Especializacao.create(especializacaoCriada)
-
-    //Se a variável especializacaoCriada não existir ou se o tamanho
-    // do 'nome' for menor que 4, retorna a mensagem de erro.
-    } else {
-        return response.abort({
-            Message: 'Os campos digitados são inválidos. Tente novamente'
-        }, 400)
+    //Try catch para capturar erros, semelhante ao que acontece no Python, em que temos try except.
+    //Ao tentar realizar a operação de criação, e encontrar um erro no caminho, será levantada
+    //a mensagem de erro amigável.
+    try{
+        //Faz a validação dos dados da especialização, usando o validator 'storeEspecializacaoValidator'.
+        const validacao = await request.validateUsing(storeEspecializacaoValidator)
+        //Retorna o objeto criado, após a validação
+        return await Especializacao.create(validacao)
+    } catch (error){
+        return response.status(404).send('Não foi possível cadastrar a especialização. Tente novamente')
     }
   }
   //Testado
   //Exibe objeto único especificado pelo id
   public async show({ params }: HttpContext) {
 
-    //Procura objetos com o id indicado, e retorna os objetos de especializacao.
+    //Procura por um objeto com o id indicado, e retorna um objeto da tabela de especializacao.
     // + os profissionais vinculados a eles.
     return await Especializacao.query().where('id', params.id).preload('profissionais')
 
@@ -49,35 +37,29 @@ export default class EspecializacoesController {
     //Testado
     //Atualiza/modifica objetos individualmente da tabela já criados 
   public async update({ params, request, response }: HttpContext) {
-    //Procura o objeto com o id correspondente. Se não encontrar, retorna uma mensagem de erro.
-    const idEspecializacao = await Especializacao.findOrFail(params.id)
-
-    //Semelhante ao 'store'. Cria uma variável associada a requisição.
-    const especializacaoCriada = request.only(['nome'])
-    
-    //Verifica se a variável especializacaoCriada não é nula, e se o tamanho é maior ou igual a 4.
-    if (especializacaoCriada && especializacaoCriada.nome.length >= 4){
-        //Faz o merge com a variável criada a partir da requisição.
-        idEspecializacao.merge(especializacaoCriada)
-        //salva o merge
-        await idEspecializacao.save()
-        //retorna o objeto após a etapa de merge e salvamento.
-        return idEspecializacao
-    } else {
-        //Se as condições não forem atendidas, retorna uma mensagem de erro.
-        return response.abort({
-            Message: 'Os campos digitados são inválidos. Tente novamente'
-        }, 400)
-    }
+    //Ao tentar realizar a operação de atualização, e encontrar um erro no caminho, será levantada
+    //a mensagem de erro amigável.
+    try{
+        //Procura o objeto com o id correspondente. Se não encontrar, retorna uma mensagem de erro.
+        const objProfissional = await Especializacao.findOrFail(params.id)
+        //Faz a validação do objeto encontrado, usando o validator 'updateEspecializacaoValidator'.
+        const validacao = await request.validateUsing(updateEspecializacaoValidator)
+        //Após a validação, faz o merge com o objeto especializacao, passando os dados validados.
+        objProfissional.merge(validacao) 
+        //Retorna o objeto salvo.
+        return await objProfissional.save()
+    } catch (error){
+        return response.status(404).send('Não foi possível atualizar os dados da especialização. Tente novamente')
+    } 
   }
   //Testado
   //Deleta um objeto individual pelo id.
   public async destroy({ params }: HttpContext) {
-    const idEspecializacao = await Especializacao.findOrFail(params.id)
+    const objEspecializacao = await Especializacao.findOrFail(params.id)
 
     //Apaga o registro/objeto indicado pela busca a partir do params.id.
-    await idEspecializacao.delete()
+    await objEspecializacao.delete()
     //Após isso, retorna o objeto deletado.
-    return idEspecializacao
+    return objEspecializacao
   }
 }

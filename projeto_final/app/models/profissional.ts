@@ -6,7 +6,8 @@ import Especializacao from '#models/especializacao'
 import Disponibilidade from '#models/disponibilidade'
 import Sala from '#models/sala'
 import Atendimento from '#models/atendimento'
-import { Genero } from '#models/cliente'
+//import { Genero } from '#models/cliente'
+//Retiramos { Genero } pois entrou em conflito com o validator.
 
 export default class Profissional extends BaseModel {
   public static table = 'profissionais'
@@ -22,7 +23,7 @@ export default class Profissional extends BaseModel {
   declare nome: string
 
   @column()
-  declare genero: Genero
+  declare genero: 'MASCULINO' | 'FEMININO'
 
   @column()
   declare idade: number
