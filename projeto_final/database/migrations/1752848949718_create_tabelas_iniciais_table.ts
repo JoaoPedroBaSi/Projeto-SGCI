@@ -65,6 +65,10 @@ export default class extends BaseSchema {
 
     this.schema.createTable('disponibilidades', (table) => {
       table.increments('id')
+      //Define que a relação profissional_id com o dia são únicas.
+      //Portanto, profissional_id 2 e dia 2 só poderá existir uma vez ->
+      //O profissional 2 só pode ter um horário de disponibilidade na terça.
+      table.unique(['profissional_id', 'dia'])
       table
         .integer('profissional_id')
         .unsigned()
@@ -73,6 +77,8 @@ export default class extends BaseSchema {
         .onDelete('CASCADE')
       //"Dia x, o profissional atende do horario_comeco ao horario_fim".
       table.integer('dia').notNullable()
+      //Checa de o horário começo é menor que o horario fim. Isso tem que acontecer.
+      table.check('horario_comeco < horario_termino')
       table.time('horario_comeco').notNullable()
       table.time('horario_termino').notNullable()
       table.timestamp('created_at')
