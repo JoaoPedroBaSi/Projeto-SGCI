@@ -1,7 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import Funcao from '#models/funcao'
-import { storeFuncaoValidator } from '#validators/store_funcao'
-import { updateFuncaoValidator } from '#validators/update_funcao'
+import { storeFuncaoValidator, updateFuncaoValidator } from '#validators/validator_funcao'
 
 export default class FuncoesController {
   // Testado

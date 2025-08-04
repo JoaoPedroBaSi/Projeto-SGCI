@@ -4,6 +4,7 @@ import type { ManyToMany } from '@adonisjs/lucid/types/relations'
 import Profissional from '#models/profissional'
 
 export default class Especializacao extends BaseModel {
+  public static table = 'especializacoes'
   //atributos
   @column({ isPrimary: true })
   declare id: number
