@@ -11,7 +11,8 @@ export const storeFuncaoValidator = vine.compile(
 export const updateFuncaoValidator = vine.compile(
   // Valida o nome da função durante o update, garantindo que seja uma string,
   // que não esteja vazia, e que tenha no mínimo 3 caracteres máximo 40 caracteres.
+  // O campo é opcional, pois a função pode ser atualizada sem alterar o nome.
   vine.object({
-    nome: vine.string().trim().minLength(3).maxLength(40),
+    nome: vine.string().trim().minLength(3).maxLength(40).optional(),
   })
 )

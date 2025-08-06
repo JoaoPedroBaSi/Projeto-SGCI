@@ -21,3 +21,4 @@ router.resource('/especializacao', '#controllers/especializacoes_controller').ex
 router.resource('/cliente', '#controllers/clientes_controller').except(['create', 'edit'])
 router.resource('/profissional', '#controllers/profissionais_controller').except(['create', 'edit'])
 router.put('/profissional/:id/especializacoes', '#controllers/profissionais_controller.associarEspecializacao')
+router.resource('/sala', '#controllers/salas_controller').except(['create', 'edit'])
