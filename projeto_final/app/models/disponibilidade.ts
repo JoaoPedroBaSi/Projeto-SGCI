@@ -17,8 +17,9 @@ export default class Disponibilidade extends BaseModel {
   @column()
   declare horarioComeco: string
 
+  //Modifiquei aqui -> tava como horarioFim antes.
   @column()
-  declare horarioFim: string
+  declare horarioTermino: string
 
   //relacionamentos
   @belongsTo(() => Profissional)

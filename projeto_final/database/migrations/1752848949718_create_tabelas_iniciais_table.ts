@@ -112,10 +112,12 @@ export default class extends BaseSchema {
         .onDelete('CASCADE')
       table.time('horario_comeco').notNullable()
       table.time('horario_termino').notNullable()
+      //Adicionei o atributo dia para servir de comparação
+      table.integer('dia').notNullable()
       table.date('data').notNullable()
       table.decimal('valor', 10, 2).notNullable()
       table.enum('forma_pagamento', ['DINHEIRO', 'PIX', 'CREDITO', 'DEBITO'])
-      //Tirei o validado pois todas os atendimentos que forem criados, 
+      //Tirei o validado pois todas os atendimentos que forem criados,
       //já passaram por etapas de validação
       //table.boolean('validado').notNullable()
       table.boolean('feito').notNullable()

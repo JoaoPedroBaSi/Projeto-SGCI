@@ -1,15 +1,16 @@
+/* eslint-disable prettier/prettier */
 import { DateTime } from 'luxon'
 import { BaseModel, column, belongsTo } from '@adonisjs/lucid/orm'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import Profissional from '#models/profissional'
 import Cliente from '#models/cliente'
 
-export enum FormaPagamento {
-  DINHEIRO = 'DINHEIRO',
-  PIX = 'PIX',
-  CREDITO = 'CREDITO',
-  DEBITO = 'DEBITO',
-}
+//export enum FormaPagamento {
+  //DINHEIRO = 'DINHEIRO',
+  //PIX = 'PIX',
+  //CREDITO = 'CREDITO',
+  //DEBITO = 'DEBITO',
+//}
 
 export default class Atendimento extends BaseModel {
   //atributos
@@ -28,6 +29,10 @@ export default class Atendimento extends BaseModel {
   @column()
   declare horarioTermino: string
 
+  //Coluna dia para comparar com a disponibilidade. No mesmo formato [1-segunda], [2-terça]...
+  @column()
+  declare dia: number
+
   @column()
   declare data: string
 
@@ -35,7 +40,7 @@ export default class Atendimento extends BaseModel {
   declare valor: number
 
   @column()
-  declare formaPagamento: FormaPagamento
+  declare formaPagamento: 'DINHEIRO' | 'PIX' | 'CREDITO' | 'DEBITO'
 
   @column()
   declare feito: boolean
