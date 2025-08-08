@@ -5,7 +5,7 @@ export const storeClienteValidator = vine.compile(
   // além de alguns adicionais, como o CPF ter exatamente 11 caracteres e a senha ter entre 8 e 30 caracteres.
   // Os campos são obrigatórios, pois o cliente deve fornecer todos os dados ao ser criado
   vine.object({
-    nome: vine.string().trim().minLength(10).maxLength(40),
+    nome: vine.string().trim().minLength(10).maxLength(40).toUpperCase(),
     genero: vine.enum(['MASCULINO', 'FEMININO']),
     idade: vine.number().min(18).max(120),
     cpf: vine.string().trim().fixedLength(11),
@@ -19,7 +19,7 @@ export const updateClienteValidator = vine.compile(
   // além de alguns adicionais, como o CPF ter exatamente 11 caracteres e a senha ter entre 8 e 30 caracteres.
   // Os campos são opcionais, pois o cliente pode atualizar apenas alguns deles.
   vine.object({
-    nome: vine.string().trim().minLength(10).maxLength(40).optional(),
+    nome: vine.string().trim().minLength(10).maxLength(40).toUpperCase().optional(),
     genero: vine.enum(['MASCULINO', 'FEMININO']).optional(),
     idade: vine.number().min(18).max(120).optional(),
     cpf: vine.string().trim().fixedLength(11).optional(),

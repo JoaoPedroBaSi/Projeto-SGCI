@@ -3,11 +3,6 @@ import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm'
 import type { HasMany } from '@adonisjs/lucid/types/relations'
 import Atendimento from '#models/atendimento'
 
-export enum Genero {
-  MASCULINO = 'MASCULINO',
-  FEMININO = 'FEMININO',
-}
-
 export default class Cliente extends BaseModel {
   //atributos
   @column({ isPrimary: true })
@@ -17,7 +12,7 @@ export default class Cliente extends BaseModel {
   declare nome: string
 
   @column()
-  declare genero: string
+  declare genero: 'MASCULINO' | 'FEMININO'
 
   @column()
   declare idade: number

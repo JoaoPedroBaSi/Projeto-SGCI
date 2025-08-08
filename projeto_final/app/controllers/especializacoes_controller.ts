@@ -31,7 +31,10 @@ export default class EspecializacaoController {
 
     //Procura por um objeto com o id indicado, e retorna um objeto da tabela de especializacao.
     // + os profissionais vinculados a eles.
-    return await Especializacao.query().where('id', params.id).preload('profissionais')
+    //traz apenas os campos id, nome e email atraves do select
+    return await Especializacao.query().where('id', params.id).preload('profissionais', (query) => {
+    query.select('id', 'nome', 'email')
+  })
 
     }
     //Testado

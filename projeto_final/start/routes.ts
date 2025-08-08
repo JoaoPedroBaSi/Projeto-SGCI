@@ -22,3 +22,5 @@ router.resource('/cliente', '#controllers/clientes_controller').except(['create'
 router.resource('/profissional', '#controllers/profissionais_controller').except(['create', 'edit'])
 router.put('/profissional/:id/especializacoes', '#controllers/profissionais_controller.associarEspecializacao')
 router.resource('/sala', '#controllers/salas_controller').except(['create', 'edit'])
+router.resource('/disponibilidade', '#controllers/disponibilidades_controller').except(['create', 'edit'])
+router.resource('/atendimento', '#controllers/atendimentos_controller').except(['create', 'edit'])

@@ -6,12 +6,23 @@ import { storeAtendimentoValidator } from '#validators/validator_atendimento'
 import { updateAtendimentoValidator } from '#validators/validator_atendimento'
 
 export default class AtendimentosController {
+    //TESTADO
+    //Mostrar todos os atendimentos
     public async index({}: HttpContext){
         return await Atendimento.all()
     }
+    //TESTADO
+    //Mostrar atendimentos individualmente
+    //Usar o select para traz apenas os dados importantes, 
+    //e ocultar dados sensíveis
     public async show({params}: HttpContext){
-        return await Atendimento.query().where('id', params.id)
+
+        return await Atendimento.query().where('id', params.id).preload('cliente', 
+            (query) => query.select('id', 'nome', 'email')).preload('profissional',
+                (query) => query.select('id', 'nome', 'email')
+            )
     }
+    //TESTADO
     public async store({request, response}: HttpContext){
         try{
             const validacao = await request.validateUsing(storeAtendimentoValidator)
@@ -26,7 +37,8 @@ export default class AtendimentosController {
             //Se já tem alguém para ser atendido no mesmo horário, no mesmo dia, pelo mesmo profissional
             const verificarConflito = await Atendimento.query().where('profissional_id', validacao.profissional_id).andWhere('dia', validacao.dia).
             andWhere('horario_comeco', validacao.horario_comeco).andWhere('data', validacao.data).first()
-            
+
+
             //Se não tem disponibilidade, é porque não está dentro da disponibilidade do profissional
             //Exemplo, tentou criar um atendimento dia 3 (quarta), mas o profissional trabalha
             //Apenas nos dias 1,2 e 4. Com isso, retorna a mensagem de erro.
@@ -36,19 +48,19 @@ export default class AtendimentosController {
                 return response.badRequest({ mensagem: 'Encontrado conflito com outro atendimento.' })
             }
 
-            //Verificar se não tem outro atendimento no mesmo horário, com o mesmo profissional, e no mesmo dia
+            //Verificar conflitos entre horários internos do próprio atendimento
             if (validacao.horario_comeco >= verificarDisponibilidade.horarioComeco && validacao.horario_comeco <= verificarDisponibilidade.horarioTermino
-                && validacao.horario_termino <= verificarDisponibilidade.horarioTermino && validacao.horario_comeco < validacao.horario_termino
-            ){
+                && validacao.horario_termino <= verificarDisponibilidade.horarioTermino &&  validacao.horario_termino >= verificarDisponibilidade.horarioComeco &&
+                validacao.horario_comeco <= validacao.horario_termino){
                 return await Atendimento.create(validacao)
             } else {
                 throw new Error()
             }
         } catch (error){
-            return response.status(404).send('Não foi possível cadastrar a disponibilidade. Tente novamente')
+            return response.status(404).send('Não foi possível cadastrar o atendimento. Tente novamente')
         }
     }
-
+    //TESTADO
     //Atualizar
     public async update({request, response, params}: HttpContext){
         try{
@@ -72,7 +84,7 @@ export default class AtendimentosController {
             //Apenas nos dias 1,2 e 4. Com isso, retorna a mensagem de erro.
             if (!verificarDisponibilidade) {
                 return response.badRequest({ mensagem: 'Disponibilidade não encontrada.' })
-            } else if (verificarConflito){
+            } else if (verificarConflito) {
                 return response.badRequest({ mensagem: 'Encontrado conflito com outro atendimento.' })
             }
 
@@ -86,9 +98,10 @@ export default class AtendimentosController {
                 throw new Error()
             }
         } catch (error){
-            return response.status(404).send('Não foi possível cadastrar a disponibilidade. Tente novamente')
+            return response.status(404).send('Não foi possível cadastrar o atendimento. Tente novamente')
         }
     }
+    //TESTADO
     //Deletar Atendimento
     public async destroy({params, response}: HttpContext){
         //Try catch para garantir que ao acontecer um erro, (ex: nao encontrar o objeto com o id), 

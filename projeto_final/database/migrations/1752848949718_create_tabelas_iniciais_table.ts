@@ -112,6 +112,7 @@ export default class extends BaseSchema {
         .onDelete('CASCADE')
       table.time('horario_comeco').notNullable()
       table.time('horario_termino').notNullable()
+      table.check('horario_comeco < horario_termino')
       //Adicionei o atributo dia para servir de comparação
       table.integer('dia').notNullable()
       table.date('data').notNullable()

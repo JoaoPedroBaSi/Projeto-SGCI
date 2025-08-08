@@ -17,10 +17,10 @@ export const storeProfissionalValidator = vine.compile(
         //Idade tem que ser maior que 18. Ou melhor, a mínima idade aceita é 18.
         idade: vine.number().min(18).max(120),
         //email terminando em gmail.com. Por padrão, o email é todo mínusculo.
-        email: vine.string().trim().regex(/@gmail\.com$/).toLowerCase(),
+        email: vine.string().trim().email().toLowerCase(),
         //Senha permite espaços, por isso não tem o .trim()
-        //Determina que o tamanho da senha deve ser entre 18-24 caracteres.
-        senha: vine.string().minLength(18).maxLength(24)
+        //Determina que o tamanho da senha deve ser entre 8-30 caracteres.
+        senha: vine.string().minLength(8).maxLength(30)
     })
 )
 //Consideramos que apenas a senha é modificável.
@@ -29,7 +29,13 @@ export const storeProfissionalValidator = vine.compile(
 //foi feita uma validação para verificar se o nome e o CPF estão de acordo.
 export const updateProfissionalValidator = vine.compile(
     vine.object({
-        senha: vine.string().minLength(18).maxLength(24),
+        funcao_id: vine.number().positive(),
+        nome: vine.string().trim().minLength(10).maxLength(40).toUpperCase(),
+        genero: vine.enum(['MASCULINO', 'FEMININO']),
+        cpf: vine.string().trim().minLength(11).maxLength(11).regex(/^\d{11}$/),
+        idade: vine.number().min(18).max(120),
+        email: vine.string().trim().email().toLowerCase(),
+        senha: vine.string().minLength(8).maxLength(30)
     })
 
 )
