@@ -1,7 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import Cliente from '#models/cliente'
-import { storeClienteValidator } from '#validators/store_cliente'
-import { updateClienteValidator } from '#validators/update_cliente'
+import { storeClienteValidator, updateClienteValidator } from '#validators/validator_cliente'
 
 export default class ClientesController {
   public async index({}: HttpContext) {

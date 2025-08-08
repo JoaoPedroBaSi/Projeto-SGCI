@@ -64,4 +64,24 @@ export default class ProfissionaisController {
             return response.status(404).send('Não foi possível apagar o profissional. Tente novamente')
         }
     }
+
+    // Associa especialização a um profissional
+    public async associarEspecializacao({ params, request, response }: HttpContext) {
+        try {
+            // Obtém os IDs das especializações enviadas no corpo da requisição
+            const ids = request.input('especializacaoIds') as number[]
+            // Salva o ID do profissional ao qual as especializações serão associadas
+            const profissional = await Profissional.findOrFail(params.id)
+
+            // Associa as especializações ao profissional usando a tabela pivô especializacoes_profissionais
+            await profissional.related('especializacoes').sync(ids)
+            await profissional.load('especializacoes')
+
+            // Retorna o profissional atualizado com as especializações associadas
+            // Caso contrário, retorna uma mensagem de erro amigável
+            return profissional 
+        } catch (error){
+            return response.status(404).send('Não foi possível associar especialização ao profissional. Tente novamente')
+        }
+    }
 }

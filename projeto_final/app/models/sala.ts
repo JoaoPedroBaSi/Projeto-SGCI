@@ -20,6 +20,9 @@ export default class Sala extends BaseModel {
   @column()
   declare dataDisponibilidade: string
 
+  @column()
+  declare ocupado: boolean
+
   //relacionamentos
   @belongsTo(() => Profissional)
   declare profissional: BelongsTo<typeof Profissional>
