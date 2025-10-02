@@ -37,6 +37,9 @@ export default class Profissional extends BaseModel {
   @column()
   declare senha: string
 
+  @column()
+  declare telefone: string
+
   //relacionamentos
   @belongsTo(() => Funcao)
   declare funcao: BelongsTo<typeof Funcao>

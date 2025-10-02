@@ -15,10 +15,13 @@ export default class Cliente extends BaseModel {
   declare genero: 'MASCULINO' | 'FEMININO'
 
   @column()
-  declare idade: number
+  declare dataNascimento: DateTime
 
   @column()
   declare cpf: string
+
+  @column()
+  declare telefone: string
 
   @column()
   declare email: string

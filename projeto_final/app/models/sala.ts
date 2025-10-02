@@ -21,6 +21,9 @@ export default class Sala extends BaseModel {
   declare dataDisponibilidade: string
 
   @column()
+  declare capacidadePacientes: number
+
+  @column()
   declare ocupado: boolean
 
   //relacionamentos

@@ -4,6 +4,7 @@ import { BaseModel, column, belongsTo } from '@adonisjs/lucid/orm'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import Profissional from '#models/profissional'
 import Cliente from '#models/cliente'
+import Sala from '#models/sala'
 
 //export enum FormaPagamento {
   //DINHEIRO = 'DINHEIRO',
@@ -37,13 +38,16 @@ export default class Atendimento extends BaseModel {
   declare data: string
 
   @column()
+  declare observacoes: string
+
+  @column()
   declare valor: number
 
   @column()
-  declare formaPagamento: 'DINHEIRO' | 'PIX' | 'CREDITO' | 'DEBITO'
+  declare formaPagamento: 'PENDENTE' |'DINHEIRO' | 'PIX' | 'CREDITO' | 'DEBITO'
 
   @column()
-  declare feito: boolean
+  declare status: 'AGENDADO' | 'CONFIRMADO' | 'CANCELADO' | 'CONCLUIDO'
 
   //relacionamentos
   @belongsTo(() => Profissional)
@@ -51,6 +55,9 @@ export default class Atendimento extends BaseModel {
 
   @belongsTo(() => Cliente)
   declare cliente: BelongsTo<typeof Cliente>
+
+  @belongsTo(() => Sala)
+  declare sala: BelongsTo<typeof Sala>
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
