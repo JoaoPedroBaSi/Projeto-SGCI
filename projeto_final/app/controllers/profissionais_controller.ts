@@ -1,87 +1,105 @@
 /* eslint-disable prettier/prettier */
 import type { HttpContext } from '@adonisjs/core/http'
 import Profissional from '#models/profissional'
-import { storeProfissionalValidator } from '#validators/validator_profissional'
-import { updateProfissionalValidator } from '#validators/validator_profissional'
-//Lembrando -> não há referencias a especializacao pq é uma relacao de muitos para muitos.
-//Haverá uma tabela pivô Especializacao/Profissional para criar os relacionamentos.
+import { DateTime } from 'luxon'
+import { storeProfissionalValidator, updateProfissionalValidator } from '#validators/validator_profissional'
+
+// Lembrando -> não há referências a especialização pois é uma relação de muitos para muitos.
+// Haverá uma tabela pivô Especializacao/Profissional para criar os relacionamentos.
 export default class ProfissionaisController {
-    //Testado
-    //Lista todos os profissionais
-    public async index({}: HttpContext){
-        return await Profissional.all()
+  // Lista todos os profissionais
+  public async index({ response }: HttpContext) {
+    try {
+      const profissionais = await Profissional.all()
+      return response.status(200).send(profissionais)
+    } catch {
+      return response.status(500).send({ message: 'Erro ao listar profissionais' })
     }
-    //Testado
-    //Cria profissionais e seus atributos
-    public async store({request, response}: HttpContext){
-        //Try catch para capturar erros, semelhante ao que acontece no Python, em que temos try except.
-        //Ao tentar realizar a operação de criação, e encontrar um erro no caminho, será levantada
-        //a mensagem de erro amigável.
-        try{
-            //Faz a validação dos dados do profissional, usando o validator 'storeProfissionalValidator'.
-            const validacao = await request.validateUsing(storeProfissionalValidator)
-            //Retorna o objeto criado, após a validação
-            return await Profissional.create(validacao)
-        } catch (error){
-            return response.status(404).send('Não foi possível cadastrar o profissional. Tente novamente')
-        }
+  }
+
+  // Cria profissionais e seus atributos
+  public async store({ request, response }: HttpContext) {
+    try {
+      const payload = await request.validateUsing(storeProfissionalValidator)
+
+      // Converte dataNascimento para DateTime antes de criar
+      const profissional = await Profissional.create({
+        ...payload,
+        dataNascimento: DateTime.fromJSDate(payload.dataNascimento),
+      })
+
+      return response.status(201).send(profissional)
+    } catch (error) {
+      console.log(error)
+      return response.status(400).send({ message: 'Não foi possível criar o profissional', error })
     }
-    //Testado
-    //Mostra os profissionais de maneira individual, pelo id.
-    public async show({params}: HttpContext){
-        return await Profissional.query().where('id', params.id).preload('especializacoes').preload('funcao')
+  }
+
+  // Mostra um profissional específico pelo id
+  public async show({ params, response }: HttpContext) {
+    try {
+      const profissional = await Profissional.query()
+        .where('id', params.id)
+        .preload('especializacoes')
+        .preload('funcao')
+        .firstOrFail()
+
+      return response.status(200).send(profissional)
+    } catch {
+      return response.status(404).send({ message: 'Profissional não encontrado' })
     }
-    //Testado no patch / Só a senha é alterável
-    //Atualiza informações dos profissionais de maneira individual, pelo id
-    public async update({ params, request, response }: HttpContext) {
-        //Ao tentar realizar a operação de atualização, e encontrar um erro no caminho, será levantada
-        //a mensagem de erro amigável.
-        try{
-            //Procura o objeto com o id correspondente. Se não encontrar, retorna uma mensagem de erro.
-            const objProfissional = await Profissional.findOrFail(params.id)
-            //Faz a validação do objeto encontrado, usando o validator 'updateProfissionalValidator'.
-            const validacao = await request.validateUsing(updateProfissionalValidator)
-            //Após a validação, faz o merge com o objeto profissional, passando os dados validados.
-            objProfissional.merge(validacao) 
-            //Retorna o objeto salvo.
-            return await objProfissional.save()
-        } catch (error){
-            return response.status(404).send('Não foi possível atualizar os dados do profissional. Tente novamente')
-        } 
-        }
-    //Testado
-    //Apaga o registro de profissional indicado pelo id
-    public async destroy({params, response}: HttpContext){
-        //Try catch para garantir que ao acontecer um erro, (ex: nao encontrar o objeto com o id), 
-        //uma mensagem amigável seja levantada.
-        try{
-            const objProfissional = await Profissional.findOrFail(params.id)
+  }
 
-            await objProfissional.delete()
+  // Atualiza informações de um profissional pelo id
+  public async update({ params, request, response }: HttpContext) {
+    try {
+      const profissional = await Profissional.findOrFail(params.id)
+      const payload = await request.validateUsing(updateProfissionalValidator)
 
-            return objProfissional
-        } catch {
-            return response.status(404).send('Não foi possível apagar o profissional. Tente novamente')
-        }
+      // Converte dataNascimento se existir no payload
+      profissional.merge({
+    ...payload,
+    dataNascimento: payload.dataNascimento
+        ? DateTime.fromJSDate(payload.dataNascimento)
+        : profissional.dataNascimento,
+    })
+
+      await profissional.save()
+      return response.status(200).send(profissional)
+    } catch (error) {
+      console.log(error)
+      return response.status(400).send({ message: 'Não foi possível atualizar o profissional', error })
     }
+  }
 
-    // Associa especialização a um profissional
-    public async associarEspecializacao({ params, request, response }: HttpContext) {
-        try {
-            // Obtém os IDs das especializações enviadas no corpo da requisição
-            const ids = request.input('especializacaoIds') as number[]
-            // Salva o ID do profissional ao qual as especializações serão associadas
-            const profissional = await Profissional.findOrFail(params.id)
-
-            // Associa as especializações ao profissional usando a tabela pivô especializacoes_profissionais
-            await profissional.related('especializacoes').sync(ids)
-            await profissional.load('especializacoes')
-
-            // Retorna o profissional atualizado com as especializações associadas
-            // Caso contrário, retorna uma mensagem de erro amigável
-            return profissional 
-        } catch (error){
-            return response.status(404).send('Não foi possível associar especialização ao profissional. Tente novamente')
-        }
+  // Apaga o registro de profissional indicado pelo id
+  public async destroy({ params, response }: HttpContext) {
+    try {
+      const profissional = await Profissional.findOrFail(params.id)
+      await profissional.delete()
+      return response.status(200).send(profissional)
+    } catch {
+      return response.status(404).send({ message: 'Profissional não encontrado' })
     }
+  }
+
+  // Associa especializações a um profissional
+  public async associarEspecializacao({ params, request, response }: HttpContext) {
+    try {
+      const ids = request.input('especializacaoIds') as number[]
+      console.log('Profissional ID:', params.id)
+      console.log('IDs das especializações:', ids)
+
+      const profissional = await Profissional.findOrFail(params.id)
+      console.log('Profissional encontrado:', profissional)
+
+      await profissional.related('especializacoes').sync(ids)
+      await profissional.load('especializacoes')
+
+      return response.status(200).send(profissional)
+    } catch (error) {
+      console.error('Erro ao associar especializações:', error)
+      return response.status(400).send({ message: 'Não foi possível atualizar o profissional' })
+    }
+  }
 }

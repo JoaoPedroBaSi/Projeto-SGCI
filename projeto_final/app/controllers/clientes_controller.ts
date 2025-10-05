@@ -1,47 +1,81 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import Cliente from '#models/cliente'
+import { DateTime } from 'luxon'
 import { storeClienteValidator, updateClienteValidator } from '#validators/validator_cliente'
 
 export default class ClientesController {
-  public async index({}: HttpContext) {
-    // Testado
-    // Lista todos os clientes
-    return await Cliente.all()
+  // Lista todos os clientes
+  public async index({ response }: HttpContext) {
+    try {
+      const clientes = await Cliente.all()
+      return response.status(200).send(clientes)
+    } catch {
+      return response.status(500).send({ message: 'Erro ao listar clientes' })
+    }
   }
 
+  // Retorna um cliente específico com os atendimentos associados
   public async show({ params, response }: HttpContext) {
-    // Testado
-    // Retorna um cliente específico com os atendimentos associados
-    // Se não encontrar, retorna 404
-    const cliente = await Cliente.query().where({ id: params.id }).preload('atendimentos').first()
-    if (cliente) return cliente
-    else return cliente ?? response.status(404)
+    try {
+      const cliente = await Cliente.query()
+        .where({ id: params.id })
+        .preload('atendimentos')
+        .firstOrFail()
+
+      return response.status(200).send(cliente)
+    } catch {
+      return response.status(404).send({ message: 'Cliente não encontrado' })
+    }
   }
 
+  // Cria um novo cliente
   public async store({ request, response }: HttpContext) {
-    // Testado
-    // Cria um novo cliente e valida os dados de entrada
-    const payload = await request.validateUsing(storeClienteValidator)
-    const cliente = await Cliente.create(payload)
-    return response.status(201).send(cliente)
+    try {
+      const payload = await request.validateUsing(storeClienteValidator)
+
+      // Converte o campo dataNascimento de Date para DateTime antes de criar
+      const cliente = await Cliente.create({
+        ...payload,
+        dataNascimento: DateTime.fromJSDate(payload.dataNascimento),
+      })
+
+      return response.status(201).send(cliente)
+    } catch (error) {
+      console.log(error)
+      return response.status(400).send({ message: 'Não foi possível criar o cliente', error })
+    }
   }
 
+  // Atualiza os dados de um cliente existente
   public async update({ request, params, response }: HttpContext) {
-    // Testado
-    // Atualiza os dados de um cliente existente após a validação
-    const payload = await request.validateUsing(updateClienteValidator)
-    const cliente = await Cliente.findOrFail(params.id)
+    try {
+      const cliente = await Cliente.findOrFail(params.id)
+      const payload = await request.validateUsing(updateClienteValidator)
 
-    cliente.merge(payload)
-    await cliente.save()
-    return response.send(cliente)
+      // Converte a data se ela existir no payload
+      cliente.merge({
+        ...payload,
+        dataNascimento: payload.dataNascimento
+          ? DateTime.fromJSDate(payload.dataNascimento)
+          : cliente.dataNascimento,
+      })
+
+      await cliente.save()
+      return response.status(200).send(cliente)
+    } catch (error) {
+      console.log(error)
+      return response.status(400).send({ message: 'Não foi possível atualizar o cliente', error })
+    }
   }
 
-  public async destroy({ params }: HttpContext) {
-    // Testado
-    // Exclui um cliente existente
-    const cliente = await Cliente.findOrFail(params.id)
-    await cliente.delete()
-    return cliente
+  // Exclui um cliente existente
+  public async destroy({ params, response }: HttpContext) {
+    try {
+      const cliente = await Cliente.findOrFail(params.id)
+      await cliente.delete()
+      return response.status(200).send(cliente)
+    } catch {
+      return response.status(404).send({ message: 'Cliente não encontrado' })
+    }
   }
 }

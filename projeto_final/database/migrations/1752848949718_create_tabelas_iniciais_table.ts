@@ -38,7 +38,7 @@ export default class extends BaseSchema {
       table.integer('funcao_id').unsigned().notNullable().references('funcoes.id')
       table.string('nome', 40).notNullable()
       table.enum('genero', ['MASCULINO', 'FEMININO']).notNullable()
-      table.integer('idade').notNullable()
+      table.date('data_nascimento').notNullable()
       table.string('cpf').notNullable().unique()
       table.string('email').notNullable().unique()
       table.string('senha').notNullable()
