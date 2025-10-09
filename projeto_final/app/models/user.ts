@@ -27,7 +27,7 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare password: string
 
   @column()
-  declare perfil_tipo: 'cliente' | 'profissional' | null
+  declare perfil_tipo: 'cliente' | 'profissional' | 'admin' | null
 
   @column()
   declare perfil_id: number | null
