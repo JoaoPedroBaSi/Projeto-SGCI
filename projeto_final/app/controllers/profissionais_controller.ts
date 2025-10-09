@@ -21,7 +21,6 @@ export default class ProfissionaisController {
   public async store({ request, response }: HttpContext) {
     try {
       const payload = await request.validateUsing(storeProfissionalValidator)
-
       // Converte dataNascimento para DateTime antes de criar
       const profissional = await Profissional.create({
         ...payload,
@@ -87,18 +86,14 @@ export default class ProfissionaisController {
   public async associarEspecializacao({ params, request, response }: HttpContext) {
     try {
       const ids = request.input('especializacaoIds') as number[]
-      console.log('Profissional ID:', params.id)
-      console.log('IDs das especializações:', ids)
 
       const profissional = await Profissional.findOrFail(params.id)
-      console.log('Profissional encontrado:', profissional)
 
       await profissional.related('especializacoes').sync(ids)
       await profissional.load('especializacoes')
 
       return response.status(200).send(profissional)
     } catch (error) {
-      console.error('Erro ao associar especializações:', error)
       return response.status(400).send({ message: 'Não foi possível atualizar o profissional' })
     }
   }

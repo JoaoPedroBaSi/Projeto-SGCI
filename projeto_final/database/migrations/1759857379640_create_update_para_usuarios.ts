@@ -5,9 +5,9 @@ export default class extends BaseSchema {
 
   async up() {
     this.schema.alterTable('users', (table) => {
-      table.enum('perfil_tipo', ['cliente', 'profissional']).nullable()
+      table.enum('perfil_tipo', ['CLIENTE', 'PROFISSIONAL']).nullable()
       table.integer('perfil_id').unsigned().nullable()
-      table.enum('status', ['ativo', 'pendente', 'inativo']).defaultTo('pendente')
+      table.enum('status', ['ATIVO', 'PENDENTE', 'INATIVO']).defaultTo('pendente')
       table.string('password_reset_token').nullable()
       table.timestamp('password_reset_token_expires_at').nullable()
     })
@@ -25,8 +25,8 @@ export default class extends BaseSchema {
       table.string('registro_conselho', 20) // Ex: CRM, CREFITO
       table.string('conselho_uf', 2) // Ex: RN, SP
       table.string('foto_perfil_url')
-      table.text('biografia_curta')
-      table.enum('status', ['pendente', 'aprovado', 'rejeitado']).defaultTo('pendente')
+      table.text('biografia')
+      table.enum('status', ['PENDENTE', 'APROVADO', 'REJEITADO']).defaultTo('pendente')
       table.string('comprovante_credenciamento_url')
       table.text('observacoes_admin')
 
@@ -42,7 +42,7 @@ export default class extends BaseSchema {
       table.dropColumn('registro_conselho')
       table.dropColumn('conselho_uf')
       table.dropColumn('foto_perfil_url')
-      table.dropColumn('biografia_curta')
+      table.dropColumn('biografia')
       table.dropColumn('status')
       table.dropColumn('comprovante_credenciamento_url')
       table.dropColumn('observacoes_admin')

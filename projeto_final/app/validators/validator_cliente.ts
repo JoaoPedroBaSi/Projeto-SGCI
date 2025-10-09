@@ -25,30 +25,27 @@ const dataNascimentoRule = vine.createRule(async (value, _, field) => {
 
 export const storeClienteValidator = vine.compile(
   // Valida os dados do cliente durante sua criação, garantindo que seus dados estejam de acordo com o esperado na tabela,
-  // além de alguns adicionais, como o CPF ter exatamente 11 caracteres e a senha ter entre 8 e 30 caracteres.
+  // além de alguns adicionais, como o CPF ter exatamente 11 caracteres.
   // Os campos são obrigatórios, pois o cliente deve fornecer todos os dados ao ser criado
   vine.object({
     nome: vine.string().trim().minLength(10).maxLength(40).toUpperCase(),
     genero: vine.enum(['MASCULINO', 'FEMININO']),
     dataNascimento: vine.date().use(dataNascimentoRule()),
     cpf: vine.string().trim().fixedLength(11),
-    email: vine.string().trim().email(),
-    senha: vine.string().trim().minLength(8).maxLength(30),
+    // email e senhas removidos, uma vez que passaram para users
     telefone: vine.string().trim().minLength(10).maxLength(15),
   })
 )
 
 export const updateClienteValidator = vine.compile(
   // Valida os dados do cliente durante seu update, garantindo que estejam de acordo com o esperado na tabela,
-  // além de alguns adicionais, como o CPF ter exatamente 11 caracteres e a senha ter entre 8 e 30 caracteres.
+  // além de alguns adicionais, como o CPF ter exatamente 11 caracteres.
   // Os campos são opcionais, pois o cliente pode atualizar apenas alguns deles.
   vine.object({
     nome: vine.string().trim().minLength(10).maxLength(40).toUpperCase().optional(),
     genero: vine.enum(['MASCULINO', 'FEMININO']).optional(),
     dataNascimento: vine.date().use(dataNascimentoRule()).optional(),
     cpf: vine.string().trim().fixedLength(11).optional(),
-    email: vine.string().trim().email().optional(),
-    senha: vine.string().trim().minLength(8).maxLength(30).optional(),
     telefone: vine.string().trim().minLength(10).maxLength(15).optional(),
   })
 )

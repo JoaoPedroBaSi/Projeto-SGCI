@@ -6,6 +6,7 @@ import Especializacao from '#models/especializacao'
 import Disponibilidade from '#models/disponibilidade'
 import Sala from '#models/sala'
 import Atendimento from '#models/atendimento'
+import User from '#models/user'
 //import { Genero } from '#models/cliente'
 //Retiramos { Genero } pois entrou em conflito com o validator.
 
@@ -17,6 +18,9 @@ export default class Profissional extends BaseModel {
   declare id: number
 
   @column()
+  declare user_id: number
+
+  @column({ columnName: 'funcao_id' })
   declare funcaoId: number
 
   @column()
@@ -32,17 +36,35 @@ export default class Profissional extends BaseModel {
   declare cpf: string
 
   @column()
-  declare email: string
-
-  @column()
-  declare senha: string
-
-  @column()
   declare telefone: string
+
+  @column()
+  declare registro_conselho: string | null
+
+  @column()
+  declare conselho_uf: string | null
+
+  @column()
+  declare foto_perfil_url: string | null
+
+  @column()
+  declare biografia: string | null
+
+  @column()
+  declare status: 'pendente' | 'aprovado' | 'rejeitado'
+
+  @column()
+  declare comprovante_credenciamento_url: string | null
+
+  @column()
+  declare observacoes_admin: string | null
 
   //relacionamentos
   @belongsTo(() => Funcao)
   declare funcao: BelongsTo<typeof Funcao>
+
+  @belongsTo(() => User)
+  declare user: BelongsTo<typeof User>
 
   @manyToMany(() => Especializacao, {
     pivotTable: 'especializacoes_profissionais',

@@ -1,12 +1,16 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm'
-import type { HasMany } from '@adonisjs/lucid/types/relations'
+import { BaseModel, column, hasMany, belongsTo } from '@adonisjs/lucid/orm'
+import type { HasMany, BelongsTo } from '@adonisjs/lucid/types/relations'
 import Atendimento from '#models/atendimento'
+import User from '#models/user'
 
 export default class Cliente extends BaseModel {
   //atributos
   @column({ isPrimary: true })
   declare id: number
+
+  @column()
+  declare user_id: number
 
   @column()
   declare nome: string
@@ -15,7 +19,7 @@ export default class Cliente extends BaseModel {
   declare genero: 'MASCULINO' | 'FEMININO'
 
   @column()
-  declare dataNascimento: DateTime
+  declare dataNascimento: Date
 
   @column()
   declare cpf: string
@@ -23,13 +27,10 @@ export default class Cliente extends BaseModel {
   @column()
   declare telefone: string
 
-  @column()
-  declare email: string
-
-  @column()
-  declare senha: string
-
   //relacionamentos
+  @belongsTo(() => User)
+  declare user: BelongsTo<typeof User>
+
   @hasMany(() => Atendimento)
   declare atendimentos: HasMany<typeof Atendimento>
 

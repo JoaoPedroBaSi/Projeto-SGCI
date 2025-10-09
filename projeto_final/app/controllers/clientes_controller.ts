@@ -36,7 +36,7 @@ export default class ClientesController {
       // Converte o campo dataNascimento de Date para DateTime antes de criar
       const cliente = await Cliente.create({
         ...payload,
-        dataNascimento: DateTime.fromJSDate(payload.dataNascimento),
+        dataNascimento: DateTime.fromJSDate(payload.dataNascimento).toJSDate(),
       })
 
       return response.status(201).send(cliente)
