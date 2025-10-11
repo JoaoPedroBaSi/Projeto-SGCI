@@ -54,5 +54,24 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 
+  // Hooks
+  public static boot() {
+    super.boot()
+
+    // Criptografa a senha antes de salvar o usuário
+    this.before('create', async (user: User) => {
+      if (user.password) {
+        user.password = await hash.make(user.password)
+      }
+    })
+
+    // Criptografa a senha antes de atualizar o usuário
+    this.before('update', async (user: User) => {
+      if (user.$dirty.password) {
+        user.password = await hash.make(user.password)
+      }
+    })
+  }
+
   static accessTokens = DbAccessTokensProvider.forModel(User)
 }

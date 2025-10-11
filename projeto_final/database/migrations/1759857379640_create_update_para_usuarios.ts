@@ -5,15 +5,21 @@ export default class extends BaseSchema {
 
   async up() {
     this.schema.alterTable('users', (table) => {
-      table.enum('perfil_tipo', ['CLIENTE', 'PROFISSIONAL']).nullable()
+      table.enum('perfil_tipo', ['cliente', 'profissional', 'admin']).nullable()
       table.integer('perfil_id').unsigned().nullable()
-      table.enum('status', ['ATIVO', 'PENDENTE', 'INATIVO']).defaultTo('pendente')
+      table.enum('status', ['ativo', 'pendente', 'inativo']).defaultTo('pendente')
       table.string('password_reset_token').nullable()
       table.timestamp('password_reset_token_expires_at').nullable()
     })
 
     this.schema.alterTable('clientes', (table) => {
-      table.integer('user_id').unsigned().notNullable().references('users.id').onDelete('CASCADE')
+      table
+        .integer('user_id')
+        .unsigned()
+        .notNullable()
+        .references('users.id')
+        .onDelete('CASCADE')
+        .unique()
 
       // Removi os campos agora centralizados na tabela 'users'
       table.dropColumn('email')
@@ -21,12 +27,18 @@ export default class extends BaseSchema {
     })
 
     this.schema.alterTable('profissionais', (table) => {
-      table.integer('user_id').unsigned().notNullable().references('users.id').onDelete('CASCADE')
+      table
+        .integer('user_id')
+        .unsigned()
+        .notNullable()
+        .references('users.id')
+        .onDelete('CASCADE')
+        .unique()
       table.string('registro_conselho', 20) // Ex: CRM, CREFITO
       table.string('conselho_uf', 2) // Ex: RN, SP
       table.string('foto_perfil_url')
       table.text('biografia')
-      table.enum('status', ['PENDENTE', 'APROVADO', 'REJEITADO']).defaultTo('pendente')
+      table.enum('status', ['pendente', 'aprovado', 'rejeitado']).defaultTo('pendente')
       table.string('comprovante_credenciamento_url')
       table.text('observacoes_admin')
 

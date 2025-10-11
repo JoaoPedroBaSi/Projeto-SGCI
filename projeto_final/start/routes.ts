@@ -29,5 +29,6 @@ router.resource('/atendimento', '#controllers/atendimentos_controller').except([
 //Somente o adm pode visualizar todos os usuários
 router.get('/users', '#controllers/users_controller.index').middleware([middleware.auth()])
 router.post('/login', '#controllers/users_controller.login')
+router.post('/register', '#controllers/auth_controller.register')
 //somente usuários autenticados, com seu devido token podem visualizar seus dados
 router.get('/user/:id', '#controllers/users_controller.show').middleware([middleware.auth()])

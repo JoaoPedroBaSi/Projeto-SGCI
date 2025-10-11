@@ -12,7 +12,7 @@ const dataNascimentoRule = vine.createRule(async (value, _, field) => {
     nascimento.getFullYear() -
     (hoje < new Date(hoje.getFullYear(), nascimento.getMonth(), nascimento.getDate()) ? 1 : 0)
 
-  // Verificações de validade
+  // Verificações de validação
   if (Number.isNaN(nascimento.getTime())) {
     field.report('Data de nascimento inválida', 'validation', field)
   } else if (nascimento > hoje) {
