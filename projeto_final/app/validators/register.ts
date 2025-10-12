@@ -31,7 +31,7 @@ export const registerValidator = vine.compile(
     // Validação dos campos da tabela 'User'
     fullName: vine.string().trim().minLength(10).maxLength(40).toUpperCase(),
     email: vine.string().trim().email().toLowerCase(),
-    password: vine.string().minLength(8).maxLength(30),
+    password: vine.string().minLength(8).maxLength(255),
     perfil_tipo: vine.enum(['cliente', 'profissional', 'admin']),
 
     // Campos dos perfis 'cliente' e 'profissional'

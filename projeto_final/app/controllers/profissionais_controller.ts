@@ -94,7 +94,19 @@ export default class ProfissionaisController {
 
       return response.status(200).send(profissional)
     } catch (error) {
-      return response.status(400).send({ message: 'Não foi possível atualizar o profissional' })
+      return response.status(400).send({ message: 'Não foi possível atualizar o profissional', error })
+    }
+  }
+
+  // Aprovação/Rejeição de profissionais
+  public async atualizarStatus({ params, request, response }: HttpContext) {
+    try {
+      const profissional = await Profissional.findOrFail(params.id)
+      profissional.status = request.input('status') // 'aprovado' ou 'rejeitado'
+      await profissional.save()
+    } catch (error) {
+      return response.status(400).send({ message: 'Não foi possível atualizar o status do profissional', error })
     }
   }
 }
+

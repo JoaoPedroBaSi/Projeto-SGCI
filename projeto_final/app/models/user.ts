@@ -1,7 +1,7 @@
 import { DateTime } from 'luxon'
 import hash from '@adonisjs/core/services/hash'
 import { compose } from '@adonisjs/core/helpers'
-import { BaseModel, column, hasOne } from '@adonisjs/lucid/orm'
+import { BaseModel, beforeSave, column, hasOne } from '@adonisjs/lucid/orm'
 import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
 import { DbAccessTokensProvider } from '@adonisjs/auth/access_tokens'
 import type { HasOne } from '@adonisjs/lucid/types/relations'
@@ -23,7 +23,7 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column()
   declare email: string
 
-  @column({ serializeAs: null })
+  @column({ columnName: 'password', serializeAs: null })
   declare password: string
 
   @column()
@@ -54,23 +54,11 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 
-  // Hooks
-  public static boot() {
-    super.boot()
-
-    // Criptografa a senha antes de salvar o usuário
-    this.before('create', async (user: User) => {
-      if (user.password) {
-        user.password = await hash.make(user.password)
-      }
-    })
-
-    // Criptografa a senha antes de atualizar o usuário
-    this.before('update', async (user: User) => {
-      if (user.$dirty.password) {
-        user.password = await hash.make(user.password)
-      }
-    })
+  @beforeSave()
+  public static async hashPassword(user: User) {
+    if (user.$dirty.password) {
+      user.password = await hash.use('scrypt').make(user.password)
+    }
   }
 
   static accessTokens = DbAccessTokensProvider.forModel(User)

@@ -34,7 +34,7 @@ export default class UsersController {
     if (procura.perfil_tipo === 'cliente') {
       //retorna informações de cliente
       return Cliente.query().where('id', params.id).first()
-    } else if (procura.perfil_tipo == 'profissional') {
+    } else if (procura.perfil_tipo === 'profissional') {
       //retorna informações de profissional
       return Profissional.query()
         .where('id', params.id)
