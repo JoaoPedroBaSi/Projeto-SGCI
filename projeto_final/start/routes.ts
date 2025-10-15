@@ -37,3 +37,8 @@ router.patch('/profissional/:id/status', 'ProfissionaisController.atualizarStatu
       .middleware([middleware.auth(), middleware.adminOnly()])
 
 // teste
+
+router.group(() => {
+  router.get('/me', '#controllers/perfils_controller.show')
+  router.put('/me', '#controllers/perfils_controller.update')
+}).use(middleware.auth())

@@ -8,11 +8,11 @@ import type { HasOne } from '@adonisjs/lucid/types/relations'
 import Cliente from '#models/cliente'
 import Profissional from '#models/profissional'
 
-const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
+// Use hash.use() para obter o executor padrão
+const AuthFinder = withAuthFinder(() => hash.use(), { 
   uids: ['email'],
   passwordColumnName: 'password',
 })
-
 export default class User extends compose(BaseModel, AuthFinder) {
   @column({ isPrimary: true })
   declare id: number
@@ -53,13 +53,6 @@ export default class User extends compose(BaseModel, AuthFinder) {
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
-
-  @beforeSave()
-  public static async hashPassword(user: User) {
-    if (user.$dirty.password) {
-      user.password = await hash.use('scrypt').make(user.password)
-    }
-  }
 
   static accessTokens = DbAccessTokensProvider.forModel(User)
 }
