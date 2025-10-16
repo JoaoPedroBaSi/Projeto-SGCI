@@ -5,8 +5,6 @@ export default class AdminOnlyMiddleware {
   async handle(ctx: HttpContext, next: () => Promise<void>) {
     const user = ctx.auth?.user
 
-    console.log('Usuário autenticado:', user)
-
     if (!user) {
       return ctx.response.unauthorized({
         message: 'Usuário não autenticado',

@@ -17,8 +17,8 @@ export default class Profissional extends BaseModel {
   @column({ isPrimary: true })
   declare id: number
 
-  @column()
-  declare user_id: number
+  @column({ columnName: 'user_id' })
+  declare userId: number
 
   @column({ columnName: 'funcao_id' })
   declare funcaoId: number

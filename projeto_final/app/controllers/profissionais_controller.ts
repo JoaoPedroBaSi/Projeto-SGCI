@@ -3,6 +3,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import Profissional from '#models/profissional'
 import { DateTime } from 'luxon'
 import { storeProfissionalValidator, updateProfissionalValidator } from '#validators/validator_profissional'
+import mail from '@adonisjs/mail/services/main'
 
 // Lembrando -> não há referências a especialização pois é uma relação de muitos para muitos.
 // Haverá uma tabela pivô Especializacao/Profissional para criar os relacionamentos.
@@ -102,9 +103,28 @@ export default class ProfissionaisController {
   public async atualizarStatus({ params, request, response }: HttpContext) {
     try {
       const profissional = await Profissional.findOrFail(params.id)
-      profissional.status = request.input('status') // 'aprovado' ou 'rejeitado'
+      const novoStatus = request.input('status') // 'aprovado' ou 'rejeitado'
+
+      profissional.status = novoStatus
       await profissional.save()
-      return response.status(200).send({ message: 'Status do profissional alterado com sucesso!', profissional })
+
+      // Busca o usuário associado ao profissional
+      const user = await profissional.related('user').query().firstOrFail()
+
+      if (!user) {
+        return response.status(404).send({ message: 'Usuário associado ao profissional não encontrado' })
+      }
+
+      // Envia o email de notificação
+      await mail.send((message) => {
+        message
+          .to(user.email)
+          .from('clinicassgci@gmail.com')
+          .subject(`Seu status como profissional foi atualizado para "${novoStatus}"`)
+          .text(`Olá ${profissional.nome}, seu status como profissional foi atualizado para "${novoStatus}".`) // Futuramente, trocar para htmlView (frontend)
+      })
+
+      return response.status(200).send({ message: `Status do profissional alterado para ${novoStatus}.`, profissional })
     } catch (error) {
       return response.status(400).send({ message: 'Não foi possível atualizar o status do profissional', error })
     }
