@@ -1,7 +1,7 @@
 import { DateTime } from 'luxon'
 import hash from '@adonisjs/core/services/hash'
 import { compose } from '@adonisjs/core/helpers'
-import { BaseModel, beforeSave, column, hasOne } from '@adonisjs/lucid/orm'
+import { BaseModel, column, hasOne } from '@adonisjs/lucid/orm'
 import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
 import { DbAccessTokensProvider } from '@adonisjs/auth/access_tokens'
 import type { HasOne } from '@adonisjs/lucid/types/relations'
@@ -9,7 +9,7 @@ import Cliente from '#models/cliente'
 import Profissional from '#models/profissional'
 
 // Use hash.use() para obter o executor padrão
-const AuthFinder = withAuthFinder(() => hash.use(), { 
+const AuthFinder = withAuthFinder(() => hash.use(), {
   uids: ['email'],
   passwordColumnName: 'password',
 })

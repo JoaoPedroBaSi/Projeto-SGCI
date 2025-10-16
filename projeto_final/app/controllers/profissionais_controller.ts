@@ -104,9 +104,9 @@ export default class ProfissionaisController {
       const profissional = await Profissional.findOrFail(params.id)
       profissional.status = request.input('status') // 'aprovado' ou 'rejeitado'
       await profissional.save()
+      return response.status(200).send({ message: 'Status do profissional alterado com sucesso!', profissional })
     } catch (error) {
       return response.status(400).send({ message: 'Não foi possível atualizar o status do profissional', error })
     }
   }
 }
-

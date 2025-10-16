@@ -33,7 +33,7 @@ router.post('/register', '#controllers/auth_controller.register')
 //somente usuários autenticados, com seu devido token podem visualizar seus dados
 router.get('/user/:id', '#controllers/users_controller.show').middleware([middleware.auth()])
 // Somente o adm pode aprovar ou rejeitar um profissional
-router.patch('/profissional/:id/status', 'ProfissionaisController.atualizarStatus')
+router.patch('/profissional/:id/status', '#controllers/profissionais_controller.atualizarStatus')
       .middleware([middleware.auth(), middleware.adminOnly()])
 
 // teste
