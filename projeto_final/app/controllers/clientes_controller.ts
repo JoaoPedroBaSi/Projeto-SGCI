@@ -55,9 +55,10 @@ export default class ClientesController {
       // Converte a data se ela existir no payload
       cliente.merge({
         ...payload,
-        dataNascimento: payload.dataNascimento
-          ? DateTime.fromJSDate(payload.dataNascimento)
-          : cliente.dataNascimento,
+        dataNascimento:
+          payload.dataNascimento instanceof DateTime
+            ? payload.dataNascimento.toJSDate()
+            : payload.dataNascimento,
       })
 
       await cliente.save()
