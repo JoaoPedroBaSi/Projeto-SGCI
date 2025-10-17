@@ -25,6 +25,9 @@ export default class Atendimento extends BaseModel {
   declare clienteId: number
 
   @column()
+  declare salaId: number
+
+  @column()
   declare horarioComeco: string
 
   @column()

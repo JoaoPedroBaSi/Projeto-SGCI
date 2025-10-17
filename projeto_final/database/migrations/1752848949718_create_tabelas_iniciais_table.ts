@@ -174,10 +174,52 @@ export default class extends BaseSchema {
       table.timestamp('created_at')
       table.timestamp('updated_at')
     })
+    this.schema.createTable('inventario', (table) => {
+      table.increments('id')
+      // bom que o nome seja único para evitar duplicatas
+      table.string('nome').notNullable().unique()
+      table
+        .enum('tipo', ['MEDICAMENTO', 'EQUIPAMENTO', 'MATERIAL_ESCRITORIO', 'MATERIAL_LIMPEZA'])
+        .notNullable()
+      table.integer('quantidade').notNullable().defaultTo(0)
+      // Como a quantidade é contada? É por "unidade", "caixa", "pacote", "ml"
+      table.string('unidade_medida').notNullable().defaultTo('unidade')
+      table.date('validade').nullable()
+      table.string('lote')
+      table.string('fornecedor')
+      // número que define o "nível de alerta"
+      table.integer('ponto_reposicao').notNullable().defaultTo(10)
+
+      table.timestamp('created_at')
+      table.timestamp('updated_at')
+    })
+    this.schema.createTable('movimentacao_inventario', (table) => {
+      table.increments('id')
+      table
+        .integer('id_item')
+        .unsigned()
+        .notNullable()
+        .references('inventario.id')
+        .onDelete('RESTRICT') // Impede que um item seja deletado se ele tiver movimentações
+
+      table.integer('id_profissional').unsigned().notNullable().references('profissionais.id')
+
+      table.enum('tipo', ['ENTRADA', 'SAIDA']).notNullable()
+
+      table.integer('quantidade').unsigned().notNullable()
+
+      // Campo para justificativa ou observação (ex: "Uso no atendimento X", "Recebimento do fornecedor Y")
+      table.text('observacao')
+
+      table.timestamp('created_at')
+      table.timestamp('updated_at')
+    })
   }
 
   async down() {
     //this.schema.dropTable(this.historico_atendimentos)
+    this.schema.dropTable('movimentacao_inventario')
+    this.schema.dropTable('inventario')
     this.schema.dropTable('prontuario')
     this.schema.dropTable('atendimentos')
     this.schema.dropTable('salas')
