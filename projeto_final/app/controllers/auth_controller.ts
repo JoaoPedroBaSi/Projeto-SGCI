@@ -6,6 +6,8 @@ import Cliente from '#models/cliente'
 import Profissional from '#models/profissional'
 import { registerValidator } from '#validators/register'
 import db from '@adonisjs/lucid/services/db'
+import crypto from 'node:crypto'
+import mail from '@adonisjs/mail/services/main'
 
 export default class AuthController {
   public async register({ request, response }: HttpContext) {
@@ -119,4 +121,66 @@ export default class AuthController {
       return response.status(500).json({ message: 'Erro ao registrar usuário', error })
     }
   }
-}
+
+  public async esqueciSenha({ request, response }: HttpContext) {
+    try {
+      const { email } = request.only(['email'])
+
+      // --- PARTE 1: LÓGICA INTERNA (Atualizar o Banco) ---
+      const user = await User.findByOrFail('email', email)
+
+      const token = crypto.randomBytes(20).toString('hex')
+      const expiresAt = DateTime.now().plus({ hours: 1 })
+
+      user.password_reset_token = token
+      user.password_reset_token_expires_at = expiresAt
+      await user.save()
+
+      // --- PARTE 2: LÓGICA EXTERNA (Enviar o E-mail) ---
+      await mail.send((message) => {
+        message
+          .to(user.email)
+          .from('clinicassgci@gmail.com')
+          .subject('Recuperação de Senha do seu App')
+          // Dizendo ao Adonis para usar o molde que criamos
+          .htmlView('emails/esqueciSenha', {
+            // Enviando os dados para preencher o molde
+            user: user.serialize(),
+            link: `http://localhost:3333/redefinir-senha?token=${token}` // Link para o seu Front-end
+          })
+      })
+
+      return response.ok({ message: "Se o e-mail estiver correto, um link foi enviado." })
+
+    } catch (error) {
+      // É uma boa prática dar a mesma resposta para não confirmar se um e-mail existe ou não
+      console.error(error) // Para você ver o erro no terminal
+      return response.ok({ message: "Se o e-mail estiver correto, um link foi enviado." })
+    }
+  }
+
+  public async redefinirSenha({request, response}: HttpContext) {
+    // 1. Crie um Validator para isto para garantir que o token e a senha são enviados!
+    try {
+      const { token, password } = request.only(['token', 'password'])
+      const user = await User.query()
+      .where('password_reset_token', token)
+      .where('password_reset_token_expires_at', '>', DateTime.now().toSQL()).firstOrFail()
+
+      user.password = password
+
+      user.password_reset_token = null
+      user.password_reset_token_expires_at = null
+      await user.save()
+
+      return response.ok({
+        message: 'Senha redefinida com sucesso'
+      })
+    } catch (error) {
+      return response.badRequest({
+        message: 'Token inválido, expirado ou a senha não cumpre os requisitos.'
+      })
+    }
+  }
+    }
+

@@ -59,3 +59,6 @@ router.group(() => {
   router.get('/me', '#controllers/perfils_controller.show')
   router.put('/me', '#controllers/perfils_controller.update')
 }).use(middleware.auth())
+
+router.post('esqueci-senha', '#controllers/auth_controller.esqueciSenha')
+router.post('redefinir-senha', '#controllers/auth_controller.redefinirSenha')
