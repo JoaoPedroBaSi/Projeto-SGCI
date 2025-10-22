@@ -22,16 +22,16 @@ export default class Prontuario extends BaseModel {
   declare diagnostico: string
 
   @column({ columnName: 'medicamentos_prescritos' }) // <-- Mapeamento explícito
-  declare medicamentosPrescritos: string
+  declare medicamentosPrescritos: string | null
 
   @column()
-  declare recomendacoes: string
+  declare recomendacoes: string | null
 
   @column({ columnName: 'caminho_anexo' }) // <-- Mapeamento explícito
-  declare caminhoAnexo: string
+  declare caminhoAnexo: string | null
 
   @column()
-  declare descricao: string
+  declare descricao: string | null
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime

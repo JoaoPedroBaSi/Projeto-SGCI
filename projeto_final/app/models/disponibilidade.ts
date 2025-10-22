@@ -12,14 +12,13 @@ export default class Disponibilidade extends BaseModel {
   declare profissionalId: number
 
   @column()
-  declare dia: number
+  declare status: "livre" | "ocupado" | "bloqueado"
 
-  @column()
-  declare horarioComeco: string
+  @column.dateTime()
+  declare dataHoraInicio: DateTime
 
-  //Modifiquei aqui -> tava como horarioFim antes.
-  @column()
-  declare horarioTermino: string
+  @column.dateTime()
+  declare dataHoraFim: DateTime
 
   //relacionamentos
   @belongsTo(() => Profissional)

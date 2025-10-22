@@ -27,21 +27,21 @@ export default class Atendimento extends BaseModel {
   @column()
   declare salaId: number
 
-  @column()
-  declare horarioComeco: string
+  @column.dateTime()
+  declare horarioComeco: DateTime
 
-  @column()
-  declare horarioTermino: string
+  @column.dateTime()
+  declare horarioTermino: DateTime
 
   //Coluna dia para comparar com a disponibilidade. No mesmo formato [1-segunda], [2-terça]...
   @column()
   declare dia: number
 
-  @column()
-  declare data: string
+  @column.date()
+  declare data: DateTime
 
   @column()
-  declare observacoes: string
+  declare observacoes: string | null
 
   @column()
   declare valor: number

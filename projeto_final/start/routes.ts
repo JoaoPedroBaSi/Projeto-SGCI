@@ -62,3 +62,6 @@ router.group(() => {
 
 router.post('esqueci-senha', '#controllers/auth_controller.esqueciSenha')
 router.post('redefinir-senha', '#controllers/auth_controller.redefinirSenha')
+
+// ROTA 1: MOSTRAR o formulário de redefinição de senha
+router.get('/redefinir-senha', '#controllers/auth_controller.showRedefinirSenha')

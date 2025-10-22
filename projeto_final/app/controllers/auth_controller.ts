@@ -90,7 +90,7 @@ export default class AuthController {
       } else if (perfil_tipo === 'profissional') {
         await Profissional.create(
           {
-            user_id: user.id,
+            userId: user.id,
             funcaoId: payload.funcao_id,
             nome: fullName,
             genero: payload.genero,
@@ -143,7 +143,7 @@ export default class AuthController {
           .from('clinicassgci@gmail.com')
           .subject('Recuperação de Senha do seu App')
           // Dizendo ao Adonis para usar o molde que criamos
-          .htmlView('emails/esqueciSenha', {
+          .htmlView('emails/esqueci_senha', {
             // Enviando os dados para preencher o molde
             user: user.serialize(),
             link: `http://localhost:3333/redefinir-senha?token=${token}` // Link para o seu Front-end
@@ -182,5 +182,14 @@ export default class AuthController {
       })
     }
   }
-    }
+    // NOVO MÉTODO PARA MOSTRAR A PÁGINA
+  public async showRedefinirSenha({ view, request }: HttpContext) {
+    // Pega o token da URL (ex: ?token=abc)
+    const { token } = request.only(['token'])
+
+    // Renderiza a página HTML e passa o token para ela
+    // O token será enviado de volta no formulário
+    return view.render('emails/redefinir_senha_form', { token }) 
+  }
+  }
 
