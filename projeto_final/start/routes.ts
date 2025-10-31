@@ -17,6 +17,7 @@ router.get('/', async () => {
   }
 })
 
+// Rotas padrões com resource
 router.resource('/funcao', '#controllers/funcoes_controller').except(['create', 'edit'])
 router.resource('/especializacao', '#controllers/especializacoes_controller').except(['create', 'edit'])
 router.resource('/cliente', '#controllers/clientes_controller').except(['create', 'edit'])
@@ -24,12 +25,14 @@ router.resource('/profissional', '#controllers/profissionais_controller').except
 router.put('/profissional/:id/especializacoes', '#controllers/profissionais_controller.associarEspecializacao')
 router.resource('/sala', '#controllers/salas_controller').except(['create', 'edit'])
 router.resource('/disponibilidade', '#controllers/disponibilidades_controller').except(['create', 'edit'])
+router.resource('/inventario', '#controllers/inventarios_controller').except(['create', 'edit'])
+router.resource('/mov_inventario', '#controllers/mov_inventarios_controller').except(['create', 'edit'])
 
 //ATENDIMENTO
-//Somente o adm pode visualizar, considerando que são todos os atendimentos da clínica 
+//Somente o adm pode visualizar, considerando que são todos os atendimentos da clínica
 //(no futuro teremos que dar permissão aos atendentes)
 router.get('/atendimentos', '#controllers/atendimentos_controller.index').middleware([middleware.auth(), middleware.adminOnly()])
-//Somente o cliente e o profissional autenticado pode visualizar seu próprio atendimento 
+//Somente o cliente e o profissional autenticado pode visualizar seu próprio atendimento
 router.get('/atendimento/:id', '#controllers/atendimentos_controller.show').middleware([middleware.auth(), middleware.clienteOrProfissionalOnly()])
 //Somente o cliente (e futuramente o atendente) podem agendar um atendimento
 router.post('/atendimento', '#controllers/atendimentos_controller.store').middleware([middleware.auth(), middleware.clienteOnly()])
