@@ -70,7 +70,6 @@ export default class extends BaseSchema {
       //Define que a relação profissional_id com o dia são únicas.
       //Portanto, profissional_id 2 e dia 2 só poderá existir uma vez ->
       //O profissional 2 só pode ter um horário de disponibilidade na terça.
-      table.unique(['profissional_id', 'dia'])
       table
         .integer('profissional_id')
         .unsigned()
@@ -78,13 +77,10 @@ export default class extends BaseSchema {
         .references('profissionais.id')
         .onDelete('CASCADE')
       //"Dia x, o profissional atende do horario_comeco ao horario_fim".
-      table.integer('dia').notNullable()
-      //Checa de o horário começo é menor que o horario fim. Isso tem que acontecer.
-      table.check('horario_comeco < horario_termino')
-      table.time('horario_comeco').notNullable()
-      table.time('horario_termino').notNullable()
-      table.timestamp('created_at')
-      table.timestamp('updated_at')
+      table.timestamp('data_hora_inicio').notNullable()
+      table.timestamp('data_hora_fim').notNullable()
+      table.enum('status', ['livre', 'ocupado', 'bloqueado']).notNullable().defaultTo('livre')
+      table.timestamps(true, true)
     })
 
     this.schema.createTable('salas', (table) => {
@@ -114,15 +110,12 @@ export default class extends BaseSchema {
         .references('clientes.id')
         .onDelete('CASCADE')
       table.integer('sala_id').unsigned().references('salas.id').onDelete('SET NULL')
+      table.integer('disponibilidade_id').unsigned().notNullable().references('disponibilidades.id')
 
-      table.time('horario_comeco').notNullable()
-      table.time('horario_termino').notNullable()
-      table.check('horario_comeco < horario_termino')
+
       //Coluna observacoes para caso acha alguma coisa a ser dita sobre o atendimento
-      table.text('observacoes')
-      //Adicionei o atributo dia para servir de comparação
-      table.integer('dia').notNullable()
-      table.date('data').notNullable()
+      table.text('observacoes').nullable()
+
       table.decimal('valor', 10, 2).notNullable()
       table
         .enum('forma_pagamento', ['PENDENTE', 'DINHEIRO', 'PIX', 'CREDITO', 'DEBITO'])
@@ -136,22 +129,16 @@ export default class extends BaseSchema {
         .enum('status', ['AGENDADO', 'CONFIRMADO', 'CANCELADO', 'CONCLUIDO'])
         .notNullable()
         .defaultTo('AGENDADO')
-      table.timestamp('created_at')
-      table.timestamp('updated_at')
+      table.timestamps(true, true)
     })
-    this.schema.createTable('prontuario', (table) => {
+
+    this.schema.createTable('prontuarios', (table) => {
       table.increments('id')
       table
         .integer('atendimento_id')
         .unsigned()
         .notNullable()
         .references('atendimentos.id')
-        .onDelete('CASCADE')
-      table
-        .integer('cliente_id')
-        .unsigned()
-        .notNullable()
-        .references('clientes.id')
         .onDelete('CASCADE')
       table
         .integer('profissional_id')
@@ -163,17 +150,17 @@ export default class extends BaseSchema {
       table.string('diagnostico').notNullable()
 
       // Medicação que foi prescrita ou recomendada na sessão
-      table.text('medicamentos_prescritos')
+      table.text('medicamentos_prescritos').nullable()
 
       // Recomendações dadas ao paciente
-      table.text('recomendacoes')
+      table.text('recomendacoes').nullable()
 
       // Guarda o caminho para um arquivo de exame que foi salvo no servidor
-      table.string('caminho_anexo')
-      table.text('descricao')
-      table.timestamp('created_at')
-      table.timestamp('updated_at')
+      table.string('caminho_anexo').nullable()
+      table.text('descricao').nullable()
+      table.timestamps(true, true)
     })
+
     this.schema.createTable('inventario', (table) => {
       table.increments('id')
       // bom que o nome seja único para evitar duplicatas
@@ -220,7 +207,7 @@ export default class extends BaseSchema {
     //this.schema.dropTable(this.historico_atendimentos)
     this.schema.dropTable('movimentacao_inventario')
     this.schema.dropTable('inventario')
-    this.schema.dropTable('prontuario')
+    this.schema.dropTable('prontuarios')
     this.schema.dropTable('atendimentos')
     this.schema.dropTable('salas')
     this.schema.dropTable('disponibilidades')

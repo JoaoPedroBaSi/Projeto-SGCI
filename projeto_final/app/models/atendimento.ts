@@ -22,6 +22,9 @@ export default class Atendimento extends BaseModel {
   declare profissionalId: number
 
   @column()
+  declare disponibilidadeId: number
+
+  @column()
   declare clienteId: number
 
   @column()

@@ -19,7 +19,7 @@ export default class Cliente extends BaseModel {
   declare genero: 'MASCULINO' | 'FEMININO'
 
   @column()
-  declare dataNascimento: Date
+  declare dataNascimento: DateTime
 
   @column()
   declare cpf: string
