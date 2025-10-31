@@ -2,6 +2,7 @@ import { DateTime } from 'luxon'
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 
 export default class Inventario extends BaseModel {
+  public static table = 'inventario'
   @column({ isPrimary: true })
   declare id: number
 
@@ -18,7 +19,7 @@ export default class Inventario extends BaseModel {
   declare unidadeMedida: string
 
   @column()
-  declare validade: string | null
+  declare validade: Date
 
   @column()
   declare lote: string | null
