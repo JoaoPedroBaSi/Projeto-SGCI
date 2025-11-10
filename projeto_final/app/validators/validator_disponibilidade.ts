@@ -4,22 +4,22 @@ import vine from '@vinejs/vine'
 export const storeDisponibilidadeValidator = vine.compile(
     vine.object({
         profissional_id: vine.number().positive(),
-        //1 (segunda); 2 (terça); 3 (quarta); 4 (quinta); 5 (sexta); 6 (sabádo)
-        dia: vine.number().positive().max(6),
-        //Horários tem tamanho fixo 5 (ex: 15:30), e 
-        //devem ter 2 números consecutivos separados por ':' (determinado pela função regex())
-        horario_comeco: vine.string().fixedLength(5).regex(/^\d{2}:\d{2}$/),
-        horario_termino: vine.string().fixedLength(5).regex(/^\d{2}:\d{2}$/),
+        //data_hora_inicio: vine.date({formats: ['iso8601'], }),
+        //data_hora_fim: vine.date({formats: ['iso8601'], }),
+        data_hora_inicio: vine.string().trim(),
+        data_hora_fim: vine.string().trim(),
+        //Explicação breve do Status
+        //Livre -> Disponível para atender
+        //Ocupado -> Ocupado com algum atendimento
+        //Bloqueado -> Período em que o profissional está indisponível por fatores internos
+        status: vine.enum(['LIVRE', 'OCUPADO', 'BLOQUEADO']).optional(), //Se o profissional não informar, será criado como 'LIVRE'
     })
 )
-
 export const updateDisponibilidadeValidator = vine.compile(
     vine.object({
         profissional_id: vine.number().positive().optional(),
-        dia: vine.number().positive().max(31).optional(),
-        //Horários tem tamanho fixo 5 (ex: 15:30), e 
-        //devem ter 2 números consecutivos separados por ':' (determinado pela função regex())
-        horario_comeco: vine.string().fixedLength(5).regex(/^\d{2}:\d{2}$/),
-        horario_termino: vine.string().fixedLength(5).regex(/^\d{2}:\d{2}$/),
+        data_hora_inicio: vine.string().trim().optional(),
+        data_hora_fim: vine.string().trim().optional(),
+        status: vine.enum(['LIVRE', 'OCUPADO', 'BLOQUEADO']).optional(),
     })
 )

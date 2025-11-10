@@ -6,13 +6,6 @@ import Profissional from '#models/profissional'
 import Cliente from '#models/cliente'
 import Sala from '#models/sala'
 
-//export enum FormaPagamento {
-  //DINHEIRO = 'DINHEIRO',
-  //PIX = 'PIX',
-  //CREDITO = 'CREDITO',
-  //DEBITO = 'DEBITO',
-//}
-
 export default class Atendimento extends BaseModel {
   //atributos
   @column({ isPrimary: true })
@@ -22,26 +15,16 @@ export default class Atendimento extends BaseModel {
   declare profissionalId: number
 
   @column()
-  declare disponibilidadeId: number
-
-  @column()
   declare clienteId: number
 
   @column()
   declare salaId: number
 
   @column.dateTime()
-  declare horarioComeco: DateTime
+  declare dataHoraInicio: DateTime
 
   @column.dateTime()
-  declare horarioTermino: DateTime
-
-  //Coluna dia para comparar com a disponibilidade. No mesmo formato [1-segunda], [2-terça]...
-  @column()
-  declare dia: number
-
-  @column.date()
-  declare data: DateTime
+  declare dataHoraFim: DateTime
 
   @column()
   declare observacoes: string | null
@@ -50,10 +33,13 @@ export default class Atendimento extends BaseModel {
   declare valor: number
 
   @column()
-  declare formaPagamento: 'PENDENTE' |'DINHEIRO' | 'PIX' | 'CREDITO' | 'DEBITO'
+  declare formaPagamento: 'DINHEIRO' | 'PIX' | 'CREDITO' | 'DEBITO'
 
   @column()
-  declare status: 'AGENDADO' | 'CONFIRMADO' | 'CANCELADO' | 'CONCLUIDO'
+  declare status: 'CONFIRMADO' | 'CANCELADO' | 'CONCLUIDO'
+
+  @column()
+  declare statusPagamento: 'PENDENTE' | 'EM_ANALISE' | 'PAGO' | 'NEGADO' | 'CANCELADO' | 'ESTORNADO' | 'CONTESTADO' 
 
   //relacionamentos
   @belongsTo(() => Profissional)

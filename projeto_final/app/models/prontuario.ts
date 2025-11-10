@@ -4,6 +4,7 @@ import { BaseModel, column, belongsTo } from '@adonisjs/lucid/orm'
 import Atendimento from '#models/atendimento'
 import Cliente from '#models/cliente'
 import Profissional from '#models/profissional'
+import Parceria from './parceria.js'
 
 export default class Prontuario extends BaseModel {
   @column({ isPrimary: true })
@@ -17,6 +18,9 @@ export default class Prontuario extends BaseModel {
 
   @column({ columnName: 'profissional_id' }) // <-- Mapeamento explícito
   declare profissionalId: number
+
+  @column({ columnName: 'parceria_id' }) // <-- Mapeamento explícito
+  declare parceriaId: number | null
 
   @column()
   declare diagnostico: string
@@ -47,4 +51,7 @@ export default class Prontuario extends BaseModel {
 
   @belongsTo(() => Profissional)
   declare public profissional: BelongsTo<typeof Profissional>
+
+  @belongsTo(() => Parceria)
+  declare public parceria: BelongsTo<typeof Parceria>
 }

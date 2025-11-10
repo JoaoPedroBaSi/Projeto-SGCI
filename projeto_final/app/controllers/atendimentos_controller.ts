@@ -3,199 +3,354 @@ import type { HttpContext } from '@adonisjs/core/http'
 import { DateTime } from 'luxon'
 import Atendimento from '#models/atendimento'
 //import Disponibilidade from '#models/disponibilidade'
+import Cliente from '#models/cliente'
+import Sala from '#models/sala'
+//import Transacao from '#models/transacao'
 import { storeAtendimentoValidator } from '#validators/validator_atendimento'
 import { updateAtendimentoValidator } from '#validators/validator_atendimento'
 import { inject } from '@adonisjs/core';
 import { AtendimentoService } from '#services/atendimento_service'
+import { PagamentoService } from '#services/pagamento_service'
+import { TransacaoService } from '#services/transacao_service'
+//import Database, { TransactionClientContract } from '@ioc:Adonis/Lucid/Database'
+import db from '@adonisjs/lucid/services/db'
+import { TransactionClientContract } from '@adonisjs/lucid/types/database'
+import Disponibilidade from '#models/disponibilidade'
 
-//Obs: os testes deixei para depois (o mais breve possível) pois tem depêndencia 
-//com outras tabelas
 @inject() 
 export default class AtendimentosController {
-    constructor(protected atendimentoService: AtendimentoService) {}
-    //A TESTAR (O MAIS BREVE POSSÍVEL)
+    constructor(protected atendimentoService: AtendimentoService,
+        protected pagamentoService: PagamentoService,
+        protected transacaoService: TransacaoService
+    ) {}
     //Mostra todos os atendimentos
     public async index({}: HttpContext){
         return await Atendimento.all()
     }
-    //A TESTAR (O MAIS BREVE POSSÍVEL)
     //Mostra atendimentos individualmente
     //Usa o select para traz apenas os dados importantes, e oculta dados sensíveis
-    public async show({params}: HttpContext){
+    public async show ({ params }: HttpContext){
 
         return await Atendimento.query().where('id', params.id).preload('cliente', 
             (query) => query.select('id', 'nome', 'email')).preload('profissional',
                 (query) => query.select('id', 'nome', 'email'))
 
     }
-    //A TESTAR (O MAIS BREVE POSSÍVEL)
-    public async store({request, response}: HttpContext){
-        //Essas variáveis representam o range de horário em que as consultas podem ser
-        //marcadas. Isto é, garantem que o usuário não vá criar um atendimento que
-        //não esteja dentro do funcionamento da clínica. 
-        //A clínica abre às 07:00 e fecha às 21:00, mas considerando que os atendimentos
-        //duram 30 minutos (na teoria), o último atendimento possível tem que ser
-        //marcado para às 20:30
-        const primeiro_atendimento = '07:00:00'
-        const ultimo_atendimento = '20:30:00'
+    //Finalizado
+    public async store ({ request, response }: HttpContext){
         try {
             const dados = await request.validateUsing(storeAtendimentoValidator)
+
+            //Converte o Date nativo do JS para o Luxon DateTime
+            const dataHoraInicioLuxon = DateTime.fromISO(dados.data_hora_inicio, { zone: 'utc' })
+
+            //Verifica se a solicitação é para uma data/hora que já passou
+            const horarioExpirado = dataHoraInicioLuxon < DateTime.now().setZone('utc')
+            if (horarioExpirado) {
+                throw new Error('A solicitação de atendimento tem uma data inválida.')
+            }
+
+            //Verifica se o horário solicitado tem ao menos 24 horas de antecedência 
+            const limiteAntecedencia = DateTime.now().setZone('utc').plus({ hours: 24 })
+            const semAntecedenciaMinima = dataHoraInicioLuxon < limiteAntecedencia
+            if (semAntecedenciaMinima) {
+                throw new Error('A solicitação de atendimento precisa ser feita com ao menos 24 horas de antecedência.')
+            }
             
             //Chama a função "temDisponibilidade" para verificar se o profissional tem disponibilidade
-            const disponibilidade = await this.atendimentoService.temDisponibilidade(dados.profissional_id, dados.dia)
-            
+            const disponibilidade = await this.atendimentoService.temDisponibilidade(dados.profissional_id, dataHoraInicioLuxon)
+            console.log('A função temDisponibilidade foi chamada')
+
             if (!disponibilidade) {
-                throw new Error()
+                throw new Error('A solicitação de atendimento não está na disponibilidade do profissional.')
             }
 
-            //Chama a função "converteStringParaDate", que converte o horário solicitado de String para Date.
-            //Esse detalhe é importante pois facilita as comparações, somas, etc
-            const horarioComecoSolicitado = await this.atendimentoService.converteStringParaDate(dados.horario_comeco)
-
-            //Garante que o horário após ser convertido para date, esteja válido.
-            if (!horarioComecoSolicitado.isValid) {
-                throw new Error()
+            //Indica conflitos. Se o horário solicitado já tem outro acontecimento
+            const slotOcupado = disponibilidade.status === 'OCUPADO' 
+            if (slotOcupado) {
+                throw new Error('O horário solicitado já está marcado para outro atendimento.')
+            }
+            const slotBloqueado = disponibilidade.status === 'BLOQUEADO'
+            if (slotBloqueado) {
+                throw new Error('O profissional se encontra indisponível para este horário.')
             }
 
-            const duracaoAtendimento = 30 //Minutos
+            //Procura pela sala em que o profissional atende
+            const salaReservada = await Sala.query().where('profissional_id', dados.profissional_id).first()
+            console.log('A salaReservada foi consultada')
 
-            //Pega o horário solicitado pelo cliente, que já foi convertido, e adiciona 30 minutos
-            //para o horário de término da consulta
-            const horarioTerminoSolicitado = horarioComecoSolicitado.plus({ minutes: duracaoAtendimento })
-
-            //Converte os Luxon DateTime para strings SQL TIME (HH:mm:ss)
-            //No caso, a conversão anterior utilizava também utilizava o formato de data,
-            //para evitar viradas de dia com a soma das horas
-            const novoInicioSQL = horarioComecoSolicitado.toSQLTime()      
-            const novoTerminoSQL = horarioTerminoSolicitado.toSQLTime()
-
-            //Verifica se o horário solicitado pelo cliente está fora do horário de funcionamento da clínica
-            if (novoInicioSQL < primeiro_atendimento || novoInicioSQL > ultimo_atendimento) {
-                throw new Error()
+            if (!salaReservada){
+                throw new Error('O profissional escolhido para consulta não tem nenhum sala reservada.')
             }
 
-            //Verifica se o horário solicitado pelo cliente está fora do horário de disponibilidade do profissional
-            if (novoInicioSQL < disponibilidade.horarioComeco || novoTerminoSQL > disponibilidade.horarioTermino) {
-                throw new Error()
-            }
-            
-            const conflito = await this.atendimentoService.temConflito(dados.profissional_id, dados.dia, dados.data, novoInicioSQL, novoTerminoSQL)
+            //Se tem disponibilidade nesse horário, é definido que o final do atendimento será
+            //Igual ao final do slot
+            const dataHoraFimLuxon = disponibilidade.dataHoraFim
 
-            //Se o profissional não tiver disponibilidade no horário solicitado pelo cliente, ou tiver
-            //conflito com algum atendimento já cadastrado, sobe um erro
-            if (conflito){
-                throw new Error()
-            }
-
-            //Cria o atendimento, e o uso de "..." garante que os valores horarioComeco seja sobreescrito
-            await Atendimento.create({ ...dados, horarioComeco: novoInicioSQL, horarioTermino: novoTerminoSQL })
+            await this.atendimentoService.criarAtendimento(dados, salaReservada.id, dataHoraInicioLuxon, dataHoraFimLuxon, disponibilidade.id)
 
             //Retorna um status 201, representando que o agendamento foi feito com sucesso
             return response.status(201).send('Agendamento realizado com sucesso.')
 
         //Retorna uma mensagem de erro para qualquer desvio na execução desse try
         } catch (error){
-            return response.status(404).send('Não foi possível cadastrar o atendimento. Tente novamente')
+            let message = 'Ocorreu um erro desconhecido.'
+            let status = 500
+            if (error instanceof Error) {
+                if (error.message === 'A solicitação de atendimento tem uma data inválida.') {
+                    message = 'Tente informar uma data válida.'
+                    status = 400
+                } else if (error.message === 'A solicitação de atendimento precisa ser feita com ao menos 24 horas de antecedência.') {
+                    message = 'Só é possível agendar atendimentos com ao menos 24 horas de antecedência.'
+                } else if (error.message === 'A solicitação de atendimento não está na disponibilidade do profissional.') {
+                    message = 'Verifique em quais horários o profissional está disponível.'
+                    status = 400
+                } else if (error.message === 'O horário solicitado já está marcado para outro atendimento.') {
+                    message = 'O horário solicitado entra em conflito com outro atendimento.'
+                    status = 400
+                } else if (error.message === 'O profissional se encontra indisponível para este horário.') {
+                    message = 'O profissional se encontra indisponível no horário solicitado.'
+                    status = 400
+                } else if (error.message === 'O profissional escolhido para consulta não tem nenhum sala reservada.') {
+                    message = 'O profissional não tem uma sala para consulta, portanto não é possível realizar a consulta.'
+                    status = 400
+                }
+                return response.status(status).send({ message })
+            }
         }
     }
-    //A TESTAR (O MAIS BREVE POSSÍVEL)
     //Atualizar
-    public async update({ request, response, params }: HttpContext){
-        const horarioAtual = DateTime.now()
-
-        //O horário limite para atualizar é 24 horas antes do atendimento
-        const limiteAtualizacao = horarioAtual.plus({ hours: 24 })
-
-        //A grande diferença do update para o store é que a verificação de conflito tem que desconsiderar o 
-        //o próprio atendimento. Se não o fizer, a atualização sempre vai retornar erro
-        const primeiro_atendimento = '07:00:00'
-        const ultimo_atendimento = '20:30:00'
-        try{
-            const objAtendimento = await Atendimento.findOrFail(params.id)
-
+    public async update ({ request, response, params, auth }: HttpContext) {
+        try {
+            const atendimento = await Atendimento.findOrFail(params.id)
             const dados = await request.validateUsing(updateAtendimentoValidator)
+            const usuarioLogado = auth.user!;
+            
+            if (atendimento.status === 'CANCELADO' || atendimento.status === 'CONCLUIDO') {
+                throw new Error('Não é possível atualizar um atendimento que está cancelado ou concluido.')
+            }
 
-            const horarioAtendimento = objAtendimento.horarioComeco
+            const horarioAtendimento = atendimento.dataHoraInicio
+            const horarioExpirado = horarioAtendimento < DateTime.now()
+            if (horarioExpirado) {
+                throw new Error('A solicitação de atendimento tem uma data inválida.')
+            }
 
-            //Converte o horarioAtendimento, que é uma string, para DateTime
-            const horarioConvertido = DateTime.fromISO(horarioAtendimento, { zone: 'utc' })
-
-            //Se tiver menos de 24 horas para o atendimento, sobe a mensagem de erro,
-            //informando que não é possível realizar a atualização
-            if (horarioConvertido < limiteAtualizacao) {
-                throw new Error()
+            const limiteMinimo = DateTime.now().plus({ hours: 24 }) 
+            if (horarioAtendimento < limiteMinimo) { // Condição corrigida para clareza
+                throw new Error('A modificação do atendimento tem que ser feita com ao menos 24 horas de antecedência.')
             }
             
-            const disponibilidade = await this.atendimentoService.temDisponibilidade(dados.profissional_id, dados.dia)
+            // Obter os dados atuais do slot antigo para eventual liberação
+            const slotAntigo = await this.atendimentoService.temDisponibilidade(
+                atendimento.profissionalId, 
+                atendimento.dataHoraInicio
+            )
             
-            if (!disponibilidade) {
-                throw new Error()
+            let disponibilidadeSlotNovo = null
+            let dadosParaUpdate = { ...dados } as any; 
+
+            //Verifica se o profissional mudou
+            const profissionalMudou = dados.profissional_id && dados.profissional_id !== atendimento.profissionalId
+            //Verifica se o usuário informou uma nova data hora para começar o atendimento
+            const horarioMudou = dados.data_hora_inicio && 
+                                 DateTime.fromJSDate(dados.data_hora_inicio).toSeconds() !== atendimento.dataHoraInicio.toSeconds()
+
+            // Se o horário ou profissional mudou, precisamos validar o novo slot
+            if (horarioMudou || profissionalMudou) {
+                
+                const dataHoraInicioLuxon = DateTime.fromJSDate(dados.data_hora_inicio || atendimento.dataHoraInicio.toJSDate())
+                const profissionalIdNovo = dados.profissional_id || atendimento.profissionalId
+                
+                disponibilidadeSlotNovo = await this.atendimentoService.temDisponibilidade(
+                    profissionalIdNovo, 
+                    dataHoraInicioLuxon
+                )
+
+                if (!disponibilidadeSlotNovo) {
+                    throw new Error('O novo horário solicitado não está na disponibilidade do profissional.')
+                }
+
+                if (disponibilidadeSlotNovo.status === 'OCUPADO') {
+                    // O slot pode estar ocupado pelo PRÓPRIO atendimento que está sendo movido.
+                    // Isso requer uma verificação mais profunda, mas por simplicidade:
+                    throw new Error('O horário solicitado já está marcado para outro atendimento.')
+                }
+                if (disponibilidadeSlotNovo.status === 'BLOQUEADO') {
+                    throw new Error('O profissional se encontra indisponível para este horário.')
+                }
+
+                // Sala (Se o profissional mudar, busca-se a nova sala)
+                const salaReservada = await Sala.query().where('profissional_id', profissionalIdNovo).first()
+                if (!salaReservada) {
+                    throw new Error('Este profissional não tem nenhum sala reservada.')
+                }
+                
+                //Adiciona informações do novo slot ao update
+                dadosParaUpdate.salaId = salaReservada.id;
+                dadosParaUpdate.dataHoraInicio = dataHoraInicioLuxon;
+                dadosParaUpdate.dataHoraFim = disponibilidadeSlotNovo.dataHoraFim;
             }
 
-            const horarioComecoSolicitado = await this.atendimentoService.converteStringParaDate(dados.horario_comeco)
-
-            if (!horarioComecoSolicitado.isValid) {
-                throw new Error()
+            const usuarioValido = usuarioLogado.perfil_tipo === 'profissional' || usuarioLogado.perfil_tipo === 'admin'
+            
+            if (!usuarioValido) { //Se for cliente, remove campos restritos
+                const camposRestritos = ['valor', 'status_pagamento', 'status']; 
+                for (const campo of camposRestritos) {
+                    delete dadosParaUpdate[campo];
+                }
             }
 
-            const duracaoAtendimento = 30 //Minutos
+            const statusFinal = dadosParaUpdate.status ?? atendimento.status
+            const statusConcluido = statusFinal === 'CONCLUIDO'
+            dadosParaUpdate.status = statusFinal // <<-- GARANTE que o status correto será salvo no final
 
-            const horarioTerminoSolicitado = horarioComecoSolicitado.plus({ minutes: duracaoAtendimento })
+            const valorPagamento = dadosParaUpdate.valor ?? atendimento.valor 
+            dadosParaUpdate.valor = valorPagamento // <<-- GARANTE que o valor correto será salvo no final
 
-            const novoInicioSQL = horarioComecoSolicitado.toSQLTime()      
-            const novoTerminoSQL = horarioTerminoSolicitado.toSQLTime()
+            //Processa se estiver 'CONCLUIDO' E o valor for > 0.
+            const valorPositivo = typeof valorPagamento === 'number' && valorPagamento > 0
+            const deveProcessarPagamento = statusConcluido && valorPositivo
 
-            if (novoInicioSQL < primeiro_atendimento || novoInicioSQL > ultimo_atendimento) {
-                throw new Error()
-            }
+            if (deveProcessarPagamento) {
+                dadosParaUpdate.status_pagamento = 'PENDENTE'
+                //Status pagamento pendente indica que o processo de pagamento iniciou
+                //Lógica de pagamento aqui
+                //await this.pagamentoService.iniciarCobranca(/* ... argumentos ... */)
+                //Chama o gateway. Essa etapa que modificará o status_pagamento para outros status
+                try {
+                    //Após a etapa de gateway, acontece o registro da transação e o envio do recibo
 
-            if (novoInicioSQL < disponibilidade.horarioComeco || novoTerminoSQL > disponibilidade.horarioTermino) {
-                throw new Error()
+                    //Registro da transação
+                    //Busca o id do user
+                    const user = await Cliente.query().where('id', atendimento.clienteId).first()
+
+                    if (!user) {
+                        //Lança um erro se o cliente associado ao atendimento não for encontrado
+                        throw new Error('Não foi possível encontrar o cliente para registrar a transação.')
+                    }
+
+                    const clienteId = dadosParaUpdate.clienteId ?? atendimento.clienteId 
+                    const profissionalId = dadosParaUpdate.profissionalId ?? atendimento.profissionalId
+
+                    await this.transacaoService.criarTransacaoAtendimento(user.user_id, clienteId, profissionalId, valorPagamento)
+                    
+                    //Envio do recibo - Para a geração usei a biblioteca pupeeteer - Chama a função própria para isso
+
+                } catch (error) {
+                    console.error('Falha ao criar Transação ou Enviar Recibo:', error)
+                    
+                    dadosParaUpdate.status_pagamento = 'NEGADO' 
+                    
+                    // Isso forçará a interrupção da execução, impedindo o salvamento do atendimento como 'CONCLUIDO'
+                    throw new Error('A transação falhou. Tente novamente mais tarde.')
+                }
             }
             
-            //Verifica conflito com outros atendimentos, ignorando o próprio atendimento já criado (por meio do params.id)
-            const conflito = await this.atendimentoService.temConflito(dados.profissional_id, dados.dia, dados.data, novoInicioSQL, novoTerminoSQL, Number(params.id))
+            await db.transaction(async (trx: TransactionClientContract) => {
+                
+                //Libera o Slot Antigo (Se houve mudança de tempo ou profissional)
+                if (slotAntigo && horarioMudou || dados.profissional_id !== atendimento.profissionalId) {
+                    //Apenas liberamos se ele estava ocupado
+                    if (slotAntigo?.status === 'OCUPADO') {
+                         await Disponibilidade.query({ client: trx })
+                            .where('id', slotAntigo.id)
+                            .update({ status: 'LIVRE' })
+                    }
+                }
+                
+                //Ocupa o Slot Novo (Se houve mudança de tempo ou profissional)
+                if (disponibilidadeSlotNovo) {
+                     await Disponibilidade.query({ client: trx })
+                        .where('id', disponibilidadeSlotNovo.id)
+                        .update({ status: 'OCUPADO' })
+                }
 
-            if (conflito){
-                throw new Error()
+                //Salvando o atendimento
+                atendimento.merge(dadosParaUpdate) 
+                atendimento.useTransaction(trx) 
+                await atendimento.save()
+            })
+
+            return response.status(200).send('Agendamento atualizado com sucesso.')
+            
+        } catch (error) {
+            let message = 'Ocorreu um erro desconhecido.'
+            let status = 500
+
+            if (error.messages && error.messages.errors) {
+                message = error.messages.errors[0].message
+                status = 400
+            } 
+            else if (error instanceof Error) {
+                message = error.message
+                status = 400 // Erros de regra de negócio costumam ser 400 Bad Request
             }
-
-            objAtendimento.merge({...dados, horarioComeco: novoInicioSQL, horarioTermino: novoTerminoSQL}) 
-            //Retorna um status 201, representando que o agendamento foi atualizado com sucesso
-            return response.status(201).send('Agendamento realizado com sucesso.')
-
-        } catch (error){
-            return response.status(404).send('Não foi possível cadastrar o atendimento. Tente novamente.')
+            
+            return response.status(status).send({ message: message })
         }
     }
-    //A TESTAR (O MAIS BREVE POSSÍVEL)
-    //Deleta Atendimento / Cancela Atendimento
-    public async destroy({ params, response }: HttpContext){
-        const horarioAtual = DateTime.now()
 
-        //O horário limite para cancelamento é 24 horas antes do atendimento
-        const limiteCancelamento = horarioAtual.plus({ hours: 24 })
+    //Deleta Atendimento / Cancela Atendimento
+    public async destroy ({ params, response }: HttpContext){
         //Try catch para garantir que ao acontecer um erro, (ex: nao encontrar o objeto com o id), 
         //uma mensagem amigável seja levantada.
         try{
-            const objAtendimento = await Atendimento.findOrFail(params.id)
+            const atendimento = await Atendimento.findOrFail(params.id)
 
-            const horarioAtendimento = objAtendimento.horarioComeco
+            const horarioAtendimento = atendimento.dataHoraInicio
 
-            //Converte o horarioAtendimento, que é uma string, para DateTime
-            const horarioConvertido = DateTime.fromISO(horarioAtendimento, { zone: 'utc' })
+            if (atendimento.status !== 'CONFIRMADO') {
+                throw new Error('Não é possível cancelar um atendimento finalizado ou já cancelado.')
+            }
 
             //Se tiver menos de 24 horas para o atendimento, sobe a mensagem de erro,
             //informando que não é possível realizar o cancelamento
-            if (horarioConvertido < limiteCancelamento) {
-                throw new Error()
+            const cancelamentoProibido = horarioAtendimento <= DateTime.now().plus({ hours: 24 })
+            if (cancelamentoProibido) {
+                throw new Error('A solicitação de cancelamento precisa ser feito com pelo menos 24 horas de antecedência.')
             }
 
-            await objAtendimento.delete()
+            //Busca o slot da disponibilidade
+            const slotDisponibilidade = await Disponibilidade.query()
+                .where('profissional_id', atendimento.profissionalId)
+                .andWhere('data_hora_inicio', atendimento.dataHoraInicio.toJSDate())
+                .andWhere('data_hora_fim', atendimento.dataHoraFim.toJSDate())
+                .andWhere('status', 'OCUPADO')
+                .first()
+
+            if (!slotDisponibilidade) {
+                throw new Error('Slot de disponibilidade não encontrado')
+            }
+            
+            await db.transaction(async (trx: TransactionClientContract) => {
+                
+                //Atualiza o status da disponibilidade para 'LIVRE'
+                await Disponibilidade.query({ client: trx })
+                    .where('id', slotDisponibilidade.id)
+                    .update({ status: 'LIVRE' })
+
+                //Atualiza o status do atendimento para 'CANCELADO'
+                await Atendimento.query({ client: trx })
+                    .where('id', atendimento.id)
+                    .update({ status: 'CANCELADO' })
+            })
 
             return response.status(204).send('Cancelamento realizado com sucesso.')
-        } catch {
-            return response.status(404).send('Não foi possível apagar o atendimento. Tente novamente.')
+
+        } catch (error){
+            let message = 'Ocorreu um erro desconhecido.'
+            let status = 500
+            if (error instanceof Error) {
+                if (error.message === 'A solicitação de cancelamento precisa ser feito com pelo menos 24 horas de antecedência.') {
+                    message = 'Perdão, não é possível fazer o cancelamento desta consulta.'
+                    status = 400
+                } else if (error.message === 'Não é possível cancelar um atendimento finalizado ou já cancelado.') {
+                    message = 'O atendimento correspondente já foi finalizado ou cancelado. Tente novamente.'
+                    status = 400 
+                } 
+                return response.status(status).send({ message })        
+            }
         }
-}
+    }
 }

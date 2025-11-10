@@ -3,18 +3,36 @@ import Atendimento from '#models/atendimento'
 import Prontuario from '#models/prontuario'
 import Profissional from '#models/profissional'
 import ForceJsonResponseMiddleware from '#middleware/force_json_response_middleware'
+import Parceria from '#models/parceria'
 
 export default class ProntuariosController {
     public async store({ request, response, auth, params}: HttpContext) {
         const atendimentoId = params.id
 
-        const dadosProntuario = await request.only(['diagnostico', 'medicamentosPrescritos', 'recomendacoes', 'caminhoAnexo', 'descricao'])
+        const dadosProntuario = await request.only(['diagnostico', 'medicamentosPrescritos', 'recomendacoes', 'caminhoAnexo', 'descricao', 'parceriaId'])
 
         const profissionalLogadoId = await auth.user?.id
         if (!profissionalLogadoId) {
             return response.unauthorized({
                 message: "Acesso não autorizado. Faça login novamente"
             })
+        }
+
+        try{ 
+        //Se o profissional tiver informado uma parceria, verifica se a parceria informada é válida
+        if (dadosProntuario.parceriaId){
+            const parceria = await Parceria.query().where('id', dadosProntuario.parceriaId).first()
+
+            const statusParceriaInvalido = parceria?.statusParceria === 'INATIVO' || parceria?.statusParceria === 'EM NEGOCIACAO'
+            const relacionamentoParceriaInvalido = parceria?.tipoRelacionamento === 'SAIDA' || parceria?.tipoRelacionamento === 'ESTRATEGICO'
+            
+            const parceriaInvalida = statusParceriaInvalido || relacionamentoParceriaInvalido
+            if (parceriaInvalida) {
+                throw new Error()
+            }
+            }
+         } catch (error) {
+            return response.status(500).send('Por favor, informe uma parceria válida. Tente novamente.')
         }
 
         const perfilProfissional = await Profissional.findBy('userId', profissionalLogadoId)

@@ -12,7 +12,7 @@ export default class Disponibilidade extends BaseModel {
   declare profissionalId: number
 
   @column()
-  declare status: "livre" | "ocupado" | "bloqueado"
+  declare status: "LIVRE" | "OCUPADO" | "BLOQUEADO"
 
   @column.dateTime()
   declare dataHoraInicio: DateTime

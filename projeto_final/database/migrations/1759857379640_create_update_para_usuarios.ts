@@ -59,14 +59,14 @@ export default class extends BaseSchema {
       table.dropColumn('comprovante_credenciamento_url')
       table.dropColumn('observacoes_admin')
 
-      table.string('email').notNullable().unique()
-      table.string('senha').notNullable()
+      table.string('email').notNullable().defaultTo('temp@profissional.com')
+      table.string('senha').notNullable().defaultTo('temp_senha')
     })
 
     this.schema.alterTable('clientes', (table) => {
       table.dropColumn('user_id')
-      table.string('email').notNullable().unique()
-      table.string('senha').notNullable()
+      table.string('email').notNullable().defaultTo('temp@profissional.com')
+      table.string('senha').notNullable().defaultTo('temp_senha')
     })
 
     this.schema.alterTable('users', (table) => {

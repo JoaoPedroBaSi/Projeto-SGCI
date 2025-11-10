@@ -67,9 +67,6 @@ export default class extends BaseSchema {
 
     this.schema.createTable('disponibilidades', (table) => {
       table.increments('id')
-      //Define que a relação profissional_id com o dia são únicas.
-      //Portanto, profissional_id 2 e dia 2 só poderá existir uma vez ->
-      //O profissional 2 só pode ter um horário de disponibilidade na terça.
       table
         .integer('profissional_id')
         .unsigned()
@@ -79,7 +76,7 @@ export default class extends BaseSchema {
       //"Dia x, o profissional atende do horario_comeco ao horario_fim".
       table.timestamp('data_hora_inicio').notNullable()
       table.timestamp('data_hora_fim').notNullable()
-      table.enum('status', ['livre', 'ocupado', 'bloqueado']).notNullable().defaultTo('livre')
+      table.enum('status', ['LIVRE', 'OCUPADO', 'BLOQUEADO']).notNullable().defaultTo('LIVRE')
       table.timestamps(true, true)
     })
 
@@ -110,26 +107,66 @@ export default class extends BaseSchema {
         .references('clientes.id')
         .onDelete('CASCADE')
       table.integer('sala_id').unsigned().references('salas.id').onDelete('SET NULL')
-      table.integer('disponibilidade_id').unsigned().notNullable().references('disponibilidades.id')
 
+      //Horário/Data de começo e Horário/Data de fim para comparar com a disponibilidade
+      table.timestamp('data_hora_inicio').notNullable()
+      //'data_hora_fim' é nullable pois é a aplicação que o determina, não o usuário
+      table.timestamp('data_hora_fim').nullable()
 
       //Coluna observacoes para caso acha alguma coisa a ser dita sobre o atendimento
       table.text('observacoes').nullable()
 
-      table.decimal('valor', 10, 2).notNullable()
+      //Valor é nullable pois somente é determinado pelo próprio 
+      //profissional (com o update). Portanto, inicialmente pode ser null
+      table.decimal('valor', 10, 2).nullable()
+      //Obrigatoriamente o usuário terá que escolher uma forma de pagamento válido
       table
-        .enum('forma_pagamento', ['PENDENTE', 'DINHEIRO', 'PIX', 'CREDITO', 'DEBITO'])
+        .enum('forma_pagamento', ['DINHEIRO', 'PIX', 'CREDITO', 'DEBITO'])
         .notNullable()
-        .defaultTo('PENDENTE')
-      //Tirei o validado pois todas os atendimentos que forem criados,
-      //já passaram por etapas de validação
-      //table.boolean('validado').notNullable()
       //Add status para indentificarmos o ciclo de vida do atendimento
       table
-        .enum('status', ['AGENDADO', 'CONFIRMADO', 'CANCELADO', 'CONCLUIDO'])
+        .enum('status', ['CONFIRMADO', 'CANCELADO', 'CONCLUIDO'])
         .notNullable()
-        .defaultTo('AGENDADO')
+        .defaultTo('CONFIRMADO')
+      // Status para verificarmos o ciclo de vida do pagamento
+      // Status de pagamento só será modificado para 'PENDENTE' após o atendimento ser marcado como concluído
+      table.enum('status_pagamento', [
+        'PENDENTE',        // Boleto gerado, Pix aguardando pagamento
+        'EM_ANALISE',      // Transação em verificação anti-fraude
+        'PAGO',            // Pagamento confirmado e garantido
+        'NEGADO',          // Falha na transação (cartão recusado)
+        'CANCELADO',       // Cancelado pelo cliente ou sistema antes da aprovação
+        'ESTORNADO',       // Reembolsado ao cliente
+        'CONTESTADO'       // Chargeback (disputa)
+      ]).nullable()
       table.timestamps(true, true)
+    })
+
+    this.schema.createTable('parcerias' , (table) => {
+    table.increments('id'),
+
+    //Na prescrição o profissional terá a possibilidade de indicar uma parceria
+    table.string('nome', 40).notNullable()
+    //Informa qual ramo a empresa é
+    table.string('ramo', 40).notNullable()
+    //A partir do cep poderemos mostrar a localização precisa
+    table.integer('cep', 8).notNullable()
+    //site_url nullable pois uma empresa parceira pode não ter site
+    table.string('site_url').nullable()
+    table.float('porcentagem_desconto', 5, 2).notNullable()
+    table.string('tipo_convenio', 50).notNullable()
+    //'tipo_relacionamento' indica se a empresa parceira é
+    //Entrada -> A clínica vende o produto dela (Fornecedor)
+    //Saída -> A clínica compra dela (Comprador)
+    //Misto -> A clínica compra e venda dela
+    //Estrategico -> Não financeiro. Parceiro de marketing, desenvolvimento de produto, etc.
+    table.enum('tipo_relacionamento', ['ENTRADA', 'SAIDA', 'MISTO', 'ESTRATEGICO']).notNullable()
+    //Data de inicio da parceria. Pode ser null, tendo em vista que depende do 'status_parceria'
+    table.timestamp('data_inicio').nullable()
+    table.enum('status_parceria', ['ATIVO', 'INATIVO', 'EM NEGOCIACAO']).notNullable()
+
+    table.timestamp('created_at')
+    table.timestamp('updated_at')
     })
 
     this.schema.createTable('prontuarios', (table) => {
@@ -158,6 +195,16 @@ export default class extends BaseSchema {
       // Guarda o caminho para um arquivo de exame que foi salvo no servidor
       table.string('caminho_anexo').nullable()
       table.text('descricao').nullable()
+
+      // Recomendação de empresa parceira
+      // Como o profissional não é obrigado a recomendar uma parceira, é nullable
+      table
+        .integer('parceria_id')
+        .unsigned()
+        .nullable()
+        .references('parcerias.id')
+        .onDelete('SET NULL')
+
       table.timestamps(true, true)
     })
 
@@ -201,13 +248,63 @@ export default class extends BaseSchema {
       table.timestamp('created_at')
       table.timestamp('updated_at')
     })
+
+  this.schema.createTable('transacoes', (table) => {
+      table.increments('id')
+
+      //ID do usuário responsável pela transação
+    table
+        .integer('user_id')
+        .unsigned()
+        .notNullable()
+        //A coluna de referência
+        .references('id') 
+        //Nome da tabela de referência
+        .inTable('users') 
+        .onDelete('CASCADE')
+
+      //De qual tabela veio essa transação (ex: cliente).
+      //Essa parte identifica que usuário especificamente realizou a transação,
+      //se foi um cliente, um profissional, um admin, etc.
+      table.string('entidade_origem').notNullable()
+      //De qual registro da tabela veio essa transação (ex: cliente.id)
+      table.integer('entidade_id')
+        .unsigned() //Apenas se os IDs forem sempre positivos
+        .notNullable()
+
+      //Chave de índice para otimizar buscas pela origem
+      table.index(['entidade_origem', 'entidade_id'])
+
+      //Para onde essa transação foi (ex: destinatario_tipo = profissional, destinario_id = profissional.id)
+      table.string('destinatario_tipo', 50).nullable()
+      table.integer('destinatario_id').unsigned().nullable()
+
+      //Chave de índice para otimizar buscas pelo destino
+      table.index(['destinatario_tipo', 'destinatario_id'])
+
+      table.decimal('valor', 10, 2).notNullable()
+      //Indica se é entrada ou saída
+      table.enum('tipo', ['ENTRADA', 'SAIDA']).notNullable()
+      //A finalidade para que aquela transacao acontecer
+      table.string('finalidade').notNullable()
+      //Estado da transação (pode ser PENDENTE, CONCLUIDA, FALHOU)
+      //Obs: estornada é uma transação que tinha sido dita como concluída, mas por algum motivo houve uma falha
+      table.enum('status', ['PENDENTE', 'CONCLUIDA', 'FALHOU', 'ESTORNADA']).notNullable().defaultTo('PENDENTE') 
+      //Id da transação no gateway de pagamento (ex: ID do PIX, ID do Stripe)
+      table.string('referencia_externa').nullable()
+
+      //Horário da transação
+      table.timestamp('created_at')
+      table.timestamp('updated_at')
+  })
   }
 
   async down() {
-    //this.schema.dropTable(this.historico_atendimentos)
+    this.schema.dropTable('transacoes')
     this.schema.dropTable('movimentacao_inventario')
     this.schema.dropTable('inventario')
     this.schema.dropTable('prontuarios')
+    this.schema.dropTable('parcerias')
     this.schema.dropTable('atendimentos')
     this.schema.dropTable('salas')
     this.schema.dropTable('disponibilidades')
