@@ -106,6 +106,12 @@ export default class extends BaseSchema {
         .notNullable()
         .references('clientes.id')
         .onDelete('CASCADE')
+      table
+        .integer('disponibilidade_id')
+        .unsigned()
+        .notNullable()
+        .references('disponibilidades.id')
+        .onDelete('CASCADE')
       table.integer('sala_id').unsigned().references('salas.id').onDelete('SET NULL')
 
       //Horário/Data de começo e Horário/Data de fim para comparar com a disponibilidade

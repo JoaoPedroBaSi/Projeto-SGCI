@@ -9,9 +9,11 @@ export default class PedidoReposicaosController {
         try {
             const consulta = await PedidoReposicao.all()
             return response.status(200).send(consulta)
-        } catch {
+        } catch (error) {
+            console.error('Erro ao listar pedidos:', error)
             return response.status(500).send({
-                message: 'Erro ao listar os pedidos'
+                message: 'Erro ao listar os pedidos',
+                error: error instanceof Error ? error.message : 'Erro desconhecido'
             })
         }
     }

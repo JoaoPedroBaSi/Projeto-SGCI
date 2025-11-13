@@ -82,5 +82,5 @@ router.get('/redefinir-senha', '#controllers/auth_controller.showRedefinirSenha'
 
 router.post('/atendimentos/:id/prontuario', '#controllers/prontuarios_controller.store').middleware([middleware.auth()])
 
-router.post('pedidos-reposicao', '#controllers/pedido_reposicaos.store').middleware([middleware.auth(), middleware.auth()])
-router.get('pedidos-reposicao', '#controllers/pedido_reposicaos.index').middleware([middleware.auth(), middleware.adminOnly()])
+router.post('pedidos-reposicao', '#controllers/pedido_reposicaos_controller.store').middleware([middleware.auth(), middleware.auth()])
+router.get('pedidos-reposicao', '#controllers/pedido_reposicaos_controller.index').middleware([middleware.auth(), middleware.adminOnly()])

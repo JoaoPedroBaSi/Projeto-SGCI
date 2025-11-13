@@ -36,12 +36,6 @@ export default class Profissional extends BaseModel {
   declare cpf: string
 
   @column()
-  declare email: string
-
-  @column()
-  declare senha: string
-
-  @column()
   declare telefone: string
 
   @column()

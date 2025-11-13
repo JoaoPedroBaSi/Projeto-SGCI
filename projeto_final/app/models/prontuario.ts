@@ -4,7 +4,7 @@ import { BaseModel, column, belongsTo } from '@adonisjs/lucid/orm'
 import Atendimento from '#models/atendimento'
 import Cliente from '#models/cliente'
 import Profissional from '#models/profissional'
-import Parceria from './parceria.js'
+import Parceria from '#models/parceria'
 
 export default class Prontuario extends BaseModel {
   @column({ isPrimary: true })

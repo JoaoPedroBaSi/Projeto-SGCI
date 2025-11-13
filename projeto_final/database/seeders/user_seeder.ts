@@ -53,14 +53,17 @@ export default class extends BaseSeeder {
     const disponibilidade = await Disponibilidade.create({
       profissionalId: profissional.id, 
       dataHoraInicio: DateTime.now(), 
-      dataHoraFim: DateTime.now().plus({minutes: 30}) , // Não sei o tipo do horario pra colocar aqui
+      dataHoraFim: DateTime.now().plus({minutes: 30}),
     })
 
     const atendimento = await Atendimento.create({
       profissionalId: profissional.id,
       clienteId: cliente.id,
       disponibilidadeId: disponibilidade.id,
-      valor: 100
+      valor: 100,
+      dataHoraInicio: disponibilidade.dataHoraInicio,
+      dataHoraFim: disponibilidade.dataHoraFim,
+      formaPagamento: 'PIX'
     })
 
     // 3. Atualiza o user com o ID do perfil que acabou de ser criado

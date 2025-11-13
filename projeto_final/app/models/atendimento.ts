@@ -18,6 +18,9 @@ export default class Atendimento extends BaseModel {
   declare clienteId: number
 
   @column()
+  declare disponibilidadeId: number
+
+  @column()
   declare salaId: number
 
   @column.dateTime()

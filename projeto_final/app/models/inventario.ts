@@ -15,11 +15,11 @@ export default class Inventario extends BaseModel {
   @column()
   declare quantidade: number
 
-  @column()
+  @column({ columnName: 'unidade_medida' })
   declare unidadeMedida: string
 
   @column()
-  declare validade: Date
+  declare validade: DateTime
 
   @column()
   declare lote: string | null
@@ -27,7 +27,7 @@ export default class Inventario extends BaseModel {
   @column()
   declare fornecedor: string | null
 
-  @column()
+  @column({ columnName: 'ponto_reposicao' })
   declare pontoReposicao: number
 
   @column.dateTime({ autoCreate: true })
