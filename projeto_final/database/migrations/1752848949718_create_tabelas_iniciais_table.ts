@@ -302,7 +302,16 @@ export default class extends BaseSchema {
       //Horário da transação
       table.timestamp('created_at')
       table.timestamp('updated_at')
-  })
+
+    })
+    this.schema.createTable('pedidos_reposicao', (table) => {
+      table.increments('id')
+      table.integer('id_profissional').unsigned().notNullable().references('profissionais.id')
+      table.integer('id_inventario').unsigned().notNullable().references('inventario.id')
+      table.integer('quantidade').notNullable()
+      table.enum('status', ['pendente', 'aprovado', 'rejeitado']).notNullable().defaultTo('pendente')
+      table.timestamps(true, true)
+    })
   }
 
   async down() {
@@ -319,5 +328,6 @@ export default class extends BaseSchema {
     this.schema.dropTable('especializacoes')
     this.schema.dropTable('funcoes')
     this.schema.dropTable('clientes')
+    this.schema.dropTable('pedidos_reposicao')
   }
 }
