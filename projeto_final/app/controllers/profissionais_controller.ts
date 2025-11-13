@@ -11,7 +11,7 @@ export default class ProfissionaisController {
   // Lista todos os profissionais
   public async index({ response }: HttpContext) {
     try {
-      const profissionais = await Profissional.all()
+      const profissionais = await Profissional.query().preload('user').preload('especializacoes').preload('funcao')
       return response.status(200).send(profissionais)
     } catch {
       return response.status(500).send({ message: 'Erro ao listar profissionais' })
@@ -19,12 +19,13 @@ export default class ProfissionaisController {
   }
 
   // Cria profissionais e seus atributos
-  public async store({ request, response }: HttpContext) {
+  public async store({ request, response, auth }: HttpContext) {
     try {
       const payload = await request.validateUsing(storeProfissionalValidator)
       // Converte dataNascimento para DateTime antes de criar
       const profissional = await Profissional.create({
         ...payload,
+        userId: auth.user!.id,
         dataNascimento: DateTime.fromJSDate(payload.dataNascimento),
       })
 
@@ -40,6 +41,7 @@ export default class ProfissionaisController {
     try {
       const profissional = await Profissional.query()
         .where('id', params.id)
+        .preload('user')
         .preload('especializacoes')
         .preload('funcao')
         .firstOrFail()
@@ -58,10 +60,10 @@ export default class ProfissionaisController {
 
       // Converte dataNascimento se existir no payload
       profissional.merge({
-    ...payload,
-    dataNascimento: payload.dataNascimento
-        ? DateTime.fromJSDate(payload.dataNascimento)
-        : profissional.dataNascimento,
+      ...payload,
+      dataNascimento: payload.dataNascimento
+          ? DateTime.fromJSDate(payload.dataNascimento)
+          : profissional.dataNascimento,
     })
 
       await profissional.save()

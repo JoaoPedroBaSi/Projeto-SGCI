@@ -78,6 +78,7 @@ export default class AuthController {
       if (perfil_tipo === 'cliente') {
         await Cliente.create(
           {
+            id: user.id,
             user_id: user.id,
             nome: fullName,
             genero: payload.genero,
@@ -90,6 +91,7 @@ export default class AuthController {
       } else if (perfil_tipo === 'profissional') {
         await Profissional.create(
           {
+            id: user.id,
             userId: user.id,
             funcaoId: payload.funcao_id,
             nome: fullName,
@@ -115,7 +117,11 @@ export default class AuthController {
       }
 
       await trx.commit()
-      return response.created({ message: 'Usuário registrado com sucesso' })
+      return response.created({
+        message: 'Usuário registrado com sucesso',
+        user,
+        perfil: perfil_tipo === 'cliente' ? 'cliente' : 'profissional',
+      })
     } catch (error) {
       await trx.rollback()
       return response.status(500).json({ message: 'Erro ao registrar usuário', error })
@@ -146,26 +152,26 @@ export default class AuthController {
           .htmlView('emails/esqueci_senha', {
             // Enviando os dados para preencher o molde
             user: user.serialize(),
-            link: `http://localhost:3333/redefinir-senha?token=${token}` // Link para o seu Front-end
+            link: `http://localhost:3333/redefinir-senha?token=${token}`, // Link para o seu Front-end
           })
       })
 
-      return response.ok({ message: "Se o e-mail estiver correto, um link foi enviado." })
-
+      return response.ok({ message: 'Se o e-mail estiver correto, um link foi enviado.' })
     } catch (error) {
       // É uma boa prática dar a mesma resposta para não confirmar se um e-mail existe ou não
       console.error(error) // Para você ver o erro no terminal
-      return response.ok({ message: "Se o e-mail estiver correto, um link foi enviado." })
+      return response.ok({ message: 'Se o e-mail estiver correto, um link foi enviado.' })
     }
   }
 
-  public async redefinirSenha({request, response}: HttpContext) {
+  public async redefinirSenha({ request, response }: HttpContext) {
     // 1. Crie um Validator para isto para garantir que o token e a senha são enviados!
     try {
       const { token, password } = request.only(['token', 'password'])
       const user = await User.query()
-      .where('password_reset_token', token)
-      .where('password_reset_token_expires_at', '>', DateTime.now().toSQL()).firstOrFail()
+        .where('password_reset_token', token)
+        .where('password_reset_token_expires_at', '>', DateTime.now().toSQL())
+        .firstOrFail()
 
       user.password = password
 
@@ -174,22 +180,21 @@ export default class AuthController {
       await user.save()
 
       return response.ok({
-        message: 'Senha redefinida com sucesso'
+        message: 'Senha redefinida com sucesso',
       })
     } catch (error) {
       return response.badRequest({
-        message: 'Token inválido, expirado ou a senha não cumpre os requisitos.'
+        message: 'Token inválido, expirado ou a senha não cumpre os requisitos.',
       })
     }
   }
-    // NOVO MÉTODO PARA MOSTRAR A PÁGINA
+  // NOVO MÉTODO PARA MOSTRAR A PÁGINA
   public async showRedefinirSenha({ view, request }: HttpContext) {
     // Pega o token da URL (ex: ?token=abc)
     const { token } = request.only(['token'])
 
     // Renderiza a página HTML e passa o token para ela
     // O token será enviado de volta no formulário
-    return view.render('emails/redefinir_senha_form', { token }) 
+    return view.render('emails/redefinir_senha_form', { token })
   }
-  }
-
+}
