@@ -5,7 +5,10 @@ export default class extends BaseSchema {
 
   async up() {
     this.schema.createTable('clientes', (table) => {
-      table.increments('id')
+      // troquei o id para ser o mesmo na tabela users, ao invés de auto incrementar
+      // Assim, o id é o mesmo, evitando futuros erros de inconsistência por conta de
+      // um id diferente entre as tabelas
+      table.integer('id').unsigned().primary().references('id').inTable('users').onDelete('CASCADE')
       table.string('nome', 40).notNullable()
       table.enum('genero', ['MASCULINO', 'FEMININO']).notNullable()
       table.date('data_nascimento').notNullable()
@@ -33,7 +36,10 @@ export default class extends BaseSchema {
     })
 
     this.schema.createTable('profissionais', (table) => {
-      table.increments('id')
+      // troquei o id para ser o mesmo na tabela users, ao invés de auto incrementar
+      // Assim, o id é o mesmo, evitando futuros erros de inconsistência por conta de
+      // um id diferente entre as tabelas
+      table.integer('id').unsigned().primary().references('id').inTable('users').onDelete('CASCADE')
       //table.integer('especializacao_id').notNullable().references('especializacoes.id')
       table.integer('funcao_id').unsigned().notNullable().references('funcoes.id')
       table.string('nome', 40).notNullable()
@@ -122,7 +128,7 @@ export default class extends BaseSchema {
       //Coluna observacoes para caso acha alguma coisa a ser dita sobre o atendimento
       table.text('observacoes').nullable()
 
-      //Valor é nullable pois somente é determinado pelo próprio 
+      //Valor é nullable pois somente é determinado pelo próprio
       //profissional (com o update). Portanto, inicialmente pode ser null
       table.decimal('valor', 10, 2).nullable()
       //Obrigatoriamente o usuário terá que escolher uma forma de pagamento válido
@@ -264,9 +270,9 @@ export default class extends BaseSchema {
         .unsigned()
         .notNullable()
         //A coluna de referência
-        .references('id') 
+        .references('id')
         //Nome da tabela de referência
-        .inTable('users') 
+        .inTable('users')
         .onDelete('CASCADE')
 
       //De qual tabela veio essa transação (ex: cliente).
@@ -295,7 +301,7 @@ export default class extends BaseSchema {
       table.string('finalidade').notNullable()
       //Estado da transação (pode ser PENDENTE, CONCLUIDA, FALHOU)
       //Obs: estornada é uma transação que tinha sido dita como concluída, mas por algum motivo houve uma falha
-      table.enum('status', ['PENDENTE', 'CONCLUIDA', 'FALHOU', 'ESTORNADA']).notNullable().defaultTo('PENDENTE') 
+      table.enum('status', ['PENDENTE', 'CONCLUIDA', 'FALHOU', 'ESTORNADA']).notNullable().defaultTo('PENDENTE')
       //Id da transação no gateway de pagamento (ex: ID do PIX, ID do Stripe)
       table.string('referencia_externa').nullable()
 

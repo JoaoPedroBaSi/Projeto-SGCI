@@ -8,7 +8,8 @@ export const storeSalaValidator = vine.compile(
     profissionalId: vine.number().positive(),
     nome: vine.string().trim().minLength(3).maxLength(50).toUpperCase(),
     precoAluguel: vine.number().min(900),
-    dataDisponibilidade: vine.string().trim(),
+    dataDisponibilidade: vine.date(),
+    capacidadePacientes: vine.number(),
     ocupado: vine.boolean(),
   })
 )
@@ -21,7 +22,8 @@ export const updateSalaValidator = vine.compile(
     profissionalId: vine.number().positive().optional(),
     nome: vine.string().trim().minLength(3).maxLength(50).toUpperCase().optional(),
     precoAluguel: vine.number().min(900).optional(),
-    dataDisponibilidade: vine.string().trim().optional(),
+    dataDisponibilidade: vine.date().optional(),
+    capacidadePacientes: vine.number().min(1).optional(),
     ocupado: vine.boolean().optional(),
   })
 )

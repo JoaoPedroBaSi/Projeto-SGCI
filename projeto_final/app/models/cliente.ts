@@ -9,6 +9,9 @@ export default class Cliente extends BaseModel {
   @column({ isPrimary: true })
   declare id: number
 
+  @column({ columnName: 'user_id' })
+  declare userId: number
+
   @column()
   declare user_id: number
 

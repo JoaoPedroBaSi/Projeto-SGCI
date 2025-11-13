@@ -19,6 +19,7 @@ export default class ClientesController {
     try {
       const cliente = await Cliente.query()
         .where({ id: params.id })
+        .preload('user')
         .preload('atendimentos')
         .firstOrFail()
 
@@ -29,14 +30,15 @@ export default class ClientesController {
   }
 
   // Cria um novo cliente
-  public async store({ request, response }: HttpContext) {
+  public async store({ request, auth, response }: HttpContext) {
     try {
       const payload = await request.validateUsing(storeClienteValidator)
 
       // Converte o campo dataNascimento de Date para DateTime antes de criar
       const cliente = await Cliente.create({
         ...payload,
-        dataNascimento: DateTime.fromJSDate(payload.dataNascimento).toJSDate(),
+        user_id: auth.user!.id,
+        dataNascimento: DateTime.fromJSDate(payload.dataNascimento),
       })
 
       return response.status(201).send(cliente)
@@ -55,10 +57,9 @@ export default class ClientesController {
       // Converte a data se ela existir no payload
       cliente.merge({
         ...payload,
-        dataNascimento:
-          payload.dataNascimento instanceof DateTime
-            ? payload.dataNascimento.toJSDate()
-            : payload.dataNascimento,
+        dataNascimento: payload.dataNascimento
+          ? DateTime.fromJSDate(payload.dataNascimento)
+          : cliente.dataNascimento,
       })
 
       await cliente.save()
