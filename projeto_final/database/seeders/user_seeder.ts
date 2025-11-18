@@ -27,7 +27,8 @@ export default class extends BaseSeeder {
     
     // 2. Cria o perfil na tabela 'clientes' e associa-o ao user criado
     const cliente = await Cliente.create({
-      user_id: user.id, // A ligação entre as tabelas
+      id: user.id, // A ligação entre as tabelas
+      userId: user.id,
       nome: 'Utilizador de Teste',
       cpf: '12345678900',
       telefone: '999999999',
@@ -40,7 +41,8 @@ export default class extends BaseSeeder {
     })
 
     const profissional = await Profissional.create({
-      userId: usuario.id,
+      id: user.id,
+      userId: user.id,
       funcaoId: funcaoTeste.id,
       nome: 'joão',
       genero: 'MASCULINO',

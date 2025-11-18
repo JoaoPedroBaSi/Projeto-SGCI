@@ -41,6 +41,7 @@ test.group('Listagem de Pedidos de reposicao', (group) => {
     // Perfil profissional vinculado ao usuário
     const perfilProfissional = await ProfissionalFactory
       .merge({
+        id: usuarioProfissional.id,
         userId: usuarioProfissional.id,
         funcaoId: funcao.id
       })

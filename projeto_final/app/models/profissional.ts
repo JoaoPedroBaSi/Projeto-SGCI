@@ -60,24 +60,27 @@ export default class Profissional extends BaseModel {
   declare observacoes_admin: string | null
 
   //relacionamentos
-  @belongsTo(() => Funcao)
+// 2. RELACIONAMENTOS COM LAZY LOADING (O "Truque" do .then)
+
+  @belongsTo(() => import('#models/funcao').then((m) => m.default) as any)
   declare funcao: BelongsTo<typeof Funcao>
 
-  @belongsTo(() => User)
+  @belongsTo(() => import('#models/user').then((m) => m.default) as any)
   declare user: BelongsTo<typeof User>
 
-  @manyToMany(() => Especializacao, {
+  @manyToMany(() => import('#models/especializacao').then((m) => m.default) as any, {
     pivotTable: 'especializacoes_profissionais',
   })
   declare especializacoes: ManyToMany<typeof Especializacao>
 
-  @hasMany(() => Disponibilidade)
+  @hasMany(() => import('#models/disponibilidade').then((m) => m.default) as any)
   declare disponibilidades: HasMany<typeof Disponibilidade>
 
-  @hasOne(() => Sala)
+  // AQUI ESTAVA O PRINCIPAL CULPADO (O Ciclo com Sala):
+  @hasOne(() => import('#models/sala').then((m) => m.default) as any)
   declare sala: HasOne<typeof Sala>
 
-  @hasMany(() => Atendimento)
+  @hasMany(() => import('#models/atendimento').then((m) => m.default) as any)
   declare atendimentos: HasMany<typeof Atendimento>
 
   @column.dateTime({ autoCreate: true })

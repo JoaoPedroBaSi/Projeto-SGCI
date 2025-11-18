@@ -91,6 +91,7 @@ export default class extends BaseSchema {
       //Não tem o notnullable pois a sala pode ter nenhum profissional ligado a ela.
       table.integer('profissional_id').unsigned().references('profissionais.id')
       table.string('nome', 20).notNullable()
+      table.enum('status', ['DISPONIVEL', 'OCUPADO', 'MANUTENÇÃO'])
       table.integer('capacidade_pacientes').notNullable()
       table.decimal('preco_aluguel', 10, 2).notNullable()
       table.date('data_disponibilidade').notNullable()

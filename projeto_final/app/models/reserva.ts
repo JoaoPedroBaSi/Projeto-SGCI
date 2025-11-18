@@ -1,8 +1,8 @@
 import { DateTime } from 'luxon'
 import { BaseModel, column, belongsTo } from '@adonisjs/lucid/orm'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
-import Sala from '#models/sala'
-import Profissional from '#models/profissional'
+import type Sala from '#models/sala'
+import type Profissional from '#models/profissional'
 
 export default class Reserva extends BaseModel {
   @column({ isPrimary: true })
@@ -21,7 +21,7 @@ export default class Reserva extends BaseModel {
   declare dataHoraFim: DateTime
 
   @column()
-  declare status: 'PENDENTE' | 'APROVADA' | 'REJEITADA'
+  declare status: 'PENDENTE' | 'APROVADA' | 'REJEITADO'
 
   @column()
   declare pagamentoEfetuado: boolean
@@ -33,9 +33,10 @@ export default class Reserva extends BaseModel {
   declare updatedAt: DateTime
 
   // Relacionamentos
-  @belongsTo(() => Sala)
+// 2. MUDANÇA: Usar importação dinâmica com .then() e o truque do 'as any'
+  @belongsTo(() => import('#models/sala').then((module) => module.default) as any)
   declare sala: BelongsTo<typeof Sala>
 
-  @belongsTo(() => Profissional)
+  @belongsTo(() => import('#models/profissional').then((module) => module.default )as any)
   declare profissional: BelongsTo<typeof Profissional>
 }
