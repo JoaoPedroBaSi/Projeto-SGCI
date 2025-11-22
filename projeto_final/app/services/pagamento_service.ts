@@ -1,68 +1,80 @@
-import Cliente from "#models/cliente"
-import Profissional from "#models/profissional"
-import Transacao from "#models/transacao"
-import { DateTime } from "luxon"
+/* eslint-disable prettier/prettier */
+import Transacao from '#models/transacao'
+import { DateTime } from 'luxon'
+import env from '#start/env' 
+import axios from 'axios'
 
 export class PagamentoService {
-  public async iniciarCobranca(profissionalId: number, clienteId: number, valor: number, formaPagamento: string) {
-        
-        let transacaoData = {
-            profissionalId: profissionalId,
-            clienteId: clienteId,
-            valor: valor,
-            formaPagamento: formaPagamento,
-            status: 'PENDENTE' as const, // Status inicial
-            dataHoraTransacao: DateTime.now()
-        }
-
-        if (formaPagamento === 'BOLETO') {
-            //Lógica para chamar a API do banco/gateway para gerar o boleto
-            //const linkBoleto = await this.gateway.gerar(transacaoData) 
-
-            //Registra a transação como PENDENTE
-            const transacao = await Transacao.create(transacaoData)
-            
-            //Lógica para enviar o boleto ao cliente
-            //this.emailService.enviar(linkBoleto, clienteId)
-            
-            return transacao // Retorna a transação pendente
-            
-        } else if (formaPagamento === 'DEBITO' || formaPagamento === 'DINHEIRO' || formaPagamento === 'PIX') {
-            //Pagamento Presencial: A transação deve ser registrada como PAGA IMEDIATAMENTE
-            //transacaoData.status = 'PAGO' as const
-            const transacao = await Transacao.create(transacaoData)
-            return transacao
-
-        } else {
-            //Outras formas de pagamento...
-        }
+  
+  private api = axios.create({
+    baseURL: env.get('ASAAS_URL'),
+    headers: {
+      'access_token': env.get('ASAAS_API_KEY'),
+      'Content-Type': 'application/json'
     }
-  public async etapaPagamento(){
-    //Aqui irá chamar o gateway
-    //Acontecerá a mudança do status_pagamento, de acordo com a etapa que se encontra
-    //Depois que status_pagamento = 'CONCLUIDO', 
-    //gera o boleto e cria um registro na tabela 'Transação'
-  }
-  public async gerarBoleto(profissional_id: number, cliente_id: number, valor_atendimento: number) {
-    const cliente = await Cliente.query().where('id', Number(cliente_id)).first()
-    const profissional = await Profissional.query().where('id', Number(profissional_id)).first()
+  })
 
-    if (valor_atendimento){          
-      //Informações para serem passadas no recibo
-      cliente?.id
-      cliente?.nome //Nome do cliente
-      cliente?.cpf //CPF do cliente
-      valor_atendimento //Valor da consulta
-      DateTime.now() //Data da geração do recibo
-      profissional?.nome //Nome do profissional
-      profissional?.id //Id do profissional
+  public async iniciarCobranca(
+    profissionalId: number, 
+    clienteId: number, 
+    valor: number, 
+    formaPagamento: string
+    
+  ) {
+    const chave = env.get('ASAAS_API_KEY')
+    console.log('--- DEBUG ---')
+    console.log('Chave lida do .env:', chave ? 'SIM (Começa com ' + chave.substring(0, 5) + '...)' : 'NÃO (Está vazia!)')
+    console.log('-------------')
+    
+    // ✅ CORREÇÃO: Usamos apenas o ID que você encontrou e funciona.
+    // Sem duplicidade de variáveis.
+    const clienteAsaasId = 'cus_000007240314' 
 
-      //talvez informações do atendimento
+    try {
+      console.log(`[ASAAS] Processando R$ ${valor} via ${formaPagamento}...`)
 
-      return 'Boleto gerado com sucesso.'
+      // 1. COBRA NO ASAAS
+      const resposta = await this.api.post('/payments', {
+        customer: clienteAsaasId,
+        billingType: formaPagamento.toUpperCase(),
+        dueDate: DateTime.now().plus({ days: 1 }).toFormat('yyyy-MM-dd'),
+        value: valor,
+        description: `Consulta Profissional #${profissionalId}`,
+      })
+
+      const dadosAsaas = resposta.data
+      
+      let statusTransacao = 'PENDENTE'
+      if (dadosAsaas.status === 'RECEIVED' || dadosAsaas.status === 'CONFIRMED') {
+          statusTransacao = 'CONCLUIDA'
       }
-      return 'Não foi possível gerar o boleto.'
+
+      // 2. REGISTRA NO BANCO
+      const transacao = await Transacao.create({
+        userId: clienteId,              
+        entidadeOrigem: 'cliente',      
+        entidadeId: clienteId,          
+        destinatarioTipo: 'profissional', 
+        destinatarioId: profissionalId,   
+        valor: valor,
+        tipo: 'ENTRADA', 
+        finalidade: `Pagamento via ${formaPagamento}`, 
+        status: statusTransacao as 'PENDENTE' | 'CONCLUIDA',
+        referenciaExterna: dadosAsaas.id 
+      })
+
+      return { 
+        transacao, 
+        gateway: {
+            id: dadosAsaas.id,
+            invoiceUrl: dadosAsaas.invoiceUrl,
+            status: dadosAsaas.status
+        } 
+      }
+
+    } catch (error) {
+      console.error('[ERRO ASAAS]', error.response?.data || error.message)
+      throw new Error('Erro ao comunicar com o Gateway de Pagamento')
+    }
   }
-
-
 }

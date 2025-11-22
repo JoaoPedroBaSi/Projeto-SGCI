@@ -48,6 +48,8 @@ router.get('/user', '#controllers/users_controller.index').middleware([middlewar
 //somente usuários autenticados, com seu devido token podem visualizar seus dados
 router.get('/user/:id', '#controllers/users_controller.show').middleware([middleware.auth()])
 router.post('/login', '#controllers/users_controller.login')
+// Rota para processar pagamento (Exige login)
+router.post('/pagamento/processar', '#controllers/transacoes_controller.realizarPagamento').middleware([middleware.auth()])
 
 //AUTH
 router.post('/register', '#controllers/auth_controller.register')

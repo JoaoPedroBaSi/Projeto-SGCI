@@ -59,6 +59,7 @@
     "@types/pdfmake": "^0.2.12",
     "@vinejs/vine": "^3.0.1",
     "adonisjs-scheduler": "^2.6.4",
+    "axios": "^1.13.2",
     "edge.js": "^6.3.0",
     "luxon": "^3.7.2",
     "pdfmake": "^0.2.20",

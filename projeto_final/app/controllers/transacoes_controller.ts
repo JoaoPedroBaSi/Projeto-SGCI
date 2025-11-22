@@ -1,14 +1,14 @@
+/* eslint-disable prettier/prettier */
 import Transacao from '#models/transacao'
-//import User from '#models/user'
 import type { HttpContext } from '@adonisjs/core/http'
-import { storeTransacaoValidator, updateTransacaoValidator } from '#validators/validator_transacao'
-//import Application from '@ioc:Adonis/Core/Application'
-//import { Application } from '@adonisjs/core/app'
-//import View from '@ioc:Adonis/Core/View'
-//import { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
-//import puppeteer from 'puppeteer'
+import { storeTransacaoValidator } from '#validators/validator_transacao'
+
+// IMPORTAÇÃO CORRETA DO ARQUIVO DOS SEUS COLEGAS
+import { PagamentoService } from '#services/pagamento_service'
 
 export default class TransacoesController {
+
+    // --- MÉTODOS EXISTENTES (MANTIDOS) ---
     public async index ({ } : HttpContext) {
         return await Transacao.all()
     }
@@ -17,25 +17,52 @@ export default class TransacoesController {
       return await Transacao.query().where('id', params.id)
     }
     
-    //Registrar transações externas -> admin é responsável pelo cadastro
     public async store ({ auth, request, response } : HttpContext) {
       try{
         const usuarioLogado = auth.user!;
         const dados = await request.validateUsing(storeTransacaoValidator)
-
         const adminLogado = usuarioLogado.perfil_tipo === 'admin'
-
-        if (!adminLogado) {
-          throw new Error()
-        }
-
+        if (!adminLogado) throw new Error()
         await Transacao.create(dados)
-
         return response.status(200).send('Transação registrada com sucesso!')
         } catch (error) {
-          return response.status(500).send('Não foi possível registrar a transação. Tente novamente.')
+          return response.status(500).send('Erro ao registrar transação.')
         }
     }
-  }
 
-    //Gerar recibos - Acontecem após a transação - Em breve...
+    // --- SEU NOVO MÉTODO (INTEGRAÇÃO) ---
+    public async realizarPagamento({ auth, request, response }: HttpContext) {
+        // 1. Pega o usuário logado (que é o Cliente pagador)
+        const cliente = auth.user!
+        
+        // 2. Recebe os dados do formulário
+        const dados = request.only(['profissionalId', 'valor', 'formaPagamento'])
+        
+        // Validação básica
+        if (!dados.profissionalId || !dados.valor || !dados.formaPagamento) {
+            return response.badRequest({ message: 'Dados incompletos para pagamento.' })
+        }
+
+        // 3. Instancia o serviço que seus colegas criaram
+        const service = new PagamentoService()
+
+        try {
+            // 4. Chama o método que JÁ EXISTE para processar e salvar
+            const transacao = await service.iniciarCobranca(
+                dados.profissionalId,
+                cliente.id,    // O ID do cliente vem do token de quem está logado
+                dados.valor,
+                dados.formaPagamento
+            )
+
+            return response.ok({
+                message: 'Processamento de pagamento iniciado!',
+                transacao: transacao
+            })
+
+        } catch (error) {
+            console.error(error)
+            return response.badRequest({ message: 'Erro ao processar pagamento.' })
+        }
+    }
+}

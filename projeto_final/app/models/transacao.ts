@@ -34,7 +34,7 @@ export default class Transacao extends BaseModel {
   declare status: 'PENDENTE' | 'CONCLUIDA' | 'FALHOU' | 'ESTORNADA'
 
   @column()
-  declare referenciaExterna: string
+  declare referenciaExterna: string | null
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
