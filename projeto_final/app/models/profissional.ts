@@ -1,14 +1,12 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column, belongsTo, manyToMany, hasMany, hasOne } from '@adonisjs/lucid/orm'
-import type { BelongsTo, ManyToMany, HasMany, HasOne } from '@adonisjs/lucid/types/relations'
+import { BaseModel, column, belongsTo, manyToMany, hasMany } from '@adonisjs/lucid/orm'
+import type { BelongsTo, ManyToMany, HasMany } from '@adonisjs/lucid/types/relations'
 import Funcao from '#models/funcao'
 import Especializacao from '#models/especializacao'
 import Disponibilidade from '#models/disponibilidade'
 import Sala from '#models/sala'
 import Atendimento from '#models/atendimento'
 import User from '#models/user'
-//import { Genero } from '#models/cliente'
-//Retiramos { Genero } pois entrou em conflito com o validator.
 
 export default class Profissional extends BaseModel {
   public static table = 'profissionais'
@@ -76,9 +74,11 @@ export default class Profissional extends BaseModel {
   @hasMany(() => import('#models/disponibilidade').then((m) => m.default) as any)
   declare disponibilidades: HasMany<typeof Disponibilidade>
 
-  // AQUI ESTAVA O PRINCIPAL CULPADO (O Ciclo com Sala):
-  @hasOne(() => import('#models/sala').then((m) => m.default) as any)
-  declare sala: HasOne<typeof Sala>
+  @manyToMany(() => import('#models/sala').then((m) => m.default) as any, {
+  pivotTable: 'reservas',
+  pivotColumns: ['data_hora_inicio', 'data_hora_fim', 'status', 'pagamento_efetuado'],
+  })
+  declare salas: ManyToMany<typeof Sala>
 
   @hasMany(() => import('#models/atendimento').then((m) => m.default) as any)
   declare atendimentos: HasMany<typeof Atendimento>

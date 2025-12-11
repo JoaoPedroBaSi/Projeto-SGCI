@@ -13,7 +13,7 @@ export default class SalasController {
   // Retorna uma sala específica com o profissional associado
   // Se não encontrar, retorna 404
   public async show({ params, response }: HttpContext) {
-    const sala = await Sala.query().where({ id: params.id }).preload('profissional').first()
+    const sala = await Sala.query().where({ id: params.id })
     if (sala) return sala
     else return response.status(404).send({ message: 'Sala não encontrada' })
   }
