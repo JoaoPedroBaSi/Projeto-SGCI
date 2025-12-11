@@ -23,7 +23,7 @@ export default class extends BaseSchema {
 
     this.schema.createTable('funcoes', (table) => {
       table.increments('id')
-      table.string('nome', 40).notNullable()
+      table.enum('nome', ['MEDICO', 'DENTISTA', 'TERAPEUTA', 'PSICOLOGO', 'UROLOGISTA', 'GINECOLOGISTA', 'NUTRICIONISTA'])
       table.timestamp('created_at')
       table.timestamp('updated_at')
     })
@@ -322,6 +322,7 @@ export default class extends BaseSchema {
   }
 
   async down() {
+    this.schema.dropTableIfExists('pedidos_reposicao')
     this.schema.dropTable('transacoes')
     this.schema.dropTable('movimentacao_inventario')
     this.schema.dropTable('inventario')
@@ -335,6 +336,5 @@ export default class extends BaseSchema {
     this.schema.dropTable('especializacoes')
     this.schema.dropTable('funcoes')
     this.schema.dropTable('clientes')
-    this.schema.dropTable('pedidos_reposicao')
   }
 }

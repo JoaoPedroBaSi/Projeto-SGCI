@@ -12,7 +12,7 @@ export default class Funcao extends BaseModel {
   declare id: number
 
   @column()
-  declare nome: string
+  declare nome: 'MEDICO' | 'DENTISTA' | 'TERAPEUTA' | 'PSICOLOGO' | 'UROLOGISTA' | 'GINECOLOGISTA' | 'NUTRICIONISTA'
 
   //relacionamentos
   @hasMany(() => Profissional)

@@ -4,7 +4,7 @@ export const storeFuncaoValidator = vine.compile(
   // Valida o nome da função durante sua criação, garantindo que seja uma string,
   // que não esteja vazia, e que tenha no mínimo 3 caracteres e no máximo 40 caracteres.
   vine.object({
-    nome: vine.string().trim().minLength(3).maxLength(40).toUpperCase(),
+    nome: vine.enum(['MEDICO', 'DENTISTA', 'TERAPEUTA', 'PSICOLOGO', 'UROLOGISTA', 'GINECOLOGISTA', 'NUTRICIONISTA']),
   })
 )
 
@@ -13,6 +13,6 @@ export const updateFuncaoValidator = vine.compile(
   // que não esteja vazia, e que tenha no mínimo 3 caracteres máximo 40 caracteres.
   // O campo é opcional, pois a função pode ser atualizada sem alterar o nome.
   vine.object({
-    nome: vine.string().trim().minLength(3).maxLength(40).toUpperCase(),
+    nome: vine.enum(['MEDICO', 'DENTISTA', 'TERAPEUTA', 'PSICOLOGO', 'UROLOGISTA', 'GINECOLOGISTA', 'NUTRICIONISTA'])
   })
 )
