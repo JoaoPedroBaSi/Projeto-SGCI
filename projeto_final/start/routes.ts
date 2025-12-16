@@ -30,20 +30,14 @@ router.resource('/inventario', '#controllers/inventarios_controller').except(['c
 router.resource('/mov_inventario', '#controllers/mov_inventarios_controller').except(['create', 'edit'])
 
 //ATENDIMENTO
-//Somente o adm pode visualizar, considerando que são todos os atendimentos da clínica
-//(no futuro teremos que dar permissão aos atendentes)
-router.get('/atendimento', '#controllers/atendimentos_controller.index').middleware([middleware.auth(), middleware.adminOnly()])
-//Somente o cliente e o profissional autenticado pode visualizar seu próprio atendimento
-router.get('/atendimento/:id', '#controllers/atendimentos_controller.show').middleware([middleware.auth(), middleware.clienteOrProfissionalOnly()])
-//Somente o cliente (e futuramente o atendente) podem agendar um atendimento
-router.post('/atendimento', '#controllers/atendimentos_controller.store').middleware([middleware.auth(), middleware.clienteOnly()])
-//Somente o cliente (e futuramente o atendente) podem atualizar um atendimento
-router.put('/atendimento/:id', '#controllers/atendimentos_controller.update').middleware([middleware.auth(), middleware.clienteOnly()])
-//O cliente, o profissional (profissionais como um todo, e atendentes também)
-router.delete('/atendimento/:id', '#controllers/atendimentos_controller.destroy').middleware([middleware.auth(), middleware.clienteOrProfissionalOnly()])
+router.get('/atendimento', '#controllers/atendimentos_controller.index')//.middleware([middleware.auth(), middleware.adminOnly()])
+router.get('/atendimento/:id', '#controllers/atendimentos_controller.show')//.middleware([middleware.auth(), middleware.clienteOrProfissionalOnly()])
+router.post('/atendimento', '#controllers/atendimentos_controller.store')//.middleware([middleware.auth(), middleware.clienteOnly()])
+router.put('/atendimento/:id', '#controllers/atendimentos_controller.update')//.middleware([middleware.auth(), middleware.clienteOnly()])
+//Patch -> cancelar atendimento
+router.patch('/atendimento/:id', '#controllers/atendimentos_controller.patch')//.middleware([middleware.auth(), middleware.clienteOrProfissionalOnly()])
 
 //USER
-//Somente o adm pode visualizar todos os usuários
 router.get('/user', '#controllers/users_controller.index').middleware([middleware.auth(), middleware.adminOnly()])
 //somente usuários autenticados, com seu devido token podem visualizar seus dados
 router.get('/user/:id', '#controllers/users_controller.show').middleware([middleware.auth()])
