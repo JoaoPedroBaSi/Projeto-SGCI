@@ -2,6 +2,8 @@ import vine from '@vinejs/vine'
 
 export const storeTransacaoValidator = vine.compile(
     vine.object({
+        atendimento_id: vine.number().positive(),
+        reserva_id: vine.number().positive(),
         user_id: vine.number().positive(),
         entidade_origem: vine.string().trim(),
         entidade_id: vine.number().positive(),

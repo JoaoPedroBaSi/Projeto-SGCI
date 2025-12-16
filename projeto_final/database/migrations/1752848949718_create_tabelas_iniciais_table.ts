@@ -82,14 +82,14 @@ export default class extends BaseSchema {
       //"Dia x, o profissional atende do horario_comeco ao horario_fim".
       table.timestamp('data_hora_inicio').notNullable()
       table.timestamp('data_hora_fim').notNullable()
-      table.enum('status', ['LIVRE', 'OCUPADO', 'BLOQUEADO']).notNullable().defaultTo('LIVRE')
+      table.enum('status', ['LIVRE', 'OCUPADO', 'BLOQUEADO', 'FINALIZADO']).notNullable().defaultTo('LIVRE')
       table.timestamps(true, true)
     })
 
     this.schema.createTable('salas', (table) => {
       table.increments('id')
       table.string('nome', 20).notNullable()
-      table.enum('status', ['DISPONIVEL', 'OCUPADO', 'MANUTENÇÃO'])
+      table.enum('status', ['DISPONIVEL', 'OCUPADO', 'MANUTENÇÃO']).defaultTo('DISPONIVEL')
       table.integer('capacidade_pacientes').notNullable()
       table.decimal('preco_aluguel', 10, 2).notNullable()
       table.timestamp('created_at')
@@ -117,15 +117,12 @@ export default class extends BaseSchema {
         .references('disponibilidades.id')
         .onDelete('CASCADE')
       table.integer('sala_id').unsigned().references('salas.id').onDelete('SET NULL')
-
       //Horário/Data de começo e Horário/Data de fim para comparar com a disponibilidade
       table.timestamp('data_hora_inicio').notNullable()
       //'data_hora_fim' é nullable pois é a aplicação que o determina, não o usuário
       table.timestamp('data_hora_fim').nullable()
-
       //Coluna observacoes para caso acha alguma coisa a ser dita sobre o atendimento
       table.text('observacoes').nullable()
-
       //Valor é nullable pois somente é determinado pelo próprio
       //profissional (com o update). Portanto, inicialmente pode ser null
       table.decimal('valor', 10, 2).nullable()
@@ -262,45 +259,46 @@ export default class extends BaseSchema {
   this.schema.createTable('transacoes', (table) => {
       table.increments('id')
 
-      //ID do usuário responsável pela transação
-    table
+     // Transação ligada a um Atendimento/Consulta (Ex: Pagamento da consulta)
+      table
+        .integer('atendimento_id')
+        .unsigned()
+        .nullable()
+        .references('id')
+        .inTable('atendimentos')
+        .onDelete('SET NULL') // Se o atendimento for excluído, a transação perde o link, mas permanece.
+
+      table
         .integer('user_id')
         .unsigned()
         .notNullable()
-        //A coluna de referência
         .references('id')
-        //Nome da tabela de referência
         .inTable('users')
-        .onDelete('CASCADE')
+        .onDelete('CASCADE') // Se o usuário admin for excluído, as transações registradas por ele também.
 
-      //De qual tabela veio essa transação (ex: cliente).
-      //Essa parte identifica que usuário especificamente realizou a transação,
-      //se foi um cliente, um profissional, um admin, etc.
-      table.string('entidade_origem').notNullable()
-      //De qual registro da tabela veio essa transação (ex: cliente.id)
-      table.integer('entidade_id')
-        .unsigned() //Apenas se os IDs forem sempre positivos
-        .notNullable()
-
-      //Chave de índice para otimizar buscas pela origem
+      // Quem pagou/de onde o dinheiro saiu (Ex: 'cliente', 'profissional')
+      table.string('entidade_origem', 50).nullable()
+      table.integer('entidade_id').unsigned().nullable()
+      // Chave de índice para otimizar buscas pela origem
       table.index(['entidade_origem', 'entidade_id'])
 
-      //Para onde essa transação foi (ex: destinatario_tipo = profissional, destinario_id = profissional.id)
+      // Para onde essa transação foi (Ex: 'profissional', 'clinica')
       table.string('destinatario_tipo', 50).nullable()
       table.integer('destinatario_id').unsigned().nullable()
-
-      //Chave de índice para otimizar buscas pelo destino
+      // Chave de índice para otimizar buscas pelo destino
       table.index(['destinatario_tipo', 'destinatario_id'])
 
-      table.decimal('valor', 10, 2).notNullable()
-      //Indica se é entrada ou saída
-      table.enum('tipo', ['ENTRADA', 'SAIDA']).notNullable()
-      //A finalidade para que aquela transacao acontecer
-      table.string('finalidade').notNullable()
-      //Estado da transação (pode ser PENDENTE, CONCLUIDA, FALHOU)
-      //Obs: estornada é uma transação que tinha sido dita como concluída, mas por algum motivo houve uma falha
-      table.enum('status', ['PENDENTE', 'CONCLUIDA', 'FALHOU', 'ESTORNADA']).notNullable().defaultTo('PENDENTE')
-      //Id da transação no gateway de pagamento (ex: ID do PIX, ID do Stripe)
+      table.decimal('valor', 10, 2).notNullable() // Valor da transação
+      table.enum('tipo', ['ENTRADA', 'SAIDA']).notNullable() // Indica se é entrada ou saída
+      table.string('finalidade').notNullable() // A razão da transação (Ex: 'Pagamento Consulta X', 'Aluguel Sala Y')
+
+      // Estado da transação
+      table
+        .enum('status', ['PENDENTE', 'CONCLUIDA', 'FALHOU', 'ESTORNADA'])
+        .notNullable()
+        .defaultTo('PENDENTE')
+
+      // ID da transação no gateway (PIX, Stripe, etc.)
       table.string('referencia_externa').nullable()
 
       //Horário da transação
