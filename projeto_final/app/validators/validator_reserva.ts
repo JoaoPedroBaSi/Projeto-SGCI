@@ -10,6 +10,7 @@ export const storeReservaValidator = vine.compile(
       const sala = await db.from('salas').where('id', value).first()
       return !!sala
     }),
+    profissionalId: vine.number().positive(),
     dataHoraInicio: vine.string().regex(htmlDateTimeLocalRegex),
     dataHoraFim: vine.string().regex(htmlDateTimeLocalRegex),
   })
@@ -18,6 +19,12 @@ export const storeReservaValidator = vine.compile(
 // Validator para o admin aprovar ou rejeitar uma sala
 export const updateReservaStatusValidator = vine.compile(
   vine.object({
-    status: vine.enum(['APROVADA', 'REJEITADA']),
+    status: vine.enum(['APROVADA', 'REJEITADO']),
+  })
+)
+
+export const updateReservaFormaPagamento = vine.compile(
+  vine.object({
+    formaPagamento: vine.enum(['PIX', 'DEBITO', 'CREDITO', 'PENDENTE'])
   })
 )

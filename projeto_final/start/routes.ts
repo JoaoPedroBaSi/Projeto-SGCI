@@ -30,12 +30,12 @@ router.resource('/inventario', '#controllers/inventarios_controller').except(['c
 router.resource('/mov_inventario', '#controllers/mov_inventarios_controller').except(['create', 'edit'])
 
 //ATENDIMENTO
-router.get('/atendimento', '#controllers/atendimentos_controller.index')//.middleware([middleware.auth(), middleware.adminOnly()])
-router.get('/atendimento/:id', '#controllers/atendimentos_controller.show')//.middleware([middleware.auth(), middleware.clienteOrProfissionalOnly()])
-router.post('/atendimento', '#controllers/atendimentos_controller.store')//.middleware([middleware.auth(), middleware.clienteOnly()])
-router.put('/atendimento/:id', '#controllers/atendimentos_controller.update')//.middleware([middleware.auth(), middleware.clienteOnly()])
-//Patch -> cancelar atendimento
-router.patch('/atendimento/:id', '#controllers/atendimentos_controller.patch')//.middleware([middleware.auth(), middleware.clienteOrProfissionalOnly()])
+router.get('/atendimento', '#controllers/atendimentos_controller.index').middleware([middleware.auth(), middleware.adminOnly()])
+router.get('/atendimento/:id', '#controllers/atendimentos_controller.show').middleware([middleware.auth(), middleware.clienteOrProfissionalOnly()])
+router.post('/atendimento', '#controllers/atendimentos_controller.store').middleware([middleware.auth(), middleware.clienteOnly()])
+router.put('/atendimento/:id', '#controllers/atendimentos_controller.update').middleware([middleware.auth(), middleware.clienteOnly()])
+router.patch('/atendimento/cancelar/:id', '#controllers/atendimentos_controller.cancelar').middleware([middleware.auth(), middleware.clienteOrProfissionalOnly()])
+router.patch('/atendimento/concluir/:id', '#controllers/atendimentos_controller.concluir').middleware([middleware.auth()])
 
 //USER
 router.get('/user', '#controllers/users_controller.index').middleware([middleware.auth(), middleware.adminOnly()])
@@ -63,6 +63,8 @@ router.get('/parceria', '#controllers/parcerias_controller.index').middleware([m
 router.get('/parceria/:id', '#controllers/parcerias_controller.show').middleware([middleware.auth(), middleware.adminOnly()])
 router.post('/parceria', '#controllers/parcerias_controller.store').middleware([middleware.auth(), middleware.adminOnly()])
 
+//RESERVA
+router.patch('/reserva', '#controllers/reservas_controller.pagar')
 
 // teste
 

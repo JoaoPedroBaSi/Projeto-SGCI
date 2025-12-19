@@ -24,6 +24,8 @@ export default class extends BaseSchema {
         .defaultTo('PENDENTE') // (pendente, aprovada, rejeitada)
       table.boolean('pagamento_efetuado').defaultTo(false)
 
+      table.enum('forma_pagamento', ['PIX', 'CREDITO', 'DEBITO', 'PENDENTE']).defaultTo('PENDENTE').notNullable()
+
       table.timestamp('created_at')
       table.timestamp('updated_at')
     })
