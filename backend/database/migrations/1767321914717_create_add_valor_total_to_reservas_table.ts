@@ -1,5 +1,6 @@
 import { BaseSchema } from '@adonisjs/lucid/schema'
 
+// Adiciona a coluna valor_total para a tabela reservas
 export default class extends BaseSchema {
   protected tableName = 'reservas'
 

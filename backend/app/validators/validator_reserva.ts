@@ -16,6 +16,25 @@ export const storeReservaValidator = vine.compile(
   })
 )
 
+// Validator para o profissional solicitar várias reservas de horário de uma sala em lote
+export const storeReservaLoteValidator = vine.compile(
+  vine.object({
+    salaId: vine.number().exists(async (db, value) => {
+      const sala = await db.from('salas').where('id', value).first()
+      return !!sala
+    }),
+    profissionalId: vine.number().positive(),
+    horarios: vine
+      .array(
+        vine.object({
+          inicio: vine.string().regex(htmlDateTimeLocalRegex),
+          fim: vine.string().regex(htmlDateTimeLocalRegex),
+        })
+      )
+      .minLength(1), // Garante que tenha pelo menos 1 horário
+  })
+)
+
 // Validator para o admin aprovar ou rejeitar uma sala
 export const updateReservaStatusValidator = vine.compile(
   vine.object({
@@ -25,6 +44,6 @@ export const updateReservaStatusValidator = vine.compile(
 
 export const updateReservaFormaPagamento = vine.compile(
   vine.object({
-    formaPagamento: vine.enum(['PIX', 'DEBITO', 'CREDITO', 'PENDENTE'])
+    formaPagamento: vine.enum(['PIX', 'DEBITO', 'CREDITO', 'PENDENTE']),
   })
 )

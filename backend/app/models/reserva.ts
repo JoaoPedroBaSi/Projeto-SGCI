@@ -3,6 +3,7 @@ import { BaseModel, column, belongsTo } from '@adonisjs/lucid/orm'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import Sala from '#models/sala'
 import Profissional from '#models/profissional'
+import Transacao from '#models/transacao'
 
 export default class Reserva extends BaseModel {
   @column({ isPrimary: true })
@@ -13,6 +14,9 @@ export default class Reserva extends BaseModel {
 
   @column()
   declare profissionalId: number | null
+
+  @column()
+  declare transacaoId: number | null
 
   @column()
   declare dataHoraInicio: DateTime
@@ -29,6 +33,9 @@ export default class Reserva extends BaseModel {
   @column()
   declare formaPagamento: 'PIX' | 'CREDITO' | 'DEBITO' | 'PENDENTE'
 
+  @column()
+  declare valorTotal: number
+
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 
@@ -36,8 +43,11 @@ export default class Reserva extends BaseModel {
   declare updatedAt: DateTime
 
   @belongsTo(() => Sala)
-  public declare sala: BelongsTo<typeof Sala>
+  declare public sala: BelongsTo<typeof Sala>
 
   @belongsTo(() => Profissional)
-  public declare profissional: BelongsTo<typeof Profissional>
+  declare public profissional: BelongsTo<typeof Profissional>
+
+  @belongsTo(() => Transacao)
+  declare public transacao: BelongsTo<typeof Transacao>
 }

@@ -1,8 +1,14 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import Reserva from '#models/reserva'
-import Profissional from '#models/profissional'
-import { storeReservaValidator, updateReservaFormaPagamento, updateReservaStatusValidator } from '#validators/validator_reserva'
+// import Profissional from '#models/profissional' <--- Desnecessário devido ao service
+import {
+  storeReservaLoteValidator,
+  storeReservaValidator,
+  updateReservaFormaPagamento,
+  updateReservaStatusValidator,
+} from '#validators/validator_reserva'
 import { PagamentoService } from '#services/pagamento_service'
+import ReservaService from '#services/reserva_service'
 import { DateTime } from 'luxon'
 import { inject } from '@adonisjs/core'
 import Sala from '#models/sala'
@@ -11,7 +17,11 @@ import { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 @inject()
 export default class ReservasController {
+  // Instancia o service
+  private reservaService = new ReservaService()
+
   constructor(protected pagamentoService: PagamentoService) {}
+
   public async index({ response }: HttpContext) {
     try {
       const reserva = await Reserva.query().preload('sala').preload('profissional')
@@ -34,73 +44,63 @@ export default class ReservasController {
     }
   }
 
-  public async store({ request, response, auth }: HttpContext) {
+  // Busca reservas ocupadas para uma sala em uma data específica
+  public async buscarOcupados({ request, response }: HttpContext) {
     try {
-      const dados = await request.validateUsing(storeReservaValidator)
-      //const user = await auth.authenticate()
-      const profissional = await Profissional.findByOrFail('id', dados.profissionalId)
+      const { salaId, data } = request.qs()
 
-      // Verifica as datas antes de prosseguir
-      const inicio = new Date(dados.dataHoraInicio)
-      const fim = new Date(dados.dataHoraFim)
-
-      if (fim <= inicio) {
-        return response.status(422).send({
-          errors: [
-            {
-              field: 'dataHoraFim',
-              message: 'A data de término deve ser posterior à data de início',
-            },
-          ],
-        })
+      if (!salaId || !data) {
+        return response.badRequest({ message: 'Sala ID e Data são obrigatórios.' })
       }
 
-      // Verifica se há conflito de horários antes de solicitar uma reserva
-      const conflito = await Reserva.query()
-        .where('sala_id', dados.salaId)
-        .where('status', 'APROVADA') // Verifica apenas as reservas já aprovadas
-        .where((query) => {
-          query
-            .whereBetween('data_hora_inicio', [dados.dataHoraInicio, dados.dataHoraFim])
-            .orWhereBetween('data_hora_fim', [dados.dataHoraInicio, dados.dataHoraFim])
-            .orWhere((subQuery) => {
-              subQuery
-                .where('data_hora_inicio', '<=', dados.dataHoraInicio)
-                .andWhere('data_hora_fim', '>=', dados.dataHoraFim)
-            })
-        })
-        .first()
+      // Busca apenas o Horário de Início
+      const reservas = await Reserva.query()
+        .where('sala_id', salaId)
+        .whereRaw('CAST(data_hora_inicio AS DATE) = ?', [data])
+        .where('status', '!=', 'REJEITADO')
+        .select('data_hora_inicio')
 
-      if (conflito) {
-        return response.status(409).send({
-          message:
-            'Horário indisponível. Já existe uma reserva aprovada neste mesmo horário para essa sala.',
-        })
-      }
-
-      // Cria a solicitação da reserva
-      const reserva = await Reserva.create({
-        salaId: dados.salaId,
-        profissionalId: profissional.id,
-        dataHoraInicio: DateTime.fromISO(dados.dataHoraInicio),
-        dataHoraFim: DateTime.fromISO(dados.dataHoraFim),
-        status: 'PENDENTE',
-      })
-
-      // retorna também os relacionamentos
-      await reserva.load((loader) => {
-        loader.load('sala')
-        loader.load('profissional')
-      })
-
-      return response.status(201).send(reserva)
+      return response.ok(reservas)
     } catch (error) {
-      console.error('ERRO AO CRIAR RESERVA:', error)
-      return response.status(500).send({ message: 'Erro interno ao criar a reserva.', error })
+      return response.internalServerError({ message: 'Erro ao buscar disponibilidade', error })
     }
   }
 
-  //
+  public async store({ request, response, auth }: HttpContext) {
+    try {
+      // Validação o VineJS substitui o request.all
+      // O que garante que 'dados.horarios' seja um array válido
+      const dados = await request.validateUsing(storeReservaLoteValidator)
+
+      // Pega o usuário logado para vincular na transação
+      const user = auth.user!
+
+      // Chama o serviço de lote de reservas
+      const transacao = await this.reservaService.criarEmLote({
+        salaId: dados.salaId,
+        profissionalId: dados.profissionalId,
+        userId: user.id,
+        horarios: dados.horarios,
+      })
+
+      return response.status(201).send({
+        message: 'Solicitação criada com sucesso',
+        transacaoId: transacao.id,
+        valorTotal: transacao.valor,
+      })
+    } catch (error: any) {
+      if (error.status === 409) {
+        return response.status(409).send({ message: error.message })
+      }
+      // Captura erros de validação do VineJS
+      if (error.messages) {
+        return response.status(422).send({ errors: error.messages })
+      }
+      console.error('ERRO AO CRIAR LOTE:', error)
+      return response.status(500).send({ message: 'Erro interno', error: error.message })
+    }
+  }
+
   public async update({ params, request, response }: HttpContext) {
     try {
       const { status } = await request.validateUsing(updateReservaStatusValidator)
@@ -127,65 +127,80 @@ export default class ReservasController {
       return response.status(404).send({ message: 'Reserva não encontrada' })
     }
   }
-  public async pagar({ params, request, response } : HttpContext) {
+
+  public async pagar({ params, request, response }: HttpContext) {
     try {
       const resultado = await db.transaction(async (trx: TransactionClientContract) => {
+        const reserva = await Reserva.query({ client: trx }).where('id', params.id).firstOrFail()
 
-      const reserva = await Reserva.query({client: trx}).where('id', params.id).firstOrFail()
+        if (reserva.status !== 'APROVADA') {
+          throw new Error('Aguarde a aprovação da sua solicitação')
+        }
 
-      if (reserva.status !== 'APROVADA') {
-        throw new Error('Aguarde a aprovação da sua solicitação')
-      }
+        if (reserva.pagamentoEfetuado) {
+          throw new Error('O pagamento já foi realizado.')
+        }
 
-      if (reserva.pagamentoEfetuado) {
-        throw new Error('O pagamento já foi realizado.')
-      }
+        const { formaPagamento } = await request.validateUsing(updateReservaFormaPagamento)
 
-      //Solicitar a forma de pagamento
-      const { formaPagamento } = await request.validateUsing(updateReservaFormaPagamento)
-
-      reserva.useTransaction(trx)
-      reserva.formaPagamento = formaPagamento
-      await reserva.save()
-
-      //Buscar sala e preço
-      const sala = await Sala.query({client: trx}).where('id', reserva.salaId).firstOrFail()
-
-      if (!sala.precoAluguel) {
-        throw new Error('O preço de aluguel da sala correspondente não foi informado.')
-      }
-
-      //Iniciar cobrança no Service
-      const respostaPagamento = await this.pagamentoService.iniciarCobrancaReserva(
-        reserva,
-        Number(sala.precoAluguel)
-      )
-
-      //Verificar status (Se for PIX, ele nascerá como 'PENDING' no Asaas)
-      if (respostaPagamento.transacao.status === 'CONCLUIDA' || respostaPagamento.gateway.status === 'RECEIVED') {
-        reserva.pagamentoEfetuado = true
+        reserva.useTransaction(trx)
+        reserva.formaPagamento = formaPagamento
         await reserva.save()
-      }
 
-      return { reserva, pagamento: respostaPagamento }
-    })
+        // Pega o valor salvo na reserva
+        let valorCobranca = Number(reserva.valorTotal)
 
-    return response.status(200).send(resultado)
+        // Fallback para reservas antigas (sem valorTotal salvo)
+        if (!valorCobranca || valorCobranca <= 0) {
+          const sala = await Sala.query({ client: trx }).where('id', reserva.salaId).firstOrFail()
+
+          if (!sala.precoAluguel) {
+            throw new Error(
+              'O preço de aluguel da sala correspondente não foi informado e a reserva não possui valor gravado.'
+            )
+          }
+
+          // Recalcula a duração em horas para multiplicar pelo preço da sala
+          const inicio = DateTime.fromISO(reserva.dataHoraInicio.toString())
+          const fim = DateTime.fromISO(reserva.dataHoraFim.toString())
+          const duracaoHoras = fim.diff(inicio, 'hours').hours
+
+          valorCobranca = Number(sala.precoAluguel) * duracaoHoras
+        }
+
+        //Iniciar cobrança no Service com o valor correto
+        const respostaPagamento = await this.pagamentoService.iniciarCobrancaReserva(
+          reserva,
+          valorCobranca
+        )
+
+        if (
+          respostaPagamento.transacao.status === 'CONCLUIDA' ||
+          respostaPagamento.gateway.status === 'RECEIVED'
+        ) {
+          reserva.pagamentoEfetuado = true
+          await reserva.save()
+        }
+
+        return { reserva, pagamento: respostaPagamento }
+      })
+
+      return response.status(200).send(resultado)
     } catch (error) {
       let message = 'Aconteceu um erro desconhecido'
       let status = 500
-      if(error instanceof Error) {
+      if (error instanceof Error) {
         if (error.message === 'Aguarde a aprovação da sua solicitação') {
           message = 'A sua solicitação de reserva ainda não foi respondida.'
           status = 400
-      } else if (error.message === 'O pagamento já foi realizado.') {
-        message = 'Você já realizou o pagamento.'
-        status = 400
-      } else if (error.message === 'O preço de aluguel da sala correspondente não foi informado.') {
-        message = 'Houve uma falha interna. O preço de aluguel da sala correspondente não foi informado.'
-        status = 400
-      }
-      return response.status(status).send({message})
+        } else if (error.message === 'O pagamento já foi realizado.') {
+          message = 'Você já realizou o pagamento.'
+          status = 400
+        } else if (error.message.includes('preço de aluguel')) {
+          message = 'Houve uma falha interna. O valor da reserva não foi encontrado.'
+          status = 400
+        }
+        return response.status(status).send({ message })
       }
     }
   }
