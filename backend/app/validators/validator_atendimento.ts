@@ -19,6 +19,6 @@ export const updateAtendimentoValidator = vine.compile(
       //data_hora_inicio: vine.date({formats: ['iso8601'], }).optional(),
       valor: vine.number().decimal([0, 2]).positive().min(0).optional().optional(),
       forma_pagamento: vine.enum(['DINHEIRO', 'PIX', 'CREDITO', 'DEBITO']).optional(),
-      status: vine.enum(['CONFIRMADO', 'CONCLUIDO', 'CANCELADO']).optional(),
+      status: vine.enum(['PENDENTE', 'CONFIRMADO', 'CONCLUIDO', 'CANCELADO']).optional(),
   })
 )

@@ -36,6 +36,8 @@ router.post('/atendimento', '#controllers/atendimentos_controller.store').middle
 router.put('/atendimento/:id', '#controllers/atendimentos_controller.update').middleware([middleware.auth(), middleware.clienteOnly()])
 router.patch('/atendimento/cancelar/:id', '#controllers/atendimentos_controller.cancelar').middleware([middleware.auth(), middleware.clienteOrProfissionalOnly()])
 router.patch('/atendimento/concluir/:id', '#controllers/atendimentos_controller.concluir').middleware([middleware.auth()])
+router.patch('/atendimento/:id/aprovar','#controllers/atendimentos_controller.aprovar').middleware([middleware.auth(), middleware.adminOnly()])
+router.patch('/atendimento/:id/recusar','#controllers/atendimentos_controller.recusar').middleware([middleware.auth(), middleware.adminOnly()])
 
 //USER
 router.get('/user', '#controllers/users_controller.index').middleware([middleware.auth(), middleware.adminOnly()])

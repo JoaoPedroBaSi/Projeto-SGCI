@@ -39,10 +39,10 @@ export default class Atendimento extends BaseModel {
   declare formaPagamento: 'DINHEIRO' | 'PIX' | 'CREDITO' | 'DEBITO'
 
   @column()
-  declare status: 'CONFIRMADO' | 'CANCELADO' | 'CONCLUIDO'
+  declare status: 'PENDENTE' | 'CONFIRMADO' | 'CANCELADO' | 'CONCLUIDO'
 
   @column()
-  declare statusPagamento: 'PENDENTE' | 'EM_ANALISE' | 'PAGO' | 'NEGADO' | 'CANCELADO' | 'ESTORNADO' | 'CONTESTADO' 
+  declare statusPagamento: 'PENDENTE' | 'EM_ANALISE' | 'PAGO' | 'NEGADO' | 'CANCELADO' | 'ESTORNADO' | 'CONTESTADO'
 
   //relacionamentos
   @belongsTo(() => Profissional)

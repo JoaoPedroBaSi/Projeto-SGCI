@@ -1,5 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
+import AprovarAgendamentosView from '../views/AprovarAgendamentosView.vue'
+import ReservaSalasView from '@/views/ReservaSalasView.vue'
+import ControleEstoqueView from '@/views/ControleEstoqueView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -8,14 +11,22 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: HomeView,
+      meta: { esconderSidebar: true }
     },
     {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue'),
+      path: '/admin/solicitacoes',
+      name: 'admin-solicitacoes',
+      component: AprovarAgendamentosView
+    },
+    {
+      path: '/admin/estoque',
+      name: 'admin-estoque',
+      component: ControleEstoqueView
+    },
+    {
+      path: '/profissional/reservas',
+      name: 'profissional-reservas',
+      component: ReservaSalasView
     },
   ],
 })
