@@ -1,85 +1,76 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+import type { RouterLink, RouterView } from 'vue-router';
 </script>
 
+<!--TELA DO PROFISSIONAL-->
+
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
+  <RouterView></RouterView>
+  <!--<RouterLink to="/">Inicio</RouterLink>
+  <RouterLink to="/cliente/dashboard">Dashboard(Cliente)</RouterLink>
+  <RouterLink to="/profissional/dashboard">Dashboard(Profissional)</RouterLink>
+  <RouterLink to="/cliente/agendar">Consultas</RouterLink>
+  <RouterLink to="/profissional/agenda">Agenda</RouterLink>
+  <RouterLink to="/cadastro/parceria">Parceria</RouterLink>-->
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
-    </div>
-  </header>
-
-  <RouterView />
 </template>
 
-<style scoped>
+<style lang="css" scoped>
+
+*, html {
+  color: rgb(74, 74, 74);
+  font-family: 'Montserrat', sans-serif;
+}
 header {
-  line-height: 1.5;
-  max-height: 100vh;
+  margin: 30px;
+  display: flex;
+  justify-content: space-between;
+}
+img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin: auto;
+}
+.infos-usuario {
+  margin: 10px;
+  display: flex;
+}
+.infos-usuario .credenciais {
+  margin-top: 14px;
+}
+.infos-usuario .credenciais p {
+  margin: 0 10px;
+  padding-bottom: 1px;
+}
+.infos-usuario .credenciais .nome {
+  font-weight: bold;
+}
+main {
+  margin: 50px 30px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
 }
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+h1{
+  color: #128093;
 }
 
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
+
+@media screen and (min-width: 700px) and (max-width: 1200px) {
+    main {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
-
-nav a.router-link-exact-active {
-  color: var(--color-text);
-}
-
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
-}
-
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
-}
-
-nav a:first-of-type {
-  border: 0;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
+@media screen and (max-width: 700px) {
+    header {
+      flex-direction: column-reverse;
+      align-items: center;
+    }
+    main {
+        grid-template-columns: repeat(1, 1fr);
+    }
 }
 </style>
