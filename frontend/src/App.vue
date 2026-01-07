@@ -1,28 +1,29 @@
 <script setup lang="ts">
-import { RouterView, useRoute } from 'vue-router'
-import SidebarLateral from '@/components/SidebarLateral.vue'
+import type { RouterLink, RouterView, useRoute } from 'vue-router';
 import { computed } from 'vue';
-
-// função para esconder sidebar dependendo da rota
-const route = useRoute();
-const deveMostrarSidebar = computed(() => {
-  return route.meta.esconderSidebar !== true;
-});
 </script>
 
+<!--TELA DO PROFISSIONAL-->
+
 <template>
-  <div class="layout-app">
-
-    <SidebarLateral v-if="deveMostrarSidebar" />
-
-    <main class="conteudo-principal" :class="{ 'full-width': !deveMostrarSidebar }">
-      <RouterView />
-    </main>
-
-  </div>
+<!-- 
+  <RouterLink to="/">Inicio</RouterLink>
+  <RouterLink to="/cliente/dashboard">Dashboard(Cliente)</RouterLink>
+  <RouterLink to="/profissional/dashboard">Dashboard(Profissional)</RouterLink>
+  <RouterLink to="/cliente/agendar">Consultas</RouterLink>
+  <RouterLink to="/profissional/agenda">Agenda</RouterLink>
+  <RouterLink to="/cadastro/parceria">Parceria</RouterLink> -->
+  <main>
+    <RouterView></RouterView>
+  </main>
 </template>
 
-<style>
+<style lang="css" scoped>
+
+*, html {
+  color: rgb(74, 74, 74);
+  font-family: 'Montserrat', sans-serif;
+}
 body {
   margin: 0;
   padding: 0;
@@ -30,28 +31,72 @@ body {
   font-family: 'Montserrat', sans-serif;
   background-color: #f4f6f8;
 }
-
-.layout-app {
+header {
+  margin: 30px;
   display: flex;
-  min-height: 100vh;
+  justify-content: space-between;
+}
+img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin: auto;
 }
 
-.conteudo-principal {
-  margin-left: 260px;
-  width: calc(100% - 260px);
-  min-height: 100vh;
-  transition: all 0.3s ease;
-}
-
-.conteudo-principal.full-width {
-  margin-left: 0;
+nav {
   width: 100%;
-  padding: 0;
-  max-width: 100vw;
-  overflow-x: hidden;
+  font-size: 12px;
+  text-align: center;
+  margin-top: 2rem;
+}
+
+nav a.router-link-exact-active {
+  color: var(--color-text);
+}
+
+nav a.router-link-exact-active:hover {
+  background-color: transparent;
+}
+
+nav a {
+  display: inline-block;
+  padding: 0 1rem;
+  border-left: 1px solid var(--color-border);
+}
+
+nav a:first-of-type {
+  border: 0;
 }
 
 html {
   scroll-behavior: smooth;
+}
+
+@media (min-width: 1024px) {
+  header {
+    display: flex;
+    place-items: center;
+    padding-right: calc(var(--section-gap) / 2);
+  }
+
+  .logo {
+    margin: 0 2rem 0 0;
+  }
+
+  header .wrapper {
+    display: flex;
+    place-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  nav {
+    text-align: left;
+    margin-left: -1rem;
+    font-size: 1rem;
+
+    padding: 1rem 0;
+    margin-top: 1rem;
+  }
 }
 </style>

@@ -6,7 +6,7 @@ interface Sala {
   id: number;
   nome: string;
   preco: number;
-  capacidadePacientes: number; 
+  capacidadePacientes: number;
 }
 
 const props = defineProps<{
@@ -69,7 +69,6 @@ async function buscarDisponibilidade() {
       return `${horas}:${minutos}`;
     });
 
-    // Remove seleções do usuário que agora colidem com ocupados
     horariosSelecionados.value = horariosSelecionados.value.filter(h => !horariosOcupados.value.includes(h));
 
   } catch (error) {
@@ -98,7 +97,7 @@ watch(() => abaAtiva.value, (val) => {
 
 
 function toggleHorario(hora: string) {
-  if (horariosOcupados.value.includes(hora)) return; // Bloqueia clique
+  if (horariosOcupados.value.includes(hora)) return; 
 
   if (horariosSelecionados.value.includes(hora)) {
     horariosSelecionados.value = horariosSelecionados.value.filter(h => h !== hora);

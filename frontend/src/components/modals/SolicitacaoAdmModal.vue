@@ -11,7 +11,6 @@ const emit = defineEmits(['ao-fechar', 'ao-salvar']);
 
 // Estados
 const justificativa = ref('');
-// REMOVIDO: const duracao = ref('30');
 
 const tituloModal = computed(() => {
   return props.acao === 'confirmar' ? 'Confirmar Agendamento' : 'Recusar Solicitação';
@@ -36,15 +35,12 @@ const corBordaTema = computed(() => {
 function fechar() {
   emit('ao-fechar');
   justificativa.value = '';
-  // REMOVIDO: duracao.value = '30';
 }
 
 function confirmarAcao() {
   const payload = {
     id: props.item.id,
     acao: props.acao,
-    // Se for confirmar, não precisamos mandar dados extras.
-    // Se for recusar, mandamos a justificativa (opcional, pois o backend atual ignora, mas fica pronto para futuro)
     dados: props.acao === 'recusar' ? { justificativa: justificativa.value } : {}
   };
   emit('ao-salvar', payload);

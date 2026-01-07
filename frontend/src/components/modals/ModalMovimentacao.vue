@@ -1,25 +1,41 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 
+interface OpcaoProduto {
+  id: number;
+  nome: string;
+}
+
 const props = defineProps<{
   visivel: boolean;
-  tipoInicial: 'entrada' | 'saida';
+  tipoInicial: 'ENTRADA' | 'SAIDA';
+  listaOpcoes: OpcaoProduto[];
+  idPreSelecionado?: number | null;
 }>();
 
 const emit = defineEmits(['ao-fechar', 'ao-confirmar']);
 
-const tipoAtual = ref<'entrada' | 'saida'>('entrada');
+const tipoAtual = ref<'ENTRADA' | 'SAIDA'>('ENTRADA');
+
 const form = ref({
-  produto: 'Seringa Descartável 5ml', // Valor default da imagem
+  idItem: 0,
   quantidade: 0,
-  lote: 'XYZ-00', // Valor default da imagem
   observacao: ''
 });
 
-// Atualiza o tipo quando o modal abre
 watch(() => props.visivel, (val) => {
   if (val) {
     tipoAtual.value = props.tipoInicial;
+    form.value.quantidade = 0;
+    form.value.observacao = '';
+
+    if (props.idPreSelecionado) {
+      // Se veio um ID da tabela, seleciona ele
+      form.value.idItem = props.idPreSelecionado;
+    } else if (props.listaOpcoes.length > 0) {
+      // Se não, seleciona o primeiro da lista
+      form.value.idItem = props.listaOpcoes[0].id;
+    }
   }
 });
 
@@ -28,10 +44,24 @@ function fechar() {
 }
 
 function confirmar() {
-  emit('ao-confirmar', { ...form.value, tipo: tipoAtual.value });
+  if (form.value.quantidade <= 0) {
+    alert("A quantidade deve ser maior que zero.");
+    return;
+  }
+  if (!form.value.idItem) {
+    alert("Selecione um produto.");
+    return;
+  }
+
+  emit('ao-confirmar', {
+    id_item: form.value.idItem,
+    tipo: tipoAtual.value,
+    quantidade: form.value.quantidade,
+    observacao: form.value.observacao
+  });
 }
 
-function setTipo(tipo: 'entrada' | 'saida') {
+function setTipo(tipo: 'ENTRADA' | 'SAIDA') {
   tipoAtual.value = tipo;
 }
 </script>
@@ -40,16 +70,16 @@ function setTipo(tipo: 'entrada' | 'saida') {
   <div v-if="visivel" class="modal-overlay" @click.self="fechar">
     <div class="modal-card">
       <div class="modal-header">
-        <h2 :class="['modal-title', tipoAtual === 'entrada' ? 'text-green' : 'text-red']">
-          Registrar {{ tipoAtual === 'entrada' ? 'Entrada' : 'Saída' }} de Estoque
+        <h2 :class="['modal-title', tipoAtual === 'ENTRADA' ? 'text-green' : 'text-red']">
+          Registrar {{ tipoAtual === 'ENTRADA' ? 'Entrada' : 'Saída' }} de Estoque
         </h2>
       </div>
 
       <div class="toggle-container">
-        <button :class="['toggle-btn', { 'active-entrada': tipoAtual === 'entrada' }]" @click="setTipo('entrada')">
+        <button :class="['toggle-btn', { 'active-entrada': tipoAtual === 'ENTRADA' }]" @click="setTipo('ENTRADA')">
           ↓ Entrada
         </button>
-        <button :class="['toggle-btn', { 'active-saida': tipoAtual === 'saida' }]" @click="setTipo('saida')">
+        <button :class="['toggle-btn', { 'active-saida': tipoAtual === 'SAIDA' }]" @click="setTipo('SAIDA')">
           ↑ Saída
         </button>
       </div>
@@ -57,34 +87,29 @@ function setTipo(tipo: 'entrada' | 'saida') {
       <div class="form-body">
         <div class="form-group full">
           <label>Produto</label>
-          <select v-model="form.produto" class="input-field">
-            <option>Seringa Descartável 5ml</option>
-            <option>Vacina Tetravalente</option>
+          <select v-model="form.idItem" class="input-field">
+            <option v-for="prod in listaOpcoes" :key="prod.id" :value="prod.id">
+              {{ prod.nome }}
+            </option>
           </select>
         </div>
 
-        <div class="row-dupla">
-          <div class="form-group">
-            <label>Quantidade</label>
-            <input type="number" v-model="form.quantidade" class="input-field">
-          </div>
-          <div class="form-group">
-            <label>Lote (Opcional)</label>
-            <input type="text" v-model="form.lote" class="input-field">
-          </div>
+        <div class="form-group">
+          <label>Quantidade</label>
+          <input type="number" v-model="form.quantidade" min="1" class="input-field">
         </div>
 
         <div class="form-group full">
           <label>Motivo / Observação</label>
-          <textarea v-model="form.observacao" placeholder="Ex: Reposição mensal de estoque..." rows="3"
+          <textarea v-model="form.observacao" placeholder="Ex: Reposição, Validade vencida, Uso..." rows="3"
             class="input-field"></textarea>
         </div>
       </div>
 
       <div class="modal-footer">
         <button class="btn-cancelar" @click="fechar">Cancelar</button>
-        <button :class="['btn-confirmar', tipoAtual === 'entrada' ? 'bg-green' : 'bg-red']" @click="confirmar">
-          Confirmar {{ tipoAtual === 'entrada' ? 'Entrada' : 'Saída' }}
+        <button :class="['btn-confirmar', tipoAtual === 'ENTRADA' ? 'bg-green' : 'bg-red']" @click="confirmar">
+          Confirmar
         </button>
       </div>
     </div>
@@ -92,6 +117,7 @@ function setTipo(tipo: 'entrada' | 'saida') {
 </template>
 
 <style scoped>
+/* Mesmo CSS anterior */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -131,7 +157,6 @@ function setTipo(tipo: 'entrada' | 'saida') {
   color: #FF5252;
 }
 
-/* Toggle Buttons */
 .toggle-container {
   display: flex;
   gap: 15px;
@@ -162,17 +187,11 @@ function setTipo(tipo: 'entrada' | 'saida') {
   background: #FFEBEE;
 }
 
-/* Form Styles */
 .form-body {
   display: flex;
   flex-direction: column;
   gap: 15px;
   margin-bottom: 25px;
-}
-
-.row-dupla {
-  display: flex;
-  gap: 15px;
 }
 
 .form-group {
@@ -207,7 +226,6 @@ label {
   border-color: #aaa;
 }
 
-/* Footer Buttons */
 .modal-footer {
   display: flex;
   justify-content: flex-end;

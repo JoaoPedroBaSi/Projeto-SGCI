@@ -1,73 +1,168 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import ModalMovimentacao from '@/components/modals/ModalMovimentacao.vue';
+import { estoqueService, type InventarioItem, type MovimentacaoHistorico } from '@/services/estoqueService';
 
-// --- Interfaces para Tipagem ---
-interface Produto {
-  id: number;
-  nome: string;
-  codigo: string;
-  categoria: string;
-  lote: string;
-  vence: string;
-  venceAnoFull?: string;
-  qtd: number;
-  unidade: string;
-  status: 'critico' | 'baixo' | 'normal';
-}
-
-interface Movimentacao {
-  id: number;
-  dataHora: string;
-  responsavel: string;
-  tipo: 'entrada' | 'saida';
-  produto: string;
-  qtd: number;
-  unidade: string;
-  lote: string;
-}
-
-interface LoteVencendo {
-  id: number;
-  produto: string;
-  lote: string;
-  vencimento: string;
-  diasRestantes: number;
-  acao: 'Descartar' | 'Priorizar Uso';
-}
-
-// --- Estado e Dados ---
-const abaAtiva = ref<'visao-geral' | 'historico' | 'lotes'>('visao-geral');
+// --- Estado ---
+const abaAtiva = ref<'visao-geral' | 'historico' | 'alertas'>('visao-geral');
 const busca = ref('');
 const modalAberto = ref(false);
-const tipoMovimentacaoInicial = ref<'entrada' | 'saida'>('entrada');
+const tipoMovimentacaoInicial = ref<'ENTRADA' | 'SAIDA'>('ENTRADA');
+const idProdutoPreSelecionado = ref<number | null>(null); // NOVO
+const carregando = ref(true);
 
-const listaProdutos = ref<Produto[]>([
-  { id: 1, nome: 'Seringa Descartável 5ml', codigo: 'COD-8821', categoria: 'Descartáveis', lote: '9982-A', vence: '10/Dez', qtd: 15, unidade: 'un', status: 'critico' },
-  { id: 2, nome: 'Vacina Tetravalente', codigo: 'VAC-202', categoria: 'Imunizantes', lote: 'B-202', vence: 'Jun/2026', qtd: 40, unidade: 'un', status: 'baixo' },
-  { id: 3, nome: 'Luva Látex (Tam M)', codigo: 'EPI-100', categoria: 'EPI', lote: '1102', vence: 'Indet.', qtd: 150, unidade: 'cx', status: 'normal' }
-]);
+const listaProdutos = ref<InventarioItem[]>([]);
+const listaHistorico = ref<MovimentacaoHistorico[]>([]);
+const usuarioLogado = ref({ nome: 'Usuário', email: '', id: 0 });
 
-const listaHistorico = ref<Movimentacao[]>([
-  { id: 1, dataHora: 'Hoje, 14:30', responsavel: 'Dr. Marcos', tipo: 'saida', produto: 'Luva Látex (Tam M)', qtd: 2, unidade: 'cx', lote: '1102' },
-  { id: 2, dataHora: 'Hoje, 09:15', responsavel: 'Gestor Admin', tipo: 'entrada', produto: 'Vacina HPV Quadri', qtd: 50, unidade: 'un', lote: 'HPV-99' }
-]);
+onMounted(async () => {
+  carregarDados();
+  const userStr = localStorage.getItem('usuario');
+  if (userStr) {
+    try {
+      const u = JSON.parse(userStr);
+      usuarioLogado.value = { nome: u.nome, email: u.email, id: u.id };
+    } catch (e) { }
+  }
+});
 
-const listaLotes = ref<LoteVencendo[]>([
-  { id: 1, produto: 'Seringa Descartável 5ml', lote: '9982-A', vencimento: '10 Dez 2025', diasRestantes: 2, acao: 'Descartar' },
-  { id: 2, produto: 'Anestésico Lidocaína', lote: 'LIDO-55', vencimento: '20 Dez 2025', diasRestantes: 12, acao: 'Priorizar Uso' }
-]);
+async function carregarDados() {
+  carregando.value = true;
+  try {
+    const [itens, historico] = await Promise.all([
+      estoqueService.listarItens(),
+      estoqueService.listarHistorico()
+    ]);
+    listaProdutos.value = itens;
+    listaHistorico.value = historico;
+  } catch (error) {
+    console.error("Erro ao carregar estoque:", error);
+  } finally {
+    carregando.value = false;
+  }
+}
 
-// --- Métodos ---
-function abrirModal(tipo: 'entrada' | 'saida') {
+function criarDataLocal(isoString: string | null) {
+  if (!isoString) return null;
+  const dataPart = isoString.split('T')[0];
+  const [ano, mes, dia] = dataPart.split('-').map(Number);
+  return new Date(ano, mes - 1, dia, 12, 0, 0);
+}
+
+// --- COMPUTEDS ---
+
+const produtosComputados = computed(() => {
+  let lista = listaProdutos.value;
+
+  if (busca.value && busca.value.trim() !== '') {
+    const termo = busca.value.toLowerCase().trim();
+    lista = lista.filter(p =>
+      (p.nome && p.nome.toLowerCase().includes(termo)) ||
+      (p.lote && p.lote.toLowerCase().includes(termo))
+    );
+  }
+
+  return lista.map(p => {
+    let status: 'critico' | 'baixo' | 'normal' = 'normal';
+    let venceFormatado = 'Indeterminado';
+    let diasRestantes = 9999;
+    let estaVencido = false;
+    let venceEmBreve = false;
+
+    if (p.validade) {
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      const validadeLocal = criarDataLocal(p.validade);
+
+      if (validadeLocal) {
+        const diffTime = validadeLocal.getTime() - hoje.getTime();
+        diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        venceFormatado = validadeLocal.toLocaleDateString('pt-BR');
+        estaVencido = diasRestantes < 0;
+        venceEmBreve = diasRestantes >= 0 && diasRestantes <= 60;
+      }
+    }
+
+    if (p.quantidade === 0 || estaVencido) {
+      status = 'critico';
+    } else if (p.quantidade <= p.pontoReposicao || venceEmBreve) {
+      status = 'baixo';
+    }
+
+    return {
+      ...p,
+      status,
+      venceFormatado,
+      diasRestantes,
+      motivoAlerta: estaVencido ? 'VENCIDO' : (p.quantidade === 0 ? 'ESTOQUE ZERADO' : (venceEmBreve ? 'VENCE EM BREVE' : 'ESTOQUE BAIXO'))
+    };
+  });
+});
+
+// CORREÇÃO DA BUSCA NO HISTÓRICO
+const historicoFiltrado = computed(() => {
+  let lista = listaHistorico.value;
+
+  if (busca.value && busca.value.trim() !== '') {
+    const termo = busca.value.toLowerCase().trim();
+    lista = lista.filter(h =>
+      // Usamos || '' para evitar erro se o campo for nulo
+      (h.inventario?.nome || '').toLowerCase().includes(termo) ||
+      (h.profissional?.nome || '').toLowerCase().includes(termo) ||
+      (h.tipo || '').toLowerCase().includes(termo)
+    );
+  }
+  return lista;
+});
+
+const listaAlertas = computed(() => {
+  return produtosComputados.value
+    .filter(p => p.status !== 'normal')
+    .sort((a, b) => {
+      if (a.status === 'critico' && b.status !== 'critico') return -1;
+      if (a.status !== 'critico' && b.status === 'critico') return 1;
+      return a.diasRestantes - b.diasRestantes;
+    });
+});
+
+const kpiEstoqueBaixo = computed(() => produtosComputados.value.filter(p => p.status === 'baixo').length);
+const kpiCriticos = computed(() => produtosComputados.value.filter(p => p.status === 'critico').length);
+
+// --- MÉTODOS ATUALIZADOS ---
+
+// Agora aceita um ID opcional para pré-selecionar no modal
+function abrirModal(tipo: 'ENTRADA' | 'SAIDA', produtoId: number | null = null) {
   tipoMovimentacaoInicial.value = tipo;
+  idProdutoPreSelecionado.value = produtoId; // Guarda o ID
   modalAberto.value = true;
 }
 
-function processarMovimentacao(dados: any) {
-  console.log('Dados processados:', dados);
-  modalAberto.value = false;
-  // Aqui entraria a chamada ao AdonisJS
+async function processarMovimentacao(dados: any) {
+  if (!usuarioLogado.value.id) {
+    alert("Erro: Usuário não identificado.");
+    return;
+  }
+  try {
+    await estoqueService.novaMovimentacao({
+      id_item: dados.id_item,
+      id_profissional: usuarioLogado.value.id,
+      tipo: dados.tipo,
+      quantidade: dados.quantidade,
+      observacao: dados.observacao
+    });
+    await carregarDados();
+    modalAberto.value = false;
+    alert("Movimentação registrada!");
+  } catch (error: any) {
+    const msg = error.response?.data?.message || 'Erro ao processar';
+    alert(msg);
+  }
+}
+
+function formatarDataHora(isoString: string) {
+  return new Date(isoString).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+  });
 }
 </script>
 
@@ -78,25 +173,14 @@ function processarMovimentacao(dados: any) {
         <div class="titulos">
           <h1 class="titulo-principal">Controle de Estoque</h1>
         </div>
-
         <div class="perfil-usuario">
           <div class="dados-usuario">
-            <span class="nome">Nome do Usuário</span>
-            <span class="email">usuario@gmail.com</span>
+            <span class="nome">{{ usuarioLogado.nome }}</span>
+            <span class="email">{{ usuarioLogado.email }}</span>
           </div>
           <div class="avatar-circle">
-            <svg viewBox="0 0 24 24" fill="currentColor" style="width:24px;">
-              <path
-                d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-            </svg>
+            <span>{{ usuarioLogado.nome.charAt(0) }}</span>
           </div>
-          <button class="btn-notificacao">
-            <span class="badge">1</span>
-            <svg viewBox="0 0 24 24" fill="#757575" width="24" height="24">
-              <path
-                d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" />
-            </svg>
-          </button>
         </div>
       </div>
     </header>
@@ -106,177 +190,227 @@ function processarMovimentacao(dados: any) {
 
         <section class="cards-resumo">
           <div class="card-kpi">
-            <div class="kpi-icon money">$</div>
-            <div class="kpi-info">
-              <span class="kpi-label">VALOR EM ESTOQUE</span>
-              <span class="kpi-value">R$45.280</span>
-              <span class="kpi-sub positivo">↗ +12% esse mês</span>
-            </div>
-          </div>
-
-          <div class="card-kpi">
             <div class="kpi-icon critical">!</div>
             <div class="kpi-info">
               <span class="kpi-label">ITENS CRÍTICOS</span>
-              <span class="kpi-value red-text">3</span>
-              <span class="kpi-sub red-text">Requer ação imediata</span>
+              <span class="kpi-value red-text">{{ kpiCriticos }}</span>
+              <span class="kpi-sub red-text">Zerados ou Vencidos</span>
             </div>
           </div>
-
           <div class="card-kpi">
             <div class="kpi-icon low">!</div>
             <div class="kpi-info">
               <span class="kpi-label">ESTOQUE BAIXO</span>
-              <span class="kpi-value yellow-text">5</span>
-              <span class="kpi-sub yellow-text">Solicitar reposição+</span>
+              <span class="kpi-value yellow-text">{{ kpiEstoqueBaixo }}</span>
+              <span class="kpi-sub yellow-text">Reposição necessária</span>
             </div>
           </div>
-
           <div class="card-kpi">
             <div class="kpi-icon move">⇄</div>
             <div class="kpi-info">
-              <span class="kpi-label">MOVIMENTAÇÕES HOJE</span>
-              <span class="kpi-value">24</span>
-              <span class="kpi-sub">14 Entradas / 10 Saídas</span>
+              <span class="kpi-label">MOVIMENTAÇÕES</span>
+              <span class="kpi-value">{{ listaHistorico.length }}</span>
+              <span class="kpi-sub">Total registrado</span>
             </div>
           </div>
         </section>
 
         <section class="acoes-container">
           <nav class="abas">
-            <button :class="['aba-btn', { active: abaAtiva === 'visao-geral' }]" @click="abaAtiva = 'visao-geral'">Visão
-              Geral</button>
-            <button :class="['aba-btn', { active: abaAtiva === 'historico' }]" @click="abaAtiva = 'historico'">Histórico
-              de Movimentação</button>
-            <button :class="['aba-btn', { active: abaAtiva === 'lotes' }]" @click="abaAtiva = 'lotes'">Lotes
-              Vencendo</button>
+            <button :class="['aba-btn', { active: abaAtiva === 'visao-geral' }]" @click="abaAtiva = 'visao-geral'">
+              Visão Geral
+            </button>
+            <button :class="['aba-btn', { active: abaAtiva === 'historico' }]" @click="abaAtiva = 'historico'">
+              Histórico
+            </button>
+            <button :class="['aba-btn', { active: abaAtiva === 'alertas' }]" @click="abaAtiva = 'alertas'">
+              Alertas de Estoque
+            </button>
           </nav>
-
           <div class="botoes-movimentacao">
-            <button class="btn-entrada" @click="abrirModal('entrada')">⬇ Nova Entrada</button>
-            <button class="btn-saida" @click="abrirModal('saida')">⬆ Nova Saída</button>
+            <button class="btn-entrada" @click="abrirModal('ENTRADA')">⬇ Nova Entrada</button>
+            <button class="btn-saida" @click="abrirModal('SAIDA')">⬆ Nova Saída</button>
           </div>
         </section>
 
         <section class="conteudo-tabela">
-          <div class="barra-filtro">
-            <input type="text" v-model="busca" placeholder="Busca por nome, código ou lote" class="input-search">
-            <button class="btn-filtros">Filtros ⌄</button>
+          <div v-if="carregando" class="loading-state">Carregando dados...</div>
+
+          <div v-else>
+            <div class="barra-filtro">
+              <input type="text" v-model="busca" placeholder="Busca por nome, lote ou responsável..."
+                class="input-search">
+            </div>
+
+            <table class="tabela-custom" v-if="abaAtiva === 'visao-geral'">
+              <thead>
+                <tr>
+                  <th>PRODUTO</th>
+                  <th>TIPO</th>
+                  <th>LOTE / VALIDADE</th>
+                  <th>QTD. ATUAL</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in produtosComputados" :key="item.id"
+                  :class="{ 'bg-critico-light': item.status === 'critico', 'bg-baixo-light': item.status === 'baixo' }">
+                  <td>
+                    <div class="col-produto">
+                      <span class="nome-prod">{{ item.nome }}</span>
+                    </div>
+                  </td>
+                  <td>{{ item.tipo }}</td>
+                  <td>
+                    <div class="col-lote">
+                      <span>Lote: {{ item.lote || '-' }}</span>
+                      <span :class="{ 'text-red': item.diasRestantes < 0 }">
+                        {{ item.venceFormatado !== 'Indeterminado' ? 'Vence: ' + item.venceFormatado : '-' }}
+                      </span>
+                    </div>
+                  </td>
+                  <td class="font-bold font-color-main">{{ item.quantidade }} {{ item.unidadeMedida }}</td>
+                  <td>
+                    <span :class="['badge-status', item.status]">
+                      <span class="dot">●</span> {{ item.status.toUpperCase() }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <table class="tabela-custom" v-if="abaAtiva === 'historico'">
+              <thead>
+                <tr>
+                  <th>DATA/HORA</th>
+                  <th>RESPONSÁVEL</th>
+                  <th>TIPO</th>
+                  <th>PRODUTO</th>
+                  <th>QTD.</th>
+                  <th>OBS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="mov in historicoFiltrado" :key="mov.id">
+                  <td>{{ formatarDataHora(mov.createdAt) }}</td>
+                  <td>{{ mov.profissional?.nome || 'Admin' }}</td>
+                  <td>
+                    <span :class="['badge-tipo', mov.tipo === 'ENTRADA' ? 'entrada' : 'saida']">
+                      {{ mov.tipo }}
+                    </span>
+                  </td>
+                  <td>{{ mov.inventario?.nome || 'Item excluído' }}</td>
+                  <td>
+                    <span v-if="mov.tipo === 'ENTRADA'">+ {{ mov.quantidade }}</span>
+                    <span v-else>- {{ mov.quantidade }}</span>
+                  </td>
+                  <td class="text-small">{{ mov.observacao || '-' }}</td>
+                </tr>
+                <tr v-if="historicoFiltrado.length === 0">
+                  <td colspan="6" class="text-center padding-lg">Nenhum histórico encontrado para esta busca.</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <table class="tabela-custom" v-if="abaAtiva === 'alertas'">
+              <thead>
+                <tr>
+                  <th>PRODUTO</th>
+                  <th>SITUAÇÃO</th>
+                  <th>DETALHE</th>
+                  <th>DIAS P/ VENCER</th>
+                  <th class="text-right">AÇÃO</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in listaAlertas" :key="item.id"
+                  :class="{ 'bg-critico-light': item.status === 'critico', 'bg-baixo-light': item.status === 'baixo' }">
+
+                  <td class="font-bold">{{ item.nome }}</td>
+
+                  <td>
+                    <span :class="['badge-status', item.status]">
+                      {{ item.motivoAlerta }}
+                    </span>
+                  </td>
+
+                  <td>
+                    <div v-if="item.motivoAlerta === 'VENCIDO' || item.motivoAlerta === 'VENCE EM BREVE'">
+                      Lote: {{ item.lote || 'N/A' }} <br>
+                      <span class="text-red font-bold">{{ item.venceFormatado }}</span>
+                    </div>
+                    <div v-else>
+                      Restam: <span class="font-bold">{{ item.quantidade }} {{ item.unidadeMedida }}</span> <br>
+                      <span class="text-small">Min: {{ item.pontoReposicao }}</span>
+                    </div>
+                  </td>
+
+                  <td>
+                    <span v-if="item.diasRestantes !== 9999"
+                      :class="['badge-dias', item.diasRestantes <= 0 ? 'critico' : 'alerta']">
+                      {{ item.diasRestantes <= 0 ? 'VENCIDO' : item.diasRestantes + ' DIAS' }} </span>
+                        <span v-else class="text-small">-</span>
+                  </td>
+
+                  <td class="text-right">
+                    <button v-if="item.diasRestantes <= 0 && item.diasRestantes !== 9999"
+                      class="btn-acao-outline text-red" @click="abrirModal('SAIDA', item.id)">
+                      Descartar
+                    </button>
+
+                    <button v-else class="btn-acao-outline text-yellow" @click="abrirModal('ENTRADA', item.id)">
+                      Solicitar Reposição
+                    </button>
+                  </td>
+                </tr>
+                <tr v-if="listaAlertas.length === 0">
+                  <td colspan="5" class="text-center padding-lg">
+                    <span class="text-green">✔ Tudo certo! Nenhum alerta de estoque no momento.</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-
-          <table class="tabela-custom" v-if="abaAtiva === 'visao-geral'">
-            <thead>
-              <tr>
-                <th>PRODUTO / INSUMO</th>
-                <th>CATEGORIA</th>
-                <th>LOTE / VALIDADE</th>
-                <th>QTD. ATUAL</th>
-                <th>STATUS</th>
-                <th class="text-right">AÇÕES</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in listaProdutos" :key="item.id"
-                :class="{ 'bg-critico-light': item.status === 'critico', 'bg-baixo-light': item.status === 'baixo' }">
-                <td>
-                  <div class="col-produto">
-                    <span class="nome-prod">{{ item.nome }}</span>
-                    <span class="cod-prod">{{ item.codigo }}</span>
-                  </div>
-                </td>
-                <td>{{ item.categoria }}</td>
-                <td>
-                  <div class="col-lote">
-                    <span>Lote: {{ item.lote }}</span>
-                    <span :class="{ 'text-red': item.status === 'critico' }">Vence: {{ item.vence }}</span>
-                  </div>
-                </td>
-                <td class="font-bold font-color-main">{{ item.qtd }} {{ item.unidade }}</td>
-                <td>
-                  <span :class="['badge-status', item.status]">
-                    <span class="dot">●</span> {{ item.status.toUpperCase() }}
-                  </span>
-                </td>
-                <td class="text-right">
-                  <button v-if="item.status === 'critico'" class="btn-acao">Comprar</button>
-                  <button v-else-if="item.status === 'baixo'" class="btn-acao">Repor</button>
-                  <button v-else class="btn-acao">Detalhes</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <table class="tabela-custom" v-if="abaAtiva === 'historico'">
-            <thead>
-              <tr>
-                <th>DATA/HORA</th>
-                <th>RESPONSÁVEL</th>
-                <th>TIPO</th>
-                <th>PRODUTO</th>
-                <th>QTD.</th>
-                <th class="text-right">LOTE</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="mov in listaHistorico" :key="mov.id">
-                <td>{{ mov.dataHora }}</td>
-                <td>{{ mov.responsavel }}</td>
-                <td>
-                  <span :class="['badge-tipo', mov.tipo]">
-                    {{ mov.tipo.toUpperCase() }}
-                  </span>
-                </td>
-                <td>{{ mov.produto }}</td>
-                <td>
-                  <span v-if="mov.tipo === 'entrada'">+ {{ mov.qtd }} {{ mov.unidade }}</span>
-                  <span v-else>- {{ mov.qtd }} {{ mov.unidade }}</span>
-                </td>
-                <td class="text-right">{{ mov.lote }}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <table class="tabela-custom" v-if="abaAtiva === 'lotes'">
-            <thead>
-              <tr>
-                <th>PRODUTO</th>
-                <th>LOTE</th>
-                <th>VENCIMENTO</th>
-                <th>DIAS RESTANTES</th>
-                <th class="text-right">AÇÃO RECOMENDADA</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="lote in listaLotes" :key="lote.id"
-                :class="{ 'bg-critico-light': lote.diasRestantes <= 5, 'bg-baixo-light': lote.diasRestantes > 5 && lote.diasRestantes < 15 }">
-                <td class="font-bold">{{ lote.produto }}</td>
-                <td>{{ lote.lote }}</td>
-                <td :class="{ 'text-red': lote.diasRestantes <= 5, 'text-yellow': lote.diasRestantes > 5 }">{{
-                  lote.vencimento }}</td>
-                <td>
-                  <span :class="['badge-dias', lote.diasRestantes <= 5 ? 'critico' : 'alerta']">
-                    {{ lote.diasRestantes }} DIAS
-                  </span>
-                </td>
-                <td class="text-right">
-                  <button class="btn-acao-outline">{{ lote.acao }}</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
         </section>
 
       </div>
     </main>
 
-    <ModalMovimentacao :visivel="modalAberto" :tipoInicial="tipoMovimentacaoInicial" @ao-fechar="modalAberto = false"
+    <ModalMovimentacao :visivel="modalAberto" :tipoInicial="tipoMovimentacaoInicial" :listaOpcoes="listaProdutos"
+      :idPreSelecionado="idProdutoPreSelecionado" @ao-fechar="modalAberto = false"
       @ao-confirmar="processarMovimentacao" />
   </div>
 </template>
 
 <style scoped>
-/* ESTRUTURA GLOBAL */
+/* (MANTENHA TODO O CSS IGUAL) */
+.text-center {
+  text-align: center;
+}
+
+.padding-lg {
+  padding: 30px;
+  color: #888;
+}
+
+.text-green {
+  color: #2E7D32;
+  font-weight: 600;
+}
+
+.text-small {
+  font-size: 0.8rem;
+  color: #777;
+  font-style: italic;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 40px;
+  color: #888;
+  font-size: 1.2rem;
+}
+
 .layout-wrapper {
   flex: 1;
   display: flex;
@@ -336,28 +470,6 @@ function processarMovimentacao(dados: any) {
   align-items: center;
   justify-content: center;
   color: #999;
-}
-
-.btn-notificacao {
-  background: none;
-  border: none;
-  position: relative;
-  cursor: pointer;
-}
-
-.badge {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  background: #FF5252;
-  color: white;
-  font-size: 0.6rem;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .conteudo-pagina {
@@ -444,18 +556,6 @@ function processarMovimentacao(dados: any) {
   font-weight: 600;
 }
 
-.kpi-sub.positivo {
-  color: #4CAF50;
-}
-
-.kpi-sub.red-text {
-  color: #FF5252;
-}
-
-.kpi-sub.yellow-text {
-  color: #F9A825;
-}
-
 .red-text {
   color: #FF5252;
 }
@@ -464,7 +564,6 @@ function processarMovimentacao(dados: any) {
   color: #F9A825;
 }
 
-/* Navegação e Botões */
 .acoes-container {
   display: flex;
   justify-content: space-between;
@@ -526,7 +625,6 @@ function processarMovimentacao(dados: any) {
   cursor: pointer;
 }
 
-/* Tabela e Filtros */
 .conteudo-tabela {
   background: white;
   border-radius: 8px;
@@ -546,16 +644,6 @@ function processarMovimentacao(dados: any) {
   border: 1px solid #eee;
   border-radius: 6px;
   background: #fafafa;
-}
-
-.btn-filtros {
-  background: white;
-  border: 1px solid #eee;
-  padding: 8px 20px;
-  border-radius: 6px;
-  font-weight: 600;
-  color: #555;
-  cursor: pointer;
 }
 
 .tabela-custom {
@@ -618,11 +706,6 @@ function processarMovimentacao(dados: any) {
 .nome-prod {
   font-weight: 700;
   color: #333;
-}
-
-.cod-prod {
-  font-size: 0.8rem;
-  color: #888;
 }
 
 .col-lote {
@@ -699,21 +782,6 @@ function processarMovimentacao(dados: any) {
   color: #F57F17;
 }
 
-.btn-acao {
-  background: white;
-  border: 1px solid #eee;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.btn-acao:hover {
-  background: #f5f5f5;
-}
-
 .btn-acao-outline {
   background: transparent;
   border: 1px solid #ddd;
@@ -722,6 +790,11 @@ function processarMovimentacao(dados: any) {
   font-size: 0.75rem;
   font-weight: 600;
   color: #555;
+  cursor: pointer;
+}
+
+.btn-acao-outline:hover {
+  background-color: #fafafa;
 }
 
 .bg-critico-light .btn-acao-outline {

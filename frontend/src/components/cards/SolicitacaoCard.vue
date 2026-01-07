@@ -141,3 +141,4 @@ const emit = defineEmits(['ao-confirmar', 'ao-recusar']);
   color: white;
 }
 </style>
+

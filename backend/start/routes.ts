@@ -33,6 +33,7 @@ router.resource('/inventario', '#controllers/inventarios_controller').except(['c
 router.resource('/mov_inventario', '#controllers/mov_inventarios_controller').except(['create', 'edit'])
 
 //ATENDIMENTO
+router.get('/atendimento/solicitacoes', '#controllers/atendimentos_controller.buscarSolicitacoes').middleware([middleware.auth(), middleware.adminOnly()]),
 router.get('/atendimento', '#controllers/atendimentos_controller.index').middleware([middleware.auth(), middleware.adminOnly()])
 router.get('/atendimento/:id', '#controllers/atendimentos_controller.show').middleware([middleware.auth(), middleware.clienteOrProfissionalOnly()])
 router.post('/atendimento', '#controllers/atendimentos_controller.store').middleware([middleware.auth(), middleware.clienteOnly()])

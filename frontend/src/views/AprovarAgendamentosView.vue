@@ -46,10 +46,12 @@ async function fetchSolicitacoes(isPolling = false) {
   if (!isPolling) loading.value = true;
 
   try {
-    const response = await api.get('/atendimento');
+    const response = await api.get('/atendimento/solicitacoes', {
+      params: { status: 'PENDENTE' }
+    });
 
     // Filtra apenas os pendentes
-    const pendentes = response.data.filter((item: any) => item.status === 'PENDENTE');
+    const pendentes = response.data;
 
     // Mapeia os dados novos
     const novaListaMapeada: Solicitacao[] = pendentes.map((item: any) => {
@@ -127,12 +129,16 @@ function abrirModalConfirmacao(item: Solicitacao) {
   modalAberto.value = true;
 }
 
-// Inicialização e Ciclo de Vida
+// Inicialização
 onMounted(() => {
   fetchSolicitacoes();
   pollingInterval = setInterval(() => {
-    fetchSolicitacoes(true);
-  }, 10000);
+    // SÓ faz nova busca se a anterior já tiver terminado
+    // Isso evita "empilhar" requisições e derrubar o banco
+    if (!loading.value) {
+      fetchSolicitacoes(true);
+    }
+  }, 20000); // 30 segundos
 });
 
 onUnmounted(() => {

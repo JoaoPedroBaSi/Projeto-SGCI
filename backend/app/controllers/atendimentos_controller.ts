@@ -39,6 +39,38 @@ export default class AtendimentosController {
       .preload('profissional', (query) => query.select('id', 'nome'))
       // JP: removi email dos preloads porque eles só exixsrtem na tabela User
   }
+
+  // Função para a tela de aprovação de agendamentos
+  //Busca solicitações de atendimento (status PENDENTE)
+  public async buscarSolicitacoes({ request, response }: HttpContext) {
+    try {
+      // Pega o status da URL (ex: ?status=PENDENTE)
+      const { status } = request.qs()
+
+      const query = Atendimento.query()
+        // Traz apenas ID e Nome, nada de fotos ou dados pesados
+        .preload('cliente', (q) => q.select('id', 'nome'))
+        .preload('profissional', (q) => q.select('id', 'nome'))
+        .orderBy('data_hora_inicio', 'asc')
+
+      // Se foi passado um status, filtra. Se não, traz tudo.
+      if (status) {
+        query.where('status', status)
+      } else {
+        // Se não mandar nada, assume que quer os PENDENTES por padrão
+        query.where('status', 'PENDENTE')
+      }
+
+      const resultados = await query
+      return response.ok(resultados)
+    } catch (error) {
+      return response.internalServerError({
+        message: 'Erro ao buscar lista de solicitações.',
+        error
+      })
+    }
+  }
+
   //Finalizado
   public async store({ request, response }: HttpContext) {
     try {
