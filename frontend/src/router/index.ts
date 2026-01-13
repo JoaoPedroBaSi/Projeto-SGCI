@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 // 1. IMPORTS DAS VIEWS (TELAS)
 import HomeView from '../views/HomeView.vue'
+<<<<<<< HEAD
 import CadastroClienteView from '../views/CadastroClienteView.vue'
 import CadastroProfissionalView from '../views/CadastroProfissionalView.vue'
 import RedefinirSenhaView from '../views/RedefinirSenha.vue'
@@ -22,6 +23,11 @@ import ClientDashboardView from '@/views/ClientDashboardView.vue'
 
 // Dashboard Profissional
 import ProfissionalDashboardView from '@/views/ProfissionalDashboardView.vue'
+=======
+import AprovarAgendamentosView from '../views/AprovarAgendamentosView.vue'
+import ReservaSalasView from '@/views/ReservaSalasView.vue'
+import ControleEstoqueView from '@/views/ControleEstoqueView.vue'
+>>>>>>> main
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -111,9 +117,80 @@ const router = createRouter({
     },
 
     {
+<<<<<<< HEAD
       path: '/about',
       name: 'about',
       component: () => import('../views/AboutView.vue'),
+=======
+      path: '/cliente/dashboard',
+      name: 'dashboardCliente',
+      component: () => import('../views/atendimento/dashboard/DashboardCliente.vue'),
+    },
+    {
+      path: '/profissional/dashboard',
+      name: 'dashboardProfissional',
+      component: () => import('../views/atendimento/dashboard/DashboardProfissional.vue'),
+    },
+    {
+      path: '/cliente/agendar',
+      name: 'agendarAtendimento',
+      component: () => import('../views/atendimento/consulta/AgendarConsulta.vue'),
+    },
+    {
+      path: '/cliente/historico',
+      name: 'historicoAtendimento',
+      component: () => import('../views/atendimento/atividadesCliente/HistoricoCliente.vue'),
+    },
+    {
+      path: '/cliente/agenda',
+      name: 'agendaCliente',
+      component: () => import('../views/atendimento/atividadesCliente/AgendaCliente.vue'),
+    },
+    {
+      path: '/profissional/agenda',
+      name: 'agendaProfissional',
+      component: () => import('../views/atendimento/agendaProfissional/AgendaProfissional.vue'),
+    },
+    {
+      path: '/profissional/cadastro/disponibilidade',
+      name: 'cadastroDisponibilidadeProfissional',
+      component: () => import('../views/atendimento/disponibilidade/CadastroDisponibilidade.vue'),
+    },
+    {
+      path: '/profissional/disponibilidade',
+      name: 'disponibilidadeProfissional',
+      component: () => import('../views/atendimento/disponibilidade/ExibicaoDisponibilidade.vue'),
+    },
+    {
+      path: '/profissional/historico',
+      name: 'historicoProfissional',
+      component: () => import('../views/atendimento/agendaProfissional/HistoricoProfissional.vue'),
+    },
+    {
+      path: '/cadastro/parceria',
+      name: 'cadastroParceria',
+      component: () => import('../views/atendimento/parceria/CadastroParceria.vue'),
+    },
+    {
+      path: '/parcerias',
+      name: 'listaParceria',
+      component: () => import('../views/atendimento/parceria/ListaParceria.vue'),
+    },
+    {
+      path: '/admin/solicitacoes',
+      name: 'admin-solicitacoes',
+      component: AprovarAgendamentosView
+    },
+    {
+      path: '/admin/estoque',
+      name: 'admin-estoque',
+      component: ControleEstoqueView
+    },
+    {
+      path: '/profissional/reservas',
+      name: 'profissional-reservas',
+      component: ReservaSalasView
+>>>>>>> main
     },
 
     // --- ÁREA PROFISSIONAL ---
