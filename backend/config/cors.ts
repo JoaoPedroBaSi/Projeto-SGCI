@@ -1,25 +1,15 @@
 import { defineConfig } from '@adonisjs/cors'
 
 /**
- * Configuration options to tweak the CORS policy. The following
- * options are documented on the official documentation website.
- *
- * https://docs.adonisjs.com/guides/security/cors
+ * Configuration for CORS middleware
  */
 const corsConfig = defineConfig({
   enabled: true,
-<<<<<<<< HEAD:back-end/config/cors.ts
-  
-  // 'origin: true' permite requisições de qualquer origem (ideal para desenvolvimento)
+
+  // 'origin: true' libera o acesso para qualquer site (perfeito para desenvolvimento)
   origin: true,
 
-  // IMPORTANTE: Adicione 'PATCH' nesta lista, senão a aprovação falha
-  methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'PATCH'],
-
-========
-  origin: ['http://localhost:5173'],
-  methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
->>>>>>>> main:backend/config/cors.ts
+  methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   headers: true,
   exposeHeaders: [],
   credentials: true,

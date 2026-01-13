@@ -1,4 +1,3 @@
-// database/seeders/user_seeder.ts
 import { BaseSeeder } from '@adonisjs/lucid/seeders'
 import User from '#models/user'
 import Cliente from '#models/cliente'
@@ -10,72 +9,84 @@ import { DateTime } from 'luxon'
 
 export default class extends BaseSeeder {
   public async run() {
-    // 1. Cria o registo de autenticação na tabela 'users'
-    const user = await User.create({
-      email: 'email.de.teste@exemplo.com',
-      password: 'senhaDoUtilizador', // O hook no Model vai criptografar isto
-      perfil_tipo: 'cliente',
-      status: 'ativo',
-    })
+    console.log('--- INICIANDO SEED DE TESTE ---')
 
-    const usuario = await User.create({
-      email: 'profteste@exemplo.com',
-      password: 'senhaDoProf',
-      perfil_tipo: 'profissional',
-      status: 'ativo'
-    })  
+    // 1. Cria User Cliente
+    const userCliente = await User.updateOrCreate(
+      { email: 'cliente@teste.com' },
+      { password: 'senha123' }
+    )
+
+    // 2. Cria User Profissional
+    const userProfissional = await User.updateOrCreate(
+      { email: 'medico@teste.com' },
+      { password: 'senha123' }
+    )
     
-    // 2. Cria o perfil na tabela 'clientes' e associa-o ao user criado
-    const cliente = await Cliente.create({
-      id: user.id, // A ligação entre as tabelas
-      userId: user.id,
-      nome: 'Utilizador de Teste',
-      cpf: '12345678900',
-      telefone: '999999999',
-      dataNascimento: DateTime.fromISO('1990-01-01'), // Exemplo de data
-      genero: 'MASCULINO'
-    })
+    // 3. Cria Perfil Cliente
+    // O ID é igual ao do User. Não precisamos passar 'userId' explicitamente se o ID já é o vínculo.
+    const cliente = await Cliente.updateOrCreate(
+      { id: userCliente.id },
+      {
+        id: userCliente.id, // Força o ID a ser igual ao do User
+        nome: 'Cliente Exemplo',
+        cpf: '111.111.111-11',
+        telefone: '11999999999',
+        email: userCliente.email,
+        senha: userCliente.password,
+        dataNascimento: DateTime.fromISO('1990-01-01'),
+        genero: 'MASCULINO'
+      }
+    )
 
-    const funcaoTeste = await Funcao.create({
-      nome: 'médico geral'
-    })
+    // 4. Busca Função
+    let funcaoMedico = await Funcao.findBy('nome', 'MEDICO')
+    if (!funcaoMedico) {
+        funcaoMedico = await Funcao.create({ nome: 'MEDICO' })
+    }
 
-    const profissional = await Profissional.create({
-      id: user.id,
-      userId: user.id,
-      funcaoId: funcaoTeste.id,
-      nome: 'joão',
-      genero: 'MASCULINO',
-      dataNascimento: DateTime.fromISO('2005-01-01'),
-      cpf: '98765432100',
-      telefone: '888888888'
+    // 5. Cria Perfil Profissional
+    const profissional = await Profissional.updateOrCreate(
+      { id: userProfissional.id },
+      {
+        id: userProfissional.id, // Força o ID a ser igual ao do User
+        funcaoId: funcaoMedico.id,
+        nome: 'Doutor João',
+        cpf: '222.222.222-22',
+        telefone: '11888888888',
+        genero: 'MASCULINO',
+        dataNascimento: DateTime.fromISO('1985-05-20'),
+        email: userProfissional.email,
+        senha: userProfissional.password
+      }
+    )
 
-    })
+    // 6. Disponibilidade
+    const disponibilidade = await Disponibilidade.updateOrCreate(
+      { profissionalId: profissional.id, status: 'LIVRE' }, 
+      {
+        profissionalId: profissional.id, 
+        dataHoraInicio: DateTime.now(), 
+        dataHoraFim: DateTime.now().plus({ minutes: 30 }),
+        status: 'OCUPADO'
+      }
+    )
 
-    const disponibilidade = await Disponibilidade.create({
-      profissionalId: profissional.id, 
-      dataHoraInicio: DateTime.now(), 
-      dataHoraFim: DateTime.now().plus({minutes: 30}),
-    })
-
+    // 7. Atendimento
     const atendimento = await Atendimento.create({
       profissionalId: profissional.id,
       clienteId: cliente.id,
       disponibilidadeId: disponibilidade.id,
-      valor: 100,
+      valor: 150.00,
       dataHoraInicio: disponibilidade.dataHoraInicio,
       dataHoraFim: disponibilidade.dataHoraFim,
-      formaPagamento: 'PIX'
+      formaPagamento: 'PIX',
+      status: 'CONFIRMADO',
+      statusPagamento: 'PAGO'
     })
 
-    // 3. Atualiza o user com o ID do perfil que acabou de ser criado
-    user.perfil_id = cliente.id
-    await user.save()
-
-    console.log('Utilizador de teste criado com sucesso!')
-    console.log('--- DADOS PARA O TESTE ---')
-    console.log('ID do Atendimento:', atendimento.id)
-    console.log('Login do Profissional:', usuario.email)
-    console.log('---------------------------')
+    console.log('--- SEEDERS CONCLUÍDOS ---')
+    console.log(`Cliente ID: ${cliente.id}`)
+    console.log(`Profissional ID: ${profissional.id}`)
   }
 }

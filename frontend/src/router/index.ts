@@ -1,8 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-// 1. IMPORTS DAS VIEWS (TELAS)
+// ==========================================================
+// 1. IMPORTS DAS VIEWS (SEUS + DA EQUIPE)
+// ==========================================================
+
 import HomeView from '../views/HomeView.vue'
-<<<<<<< HEAD
+
+// --- SEUS IMPORTS (HEAD) ---
 import CadastroClienteView from '../views/CadastroClienteView.vue'
 import CadastroProfissionalView from '../views/CadastroProfissionalView.vue'
 import RedefinirSenhaView from '../views/RedefinirSenha.vue'
@@ -18,16 +22,18 @@ import FinanceiroView from '@/views/FinanceiroView.vue'
 import SalasView from '@/views/SalasView.vue' 
 import AprovacaoReservasView from '@/views/AprovacaoReservasView.vue' 
 
-// 2. Dashboard do Cliente
+// Dashboards (Sua versão)
 import ClientDashboardView from '@/views/ClientDashboardView.vue'
-
-// Dashboard Profissional
 import ProfissionalDashboardView from '@/views/ProfissionalDashboardView.vue'
-=======
+
+// --- IMPORTS DA EQUIPE (MAIN) ---
 import AprovarAgendamentosView from '../views/AprovarAgendamentosView.vue'
 import ReservaSalasView from '@/views/ReservaSalasView.vue'
 import ControleEstoqueView from '@/views/ControleEstoqueView.vue'
->>>>>>> main
+
+// ==========================================================
+// 2. CONFIGURAÇÃO DAS ROTAS
+// ==========================================================
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -40,31 +46,29 @@ const router = createRouter({
     
     { path: '/login', redirect: '/' },
 
+    // --- CADASTRO E RECUPERAÇÃO ---
     { 
       path: '/cadastro/cliente', 
       name: 'cadastro-cliente', 
       component: CadastroClienteView 
     },
-    
     { 
       path: '/cadastro/profissional', 
       name: 'cadastro-profissional', 
       component: CadastroProfissionalView 
     },    
-
     {
       path: '/redefinir-senha',
       name: 'redefinir-senha',
       component: RedefinirSenhaView
     },
-
     {
       path: '/esqueci-senha',
       name: 'esqueci-senha',
       component: EsqueciSenha
     },
 
-    // --- ÁREA ADMIN ---
+    // --- ÁREA ADMIN (SUAS TAREFAS) ---
     {
       path: '/admin/dashboard',
       name: 'admin-dashboard',
@@ -96,32 +100,36 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
 
-    // --- DASHBOARDS ---
+    // --- SEUS DASHBOARDS (Rota antiga) ---
     { 
       path: '/dashboard/cliente', 
       name: 'dashboard-cliente', 
       component: ClientDashboardView, 
       meta: { requiresAuth: true } 
     },
-    
     { 
       path: '/dashboard/profissional', 
       name: 'dashboard-profissional', 
       component: ProfissionalDashboardView, 
       meta: { requiresAuth: true }
     },
-    
     {
        path: '/dashboard',
        redirect: '/dashboard/cliente'
     },
 
     {
-<<<<<<< HEAD
       path: '/about',
       name: 'about',
       component: () => import('../views/AboutView.vue'),
-=======
+    },
+
+    // ==========================================================
+    // ROTAS DA EQUIPE (VINDAS DA MAIN)
+    // ==========================================================
+    
+    // Dashboards da Equipe (Note que eles usaram caminhos diferentes)
+    {
       path: '/cliente/dashboard',
       name: 'dashboardCliente',
       component: () => import('../views/atendimento/dashboard/DashboardCliente.vue'),
@@ -131,6 +139,8 @@ const router = createRouter({
       name: 'dashboardProfissional',
       component: () => import('../views/atendimento/dashboard/DashboardProfissional.vue'),
     },
+
+    // Agendamento e Histórico
     {
       path: '/cliente/agendar',
       name: 'agendarAtendimento',
@@ -152,6 +162,13 @@ const router = createRouter({
       component: () => import('../views/atendimento/agendaProfissional/AgendaProfissional.vue'),
     },
     {
+      path: '/profissional/historico',
+      name: 'historicoProfissional',
+      component: () => import('../views/atendimento/agendaProfissional/HistoricoProfissional.vue'),
+    },
+
+    // Disponibilidade
+    {
       path: '/profissional/cadastro/disponibilidade',
       name: 'cadastroDisponibilidadeProfissional',
       component: () => import('../views/atendimento/disponibilidade/CadastroDisponibilidade.vue'),
@@ -161,11 +178,8 @@ const router = createRouter({
       name: 'disponibilidadeProfissional',
       component: () => import('../views/atendimento/disponibilidade/ExibicaoDisponibilidade.vue'),
     },
-    {
-      path: '/profissional/historico',
-      name: 'historicoProfissional',
-      component: () => import('../views/atendimento/agendaProfissional/HistoricoProfissional.vue'),
-    },
+
+    // Parcerias
     {
       path: '/cadastro/parceria',
       name: 'cadastroParceria',
@@ -176,6 +190,8 @@ const router = createRouter({
       name: 'listaParceria',
       component: () => import('../views/atendimento/parceria/ListaParceria.vue'),
     },
+
+    // Admin Outros (Equipe)
     {
       path: '/admin/solicitacoes',
       name: 'admin-solicitacoes',
@@ -186,14 +202,17 @@ const router = createRouter({
       name: 'admin-estoque',
       component: ControleEstoqueView
     },
+
+    // Reservas (Visão Profissional da Equipe)
     {
       path: '/profissional/reservas',
       name: 'profissional-reservas',
       component: ReservaSalasView
->>>>>>> main
     },
 
-    // --- ÁREA PROFISSIONAL ---
+    // ==========================================================
+    // SUAS ROTAS PROFISSIONAIS (MANTIDAS)
+    // ==========================================================
     { 
       path: '/profissional/solicitar-reposicao', 
       name: 'solicitar-reposicao', 
@@ -208,11 +227,9 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
 
-    // ✅✅✅ ROTA CORRIGIDA ✅✅✅
     {
       path: '/profissional/pagamento-salas',
       name: 'pagamento-salas',
-      // IMPORTANTE: O arquivo DEVE estar na pasta src/views/profissional/
       component: () => import('@/views/profissional/PagamentoSalasView.vue'),
       meta: { requiresAuth: true }
     }
