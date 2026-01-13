@@ -42,6 +42,17 @@ export default class extends BaseSchema {
       table.string('email').notNullable().unique()
       table.string('senha').notNullable()
       table.string('telefone').notNullable()
+      
+      // === CAMPOS ADICIONADOS PARA CORRIGIR O SEEDER ===
+      table.enum('status', ['pendente', 'aprovado', 'rejeitado']).defaultTo('pendente')
+      table.string('registro_conselho').nullable()
+      table.string('conselho_uf').nullable()
+      table.string('foto_perfil_url').nullable()
+      table.text('biografia').nullable()
+      table.string('comprovante_credenciamento_url').nullable()
+      table.text('observacoes_admin').nullable()
+      // =================================================
+
       table.timestamp('created_at')
       table.timestamp('updated_at')
     })
@@ -93,7 +104,7 @@ export default class extends BaseSchema {
       table.increments('id')
       table.string('nome', 40).notNullable()
       table.string('ramo', 40).notNullable()
-      table.integer('cep').notNullable() // Corrigido de integer('cep', 8) para integer
+      table.integer('cep').notNullable()
       table.string('site_url').nullable()
       table.float('porcentagem_desconto', 5, 2).notNullable()
       table.string('tipo_convenio', 50).notNullable()
@@ -145,19 +156,13 @@ export default class extends BaseSchema {
     // --- TABELA TRANSACOES (UNIFICADA) ---
     this.schema.createTable('transacoes', (table) => {
       table.increments('id')
-
-      // Transação ligada a um Atendimento/Consulta (Ex: Pagamento da consulta)
       table.integer('atendimento_id').unsigned().nullable().references('id').inTable('atendimentos').onDelete('SET NULL')
-
-      // Usuário que registrou a transação
       table.integer('user_id').unsigned().notNullable().references('id').inTable('users').onDelete('CASCADE')
       
-      // Quem pagou/de onde o dinheiro saiu (Ex: 'cliente', 'profissional')
       table.string('entidade_origem', 50).nullable()
       table.integer('entidade_id').unsigned().nullable()
       table.index(['entidade_origem', 'entidade_id'])
 
-      // Para onde essa transação foi (Ex: 'profissional', 'clinica')
       table.string('destinatario_tipo', 50).nullable()
       table.integer('destinatario_id').unsigned().nullable()
       table.index(['destinatario_tipo', 'destinatario_id'])
@@ -168,10 +173,8 @@ export default class extends BaseSchema {
       
       table.enum('status', ['PENDENTE', 'CONCLUIDA', 'FALHOU', 'ESTORNADA']).notNullable().defaultTo('PENDENTE')
       
-      // Seus campos personalizados recuperados
       table.string('descricao').nullable()
       table.string('forma_pagamento').nullable()
-
       table.string('referencia_externa').nullable()
       table.timestamp('created_at')
       table.timestamp('updated_at')

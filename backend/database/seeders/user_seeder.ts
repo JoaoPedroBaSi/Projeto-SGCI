@@ -9,26 +9,33 @@ import { DateTime } from 'luxon'
 
 export default class extends BaseSeeder {
   public async run() {
-    console.log('--- INICIANDO SEED DE TESTE ---')
+    console.log('--- INICIANDO SEED DE TESTE CORRIGIDO ---')
 
-    // 1. Cria User Cliente
+    // 1. Cria User Cliente (COM PERFIL_TIPO)
     const userCliente = await User.updateOrCreate(
       { email: 'cliente@teste.com' },
-      { password: 'senha123' }
+      {
+        password: 'senha123',
+        perfil_tipo: 'cliente', // <--- CORREÇÃO AQUI
+        status: 'ativo'         // <--- CORREÇÃO AQUI
+      }
     )
 
-    // 2. Cria User Profissional
+    // 2. Cria User Profissional (COM PERFIL_TIPO)
     const userProfissional = await User.updateOrCreate(
       { email: 'medico@teste.com' },
-      { password: 'senha123' }
+      {
+        password: 'senha123',
+        perfil_tipo: 'profissional', // <--- CORREÇÃO AQUI
+        status: 'ativo'              // <--- CORREÇÃO AQUI
+      }
     )
     
     // 3. Cria Perfil Cliente
-    // O ID é igual ao do User. Não precisamos passar 'userId' explicitamente se o ID já é o vínculo.
     const cliente = await Cliente.updateOrCreate(
       { id: userCliente.id },
       {
-        id: userCliente.id, // Força o ID a ser igual ao do User
+        id: userCliente.id,
         nome: 'Cliente Exemplo',
         cpf: '111.111.111-11',
         telefone: '11999999999',
@@ -49,7 +56,7 @@ export default class extends BaseSeeder {
     const profissional = await Profissional.updateOrCreate(
       { id: userProfissional.id },
       {
-        id: userProfissional.id, // Força o ID a ser igual ao do User
+        id: userProfissional.id,
         funcaoId: funcaoMedico.id,
         nome: 'Doutor João',
         cpf: '222.222.222-22',
@@ -57,7 +64,8 @@ export default class extends BaseSeeder {
         genero: 'MASCULINO',
         dataNascimento: DateTime.fromISO('1985-05-20'),
         email: userProfissional.email,
-        senha: userProfissional.password
+        senha: userProfissional.password,
+        status: 'aprovado'
       }
     )
 
