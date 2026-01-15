@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DashboardLayout from '@/layouts/DashboardLayout.vue';
 import CardDashboardConsulta from '@/components/cards/atendimento/dashboard/CardDashboardConsulta.vue';
 import CardDashboardCalc from '@/components/cards/atendimento/dashboard/CardDashboardCalc.vue';
 import { ref, onMounted, computed, watch } from 'vue';
@@ -112,73 +113,75 @@ Código Responsivo Ajustado
 Snippet de código
 
 <template>
-  <header class="cabecalho">
-    <div class="titulo">
-      <h1>Seus dashboards</h1>
-    </div>
-    <div class="infos-perfil">
-      <div class="foto">
-        <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
+  <DashboardLayout>
+    <header class="cabecalho">
+      <div class="titulo">
+        <h1>Seus dashboards</h1>
       </div>
-      <div class="texto">
-        <p class="nome">{{ clienteLogado?.nome || 'Usuário' }}</p>
-        <p class="email">{{ clienteLogado?.email || 'E-mail não informado' }}</p>
-      </div>
-    </div>
-  </header>
-
-  <div class="secao-titulo">
-    <h3>Total gasto</h3>
-  </div>
-  <div class="container-linha-unica">
-    <CardDashboardProfissional finalidade="rendimento" :chartData="saldoTotal" titulo="Gasto"/>
-  </div>
-
-  <div class="secao-titulo">
-    <h3>Próximas consultas</h3>
-  </div>
-  <section class="grid-container">
-    <div class="container-botao-adicionar">
-      <router-link to="/cliente/agendar" class="card-novo-agendamento">
-        <div class="conteudo-adicionar">
-          <span class="simbolo-mais">+</span>
+      <div class="infos-perfil">
+        <div class="foto">
+          <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
         </div>
-      </router-link>
-    </div>
-
-    <CardDashboardConsulta
-      v-for="atendimento in atendimentos"
-      :key="atendimento.id"
-      :consulta="atendimento"
-      @detalhar="abrirDetalhes"
-    />
-  </section>
-
-  <Teleport to="body">
-    <div v-if="atendimentoSelecionado" class="modal-overlay" @click.self="fecharDetalhes">
-      <div class="modal-content">
-        <button class="btn-fechar" @click="fecharDetalhes">✕</button>
-        <CardAtendimento
-          :consulta="atendimentoSelecionado"
-          @cancelar="fecharDetalhes"
-        />
+        <div class="texto">
+          <p class="nome">{{ clienteLogado?.nome || 'Usuário' }}</p>
+          <p class="email">{{ clienteLogado?.email || 'E-mail não informado' }}</p>
+        </div>
       </div>
-    </div>
-  </Teleport>
+    </header>
 
-  <div class="secao-titulo">
-    <h3>Detalhamento</h3>
-  </div>
-  <section class="grid-resumo-layout">
-    <CardDashboardCalc
-      v-for="info in infos"
-      :key="info.id"
-      :finalidade="info.finalidade"
-      :qtdAtendimentosConfirmados="contarAtendimentosConfirmados"
-      :qtdAtendimentosAguardandoPagamento="contarAtendimentosAguardandoPagamento"
-      :qtdAtendimentosNoHistorico="contarAtendimentosNoHistorico"
-    />
-  </section>
+    <div class="secao-titulo">
+      <h3>Total gasto</h3>
+    </div>
+    <div class="container-linha-unica">
+      <CardDashboardProfissional finalidade="rendimento" :chartData="saldoTotal" titulo="Gasto"/>
+    </div>
+
+    <div class="secao-titulo">
+      <h3>Próximas consultas</h3>
+    </div>
+    <section class="grid-container">
+      <div class="container-botao-adicionar">
+        <router-link to="/cliente/agendar" class="card-novo-agendamento">
+          <div class="conteudo-adicionar">
+            <span class="simbolo-mais">+</span>
+          </div>
+        </router-link>
+      </div>
+
+      <CardDashboardConsulta
+        v-for="atendimento in atendimentos"
+        :key="atendimento.id"
+        :consulta="atendimento"
+        @detalhar="abrirDetalhes"
+      />
+    </section>
+
+    <Teleport to="body">
+      <div v-if="atendimentoSelecionado" class="modal-overlay" @click.self="fecharDetalhes">
+        <div class="modal-content">
+          <button class="btn-fechar" @click="fecharDetalhes">✕</button>
+          <CardAtendimento
+            :consulta="atendimentoSelecionado"
+            @cancelar="fecharDetalhes"
+          />
+        </div>
+      </div>
+    </Teleport>
+
+    <div class="secao-titulo">
+      <h3>Detalhamento</h3>
+    </div>
+    <section class="grid-resumo-layout">
+      <CardDashboardCalc
+        v-for="info in infos"
+        :key="info.id"
+        :finalidade="info.finalidade"
+        :qtdAtendimentosConfirmados="contarAtendimentosConfirmados"
+        :qtdAtendimentosAguardandoPagamento="contarAtendimentosAguardandoPagamento"
+        :qtdAtendimentosNoHistorico="contarAtendimentosNoHistorico"
+      />
+    </section>
+  </DashboardLayout>
 </template>
 
 <style lang="css" scoped>

@@ -19,8 +19,8 @@ import SolicitacaoReposicaoView from '@/views/SolicitacaoReposicaoView.vue'
 import FinanceiroView from '@/views/FinanceiroView.vue'
 
 // --- IMPORTS SPRINT 4 (ADMIN SALAS) ---
-import SalasView from '@/views/SalasView.vue' 
-import AprovacaoReservasView from '@/views/AprovacaoReservasView.vue' 
+import SalasView from '@/views/SalasView.vue'
+import AprovacaoReservasView from '@/views/AprovacaoReservasView.vue'
 
 // Dashboards (Sua versão)
 import ClientDashboardView from '@/views/ClientDashboardView.vue'
@@ -43,20 +43,20 @@ const router = createRouter({
       name: 'home',
       component: HomeView,
     },
-    
+
     { path: '/login', redirect: '/' },
 
     // --- CADASTRO E RECUPERAÇÃO ---
-    { 
-      path: '/cadastro/cliente', 
-      name: 'cadastro-cliente', 
-      component: CadastroClienteView 
+    {
+      path: '/cadastro/cliente',
+      name: 'cadastro-cliente',
+      component: CadastroClienteView
     },
-    { 
-      path: '/cadastro/profissional', 
-      name: 'cadastro-profissional', 
-      component: CadastroProfissionalView 
-    },    
+    {
+      path: '/cadastro/profissional',
+      name: 'cadastro-profissional',
+      component: CadastroProfissionalView
+    },
     {
       path: '/redefinir-senha',
       name: 'redefinir-senha',
@@ -101,16 +101,16 @@ const router = createRouter({
     },
 
     // --- SEUS DASHBOARDS (Rota antiga) ---
-    { 
-      path: '/dashboard/cliente', 
-      name: 'dashboard-cliente', 
-      component: ClientDashboardView, 
-      meta: { requiresAuth: true } 
+    {
+      path: '/dashboard/cliente',
+      name: 'dashboard-cliente',
+      component: ClientDashboardView,
+      meta: { requiresAuth: true }
     },
-    { 
-      path: '/dashboard/profissional', 
-      name: 'dashboard-profissional', 
-      component: ProfissionalDashboardView, 
+    {
+      path: '/dashboard/profissional',
+      name: 'dashboard-profissional',
+      component: ProfissionalDashboardView,
       meta: { requiresAuth: true }
     },
     {
@@ -127,7 +127,7 @@ const router = createRouter({
     // ==========================================================
     // ROTAS DA EQUIPE (VINDAS DA MAIN)
     // ==========================================================
-    
+
     // Dashboards da Equipe (Note que eles usaram caminhos diferentes)
     {
       path: '/cliente/dashboard',
@@ -213,17 +213,17 @@ const router = createRouter({
     // ==========================================================
     // SUAS ROTAS PROFISSIONAIS (MANTIDAS)
     // ==========================================================
-    { 
-      path: '/profissional/solicitar-reposicao', 
-      name: 'solicitar-reposicao', 
-      component: SolicitacaoReposicaoView, 
+    {
+      path: '/profissional/solicitar-reposicao',
+      name: 'solicitar-reposicao',
+      component: SolicitacaoReposicaoView,
       meta: { requiresAuth: true }
     },
 
-    { 
-      path: '/profissional/financeiro', 
-      name: 'financeiro-profissional', 
-      component: FinanceiroView, 
+    {
+      path: '/profissional/financeiro',
+      name: 'financeiro-profissional',
+      component: FinanceiroView,
       meta: { requiresAuth: true }
     },
 

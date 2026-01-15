@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import SalaCard from '@/components/cards/ReservaSalaCard.vue';
 import ReservaModal from '@/components/modals/ReservaModal.vue';
 import { salaService } from '@/services/salaService';
+import DashboardLayout from '@/layouts/DashboardLayout.vue';
 
 interface Sala {
   id: number;
@@ -105,62 +106,64 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="layout-wrapper">
+  <DashboardLayout>
+    <div class="layout-wrapper">
 
-    <Teleport to="body">
-      <div class="toast-container">
-        <TransitionGroup name="toast">
-          <div v-for="toast in toasts" :key="toast.id" class="toast" :class="toast.tipo">
-            <span class="icon" v-if="toast.tipo === 'sucesso'">✅</span>
-            <span class="icon" v-else-if="toast.tipo === 'erro'">❌</span>
-            <span class="icon" v-else>ℹ️</span>
-            {{ toast.mensagem }}
-          </div>
-        </TransitionGroup>
-      </div>
-    </Teleport>
-
-    <header class="header-pagina">
-      <div class="header-content">
-        <div class="titulos">
-          <h1 class="titulo-principal">Reserva de Salas</h1>
-          <div class="breadcrumbs">Recursos / <span class="active">Reserva de Salas</span></div>
+      <Teleport to="body">
+        <div class="toast-container">
+          <TransitionGroup name="toast">
+            <div v-for="toast in toasts" :key="toast.id" class="toast" :class="toast.tipo">
+              <span class="icon" v-if="toast.tipo === 'sucesso'">✅</span>
+              <span class="icon" v-else-if="toast.tipo === 'erro'">❌</span>
+              <span class="icon" v-else>ℹ️</span>
+              {{ toast.mensagem }}
+            </div>
+          </TransitionGroup>
         </div>
-      </div>
-    </header>
+      </Teleport>
 
-    <main class="conteudo-pagina">
-      <div class="container-limite">
-
-        <section class="filtros-container">
-          <div class="filtro-item">
-            <label>DATA DESEJADA</label>
-            <div class="input-icon-wrapper">
-              <input type="date" v-model="dataFiltro" class="input-filtro">
-            </div>
+      <header class="header-pagina">
+        <div class="header-content">
+          <div class="titulos">
+            <h1 class="titulo-principal">Reserva de Salas</h1>
+            <div class="breadcrumbs">Recursos / <span class="active">Reserva de Salas</span></div>
           </div>
+        </div>
+      </header>
 
-          <div class="filtro-item flex-grow">
-            <label>BUSCAR SALA</label>
-            <div class="search-wrapper">
-              <input type="text" v-model="buscaSala" placeholder="Ex: Sala 01..." class="input-filtro">
-              <button class="btn-hoje" @click="definirDataHoje">Hoje</button>
+      <main class="conteudo-pagina">
+        <div class="container-limite">
+
+          <section class="filtros-container">
+            <div class="filtro-item">
+              <label>DATA DESEJADA</label>
+              <div class="input-icon-wrapper">
+                <input type="date" v-model="dataFiltro" class="input-filtro">
+              </div>
             </div>
-          </div>
-        </section>
 
-        <div v-if="carregando" class="loading-state">Carregando salas...</div>
+            <div class="filtro-item flex-grow">
+              <label>BUSCAR SALA</label>
+              <div class="search-wrapper">
+                <input type="text" v-model="buscaSala" placeholder="Ex: Sala 01..." class="input-filtro">
+                <button class="btn-hoje" @click="definirDataHoje">Hoje</button>
+              </div>
+            </div>
+          </section>
 
-        <section v-else class="grid-salas">
-          <SalaCard v-for="sala in listaSalas" :key="sala.id" :dados="sala" @ao-reservar="abrirModalReserva" />
-        </section>
+          <div v-if="carregando" class="loading-state">Carregando salas...</div>
 
-      </div>
-    </main>
+          <section v-else class="grid-salas">
+            <SalaCard v-for="sala in listaSalas" :key="sala.id" :dados="sala" @ao-reservar="abrirModalReserva" />
+          </section>
 
-    <ReservaModal :visivel="modalAberto" :sala="salaSelecionada" @ao-fechar="modalAberto = false"
-      @ao-confirmar="processarSucessoReserva" @ao-notificar="lidarComNotificacaoModal" />
-  </div>
+        </div>
+      </main>
+
+      <ReservaModal :visivel="modalAberto" :sala="salaSelecionada" @ao-fechar="modalAberto = false"
+        @ao-confirmar="processarSucessoReserva" @ao-notificar="lidarComNotificacaoModal" />
+    </div>
+  </DashboardLayout>
 </template>
 
 <style scoped>
@@ -215,13 +218,13 @@ onMounted(() => {
   opacity: 0;
 }
 
-/* LAYOUT GERAL */
 .layout-wrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
   background-color: #F0F2F5;
   width: 100%;
+  min-height: 100%;
 }
 
 .header-pagina {
@@ -259,15 +262,16 @@ onMounted(() => {
 
 .conteudo-pagina {
   flex-grow: 1;
-  padding: 30px 40px;
+
+  padding: 30px 0;
   width: 100%;
   box-sizing: border-box;
 }
 
 .container-limite {
   width: 100%;
-  max-width: 1600px;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
 }
 
 .loading-state {
@@ -342,7 +346,7 @@ onMounted(() => {
 
 .grid-salas {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 25px;
   width: 100%;
 }

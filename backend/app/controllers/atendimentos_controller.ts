@@ -37,7 +37,7 @@ export default class AtendimentosController {
       .where('id', params.id)
       .preload('cliente', (query) => query.select('id', 'nome'))
       .preload('profissional', (query) => query.select('id', 'nome'))
-      // JP: removi email dos preloads porque eles só exixsrtem na tabela User
+      // removi email dos preloads porque eles só exixsrtem na tabela User
   }
 
   // Função para a tela de aprovação de agendamentos

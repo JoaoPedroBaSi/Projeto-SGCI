@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import ModalMovimentacao from '@/components/modals/ModalMovimentacao.vue';
 import { estoqueService, type InventarioItem, type MovimentacaoHistorico } from '@/services/estoqueService';
+import DashboardLayout from '@/layouts/DashboardLayout.vue';
 
 // --- Estado ---
 const abaAtiva = ref<'visao-geral' | 'historico' | 'alertas'>('visao-geral');
@@ -167,223 +168,224 @@ function formatarDataHora(isoString: string) {
 </script>
 
 <template>
-  <div class="layout-wrapper">
-    <header class="header-pagina">
-      <div class="header-content">
-        <div class="titulos">
-          <h1 class="titulo-principal">Controle de Estoque</h1>
+  <DashboardLayout>
+    <div class="layout-wrapper">
+      <header class="header-pagina">
+        <div class="header-content">
+          <div class="titulos">
+            <h1 class="titulo-principal">Controle de Estoque</h1>
+          </div>
+          <div class="perfil-usuario">
+            <div class="dados-usuario">
+              <span class="nome">{{ usuarioLogado.nome }}</span>
+              <span class="email">{{ usuarioLogado.email }}</span>
+            </div>
+            <div class="avatar-circle">
+              <span>{{ usuarioLogado.nome.charAt(0) }}</span>
+            </div>
+          </div>
         </div>
-        <div class="perfil-usuario">
-          <div class="dados-usuario">
-            <span class="nome">{{ usuarioLogado.nome }}</span>
-            <span class="email">{{ usuarioLogado.email }}</span>
-          </div>
-          <div class="avatar-circle">
-            <span>{{ usuarioLogado.nome.charAt(0) }}</span>
-          </div>
-        </div>
-      </div>
-    </header>
+      </header>
 
-    <main class="conteudo-pagina">
-      <div class="container-limite">
+      <main class="conteudo-pagina">
+        <div class="container-limite">
 
-        <section class="cards-resumo">
-          <div class="card-kpi">
-            <div class="kpi-icon critical">!</div>
-            <div class="kpi-info">
-              <span class="kpi-label">ITENS CRÍTICOS</span>
-              <span class="kpi-value red-text">{{ kpiCriticos }}</span>
-              <span class="kpi-sub red-text">Zerados ou Vencidos</span>
+          <section class="cards-resumo">
+            <div class="card-kpi">
+              <div class="kpi-icon critical">!</div>
+              <div class="kpi-info">
+                <span class="kpi-label">ITENS CRÍTICOS</span>
+                <span class="kpi-value red-text">{{ kpiCriticos }}</span>
+                <span class="kpi-sub red-text">Zerados ou Vencidos</span>
+              </div>
             </div>
-          </div>
-          <div class="card-kpi">
-            <div class="kpi-icon low">!</div>
-            <div class="kpi-info">
-              <span class="kpi-label">ESTOQUE BAIXO</span>
-              <span class="kpi-value yellow-text">{{ kpiEstoqueBaixo }}</span>
-              <span class="kpi-sub yellow-text">Reposição necessária</span>
+            <div class="card-kpi">
+              <div class="kpi-icon low">!</div>
+              <div class="kpi-info">
+                <span class="kpi-label">ESTOQUE BAIXO</span>
+                <span class="kpi-value yellow-text">{{ kpiEstoqueBaixo }}</span>
+                <span class="kpi-sub yellow-text">Reposição necessária</span>
+              </div>
             </div>
-          </div>
-          <div class="card-kpi">
-            <div class="kpi-icon move">⇄</div>
-            <div class="kpi-info">
-              <span class="kpi-label">MOVIMENTAÇÕES</span>
-              <span class="kpi-value">{{ listaHistorico.length }}</span>
-              <span class="kpi-sub">Total registrado</span>
+            <div class="card-kpi">
+              <div class="kpi-icon move">⇄</div>
+              <div class="kpi-info">
+                <span class="kpi-label">MOVIMENTAÇÕES</span>
+                <span class="kpi-value">{{ listaHistorico.length }}</span>
+                <span class="kpi-sub">Total registrado</span>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section class="acoes-container">
-          <nav class="abas">
-            <button :class="['aba-btn', { active: abaAtiva === 'visao-geral' }]" @click="abaAtiva = 'visao-geral'">
-              Visão Geral
-            </button>
-            <button :class="['aba-btn', { active: abaAtiva === 'historico' }]" @click="abaAtiva = 'historico'">
-              Histórico
-            </button>
-            <button :class="['aba-btn', { active: abaAtiva === 'alertas' }]" @click="abaAtiva = 'alertas'">
-              Alertas de Estoque
-            </button>
-          </nav>
-          <div class="botoes-movimentacao">
-            <button class="btn-entrada" @click="abrirModal('ENTRADA')">⬇ Nova Entrada</button>
-            <button class="btn-saida" @click="abrirModal('SAIDA')">⬆ Nova Saída</button>
-          </div>
-        </section>
-
-        <section class="conteudo-tabela">
-          <div v-if="carregando" class="loading-state">Carregando dados...</div>
-
-          <div v-else>
-            <div class="barra-filtro">
-              <input type="text" v-model="busca" placeholder="Busca por nome, lote ou responsável..."
-                class="input-search">
+          <section class="acoes-container">
+            <nav class="abas">
+              <button :class="['aba-btn', { active: abaAtiva === 'visao-geral' }]" @click="abaAtiva = 'visao-geral'">
+                Visão Geral
+              </button>
+              <button :class="['aba-btn', { active: abaAtiva === 'historico' }]" @click="abaAtiva = 'historico'">
+                Histórico
+              </button>
+              <button :class="['aba-btn', { active: abaAtiva === 'alertas' }]" @click="abaAtiva = 'alertas'">
+                Alertas de Estoque
+              </button>
+            </nav>
+            <div class="botoes-movimentacao">
+              <button class="btn-entrada" @click="abrirModal('ENTRADA')">⬇ Nova Entrada</button>
+              <button class="btn-saida" @click="abrirModal('SAIDA')">⬆ Nova Saída</button>
             </div>
+          </section>
 
-            <table class="tabela-custom" v-if="abaAtiva === 'visao-geral'">
-              <thead>
-                <tr>
-                  <th>PRODUTO</th>
-                  <th>TIPO</th>
-                  <th>LOTE / VALIDADE</th>
-                  <th>QTD. ATUAL</th>
-                  <th>STATUS</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in produtosComputados" :key="item.id"
-                  :class="{ 'bg-critico-light': item.status === 'critico', 'bg-baixo-light': item.status === 'baixo' }">
-                  <td>
-                    <div class="col-produto">
-                      <span class="nome-prod">{{ item.nome }}</span>
-                    </div>
-                  </td>
-                  <td>{{ item.tipo }}</td>
-                  <td>
-                    <div class="col-lote">
-                      <span>Lote: {{ item.lote || '-' }}</span>
-                      <span :class="{ 'text-red': item.diasRestantes < 0 }">
-                        {{ item.venceFormatado !== 'Indeterminado' ? 'Vence: ' + item.venceFormatado : '-' }}
+          <section class="conteudo-tabela">
+            <div v-if="carregando" class="loading-state">Carregando dados...</div>
+
+            <div v-else>
+              <div class="barra-filtro">
+                <input type="text" v-model="busca" placeholder="Busca por nome, lote ou responsável..."
+                  class="input-search">
+              </div>
+
+              <table class="tabela-custom" v-if="abaAtiva === 'visao-geral'">
+                <thead>
+                  <tr>
+                    <th>PRODUTO</th>
+                    <th>TIPO</th>
+                    <th>LOTE / VALIDADE</th>
+                    <th>QTD. ATUAL</th>
+                    <th>STATUS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in produtosComputados" :key="item.id"
+                    :class="{ 'bg-critico-light': item.status === 'critico', 'bg-baixo-light': item.status === 'baixo' }">
+                    <td>
+                      <div class="col-produto">
+                        <span class="nome-prod">{{ item.nome }}</span>
+                      </div>
+                    </td>
+                    <td>{{ item.tipo }}</td>
+                    <td>
+                      <div class="col-lote">
+                        <span>Lote: {{ item.lote || '-' }}</span>
+                        <span :class="{ 'text-red': item.diasRestantes < 0 }">
+                          {{ item.venceFormatado !== 'Indeterminado' ? 'Vence: ' + item.venceFormatado : '-' }}
+                        </span>
+                      </div>
+                    </td>
+                    <td class="font-bold font-color-main">{{ item.quantidade }} {{ item.unidadeMedida }}</td>
+                    <td>
+                      <span :class="['badge-status', item.status]">
+                        <span class="dot">●</span> {{ item.status.toUpperCase() }}
                       </span>
-                    </div>
-                  </td>
-                  <td class="font-bold font-color-main">{{ item.quantidade }} {{ item.unidadeMedida }}</td>
-                  <td>
-                    <span :class="['badge-status', item.status]">
-                      <span class="dot">●</span> {{ item.status.toUpperCase() }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
 
-            <table class="tabela-custom" v-if="abaAtiva === 'historico'">
-              <thead>
-                <tr>
-                  <th>DATA/HORA</th>
-                  <th>RESPONSÁVEL</th>
-                  <th>TIPO</th>
-                  <th>PRODUTO</th>
-                  <th>QTD.</th>
-                  <th>OBS</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="mov in historicoFiltrado" :key="mov.id">
-                  <td>{{ formatarDataHora(mov.createdAt) }}</td>
-                  <td>{{ mov.profissional?.nome || 'Admin' }}</td>
-                  <td>
-                    <span :class="['badge-tipo', mov.tipo === 'ENTRADA' ? 'entrada' : 'saida']">
-                      {{ mov.tipo }}
-                    </span>
-                  </td>
-                  <td>{{ mov.inventario?.nome || 'Item excluído' }}</td>
-                  <td>
-                    <span v-if="mov.tipo === 'ENTRADA'">+ {{ mov.quantidade }}</span>
-                    <span v-else>- {{ mov.quantidade }}</span>
-                  </td>
-                  <td class="text-small">{{ mov.observacao || '-' }}</td>
-                </tr>
-                <tr v-if="historicoFiltrado.length === 0">
-                  <td colspan="6" class="text-center padding-lg">Nenhum histórico encontrado para esta busca.</td>
-                </tr>
-              </tbody>
-            </table>
+              <table class="tabela-custom" v-if="abaAtiva === 'historico'">
+                <thead>
+                  <tr>
+                    <th>DATA/HORA</th>
+                    <th>RESPONSÁVEL</th>
+                    <th>TIPO</th>
+                    <th>PRODUTO</th>
+                    <th>QTD.</th>
+                    <th>OBS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="mov in historicoFiltrado" :key="mov.id">
+                    <td>{{ formatarDataHora(mov.createdAt) }}</td>
+                    <td>{{ mov.profissional?.nome || 'Admin' }}</td>
+                    <td>
+                      <span :class="['badge-tipo', mov.tipo === 'ENTRADA' ? 'entrada' : 'saida']">
+                        {{ mov.tipo }}
+                      </span>
+                    </td>
+                    <td>{{ mov.inventario?.nome || 'Item excluído' }}</td>
+                    <td>
+                      <span v-if="mov.tipo === 'ENTRADA'">+ {{ mov.quantidade }}</span>
+                      <span v-else>- {{ mov.quantidade }}</span>
+                    </td>
+                    <td class="text-small">{{ mov.observacao || '-' }}</td>
+                  </tr>
+                  <tr v-if="historicoFiltrado.length === 0">
+                    <td colspan="6" class="text-center padding-lg">Nenhum histórico encontrado para esta busca.</td>
+                  </tr>
+                </tbody>
+              </table>
 
-            <table class="tabela-custom" v-if="abaAtiva === 'alertas'">
-              <thead>
-                <tr>
-                  <th>PRODUTO</th>
-                  <th>SITUAÇÃO</th>
-                  <th>DETALHE</th>
-                  <th>DIAS P/ VENCER</th>
-                  <th class="text-right">AÇÃO</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in listaAlertas" :key="item.id"
-                  :class="{ 'bg-critico-light': item.status === 'critico', 'bg-baixo-light': item.status === 'baixo' }">
+              <table class="tabela-custom" v-if="abaAtiva === 'alertas'">
+                <thead>
+                  <tr>
+                    <th>PRODUTO</th>
+                    <th>SITUAÇÃO</th>
+                    <th>DETALHE</th>
+                    <th>DIAS P/ VENCER</th>
+                    <th class="text-right">AÇÃO</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in listaAlertas" :key="item.id"
+                    :class="{ 'bg-critico-light': item.status === 'critico', 'bg-baixo-light': item.status === 'baixo' }">
 
-                  <td class="font-bold">{{ item.nome }}</td>
+                    <td class="font-bold">{{ item.nome }}</td>
 
-                  <td>
-                    <span :class="['badge-status', item.status]">
-                      {{ item.motivoAlerta }}
-                    </span>
-                  </td>
+                    <td>
+                      <span :class="['badge-status', item.status]">
+                        {{ item.motivoAlerta }}
+                      </span>
+                    </td>
 
-                  <td>
-                    <div v-if="item.motivoAlerta === 'VENCIDO' || item.motivoAlerta === 'VENCE EM BREVE'">
-                      Lote: {{ item.lote || 'N/A' }} <br>
-                      <span class="text-red font-bold">{{ item.venceFormatado }}</span>
-                    </div>
-                    <div v-else>
-                      Restam: <span class="font-bold">{{ item.quantidade }} {{ item.unidadeMedida }}</span> <br>
-                      <span class="text-small">Min: {{ item.pontoReposicao }}</span>
-                    </div>
-                  </td>
+                    <td>
+                      <div v-if="item.motivoAlerta === 'VENCIDO' || item.motivoAlerta === 'VENCE EM BREVE'">
+                        Lote: {{ item.lote || 'N/A' }} <br>
+                        <span class="text-red font-bold">{{ item.venceFormatado }}</span>
+                      </div>
+                      <div v-else>
+                        Restam: <span class="font-bold">{{ item.quantidade }} {{ item.unidadeMedida }}</span> <br>
+                        <span class="text-small">Min: {{ item.pontoReposicao }}</span>
+                      </div>
+                    </td>
 
-                  <td>
-                    <span v-if="item.diasRestantes !== 9999"
-                      :class="['badge-dias', item.diasRestantes <= 0 ? 'critico' : 'alerta']">
-                      {{ item.diasRestantes <= 0 ? 'VENCIDO' : item.diasRestantes + ' DIAS' }} </span>
-                        <span v-else class="text-small">-</span>
-                  </td>
+                    <td>
+                      <span v-if="item.diasRestantes !== 9999"
+                        :class="['badge-dias', item.diasRestantes <= 0 ? 'critico' : 'alerta']">
+                        {{ item.diasRestantes <= 0 ? 'VENCIDO' : item.diasRestantes + ' DIAS' }} </span>
+                          <span v-else class="text-small">-</span>
+                    </td>
 
-                  <td class="text-right">
-                    <button v-if="item.diasRestantes <= 0 && item.diasRestantes !== 9999"
-                      class="btn-acao-outline text-red" @click="abrirModal('SAIDA', item.id)">
-                      Descartar
-                    </button>
+                    <td class="text-right">
+                      <button v-if="item.diasRestantes <= 0 && item.diasRestantes !== 9999"
+                        class="btn-acao-outline text-red" @click="abrirModal('SAIDA', item.id)">
+                        Descartar
+                      </button>
 
-                    <button v-else class="btn-acao-outline text-yellow" @click="abrirModal('ENTRADA', item.id)">
-                      Solicitar Reposição
-                    </button>
-                  </td>
-                </tr>
-                <tr v-if="listaAlertas.length === 0">
-                  <td colspan="5" class="text-center padding-lg">
-                    <span class="text-green">✔ Tudo certo! Nenhum alerta de estoque no momento.</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+                      <button v-else class="btn-acao-outline text-yellow" @click="abrirModal('ENTRADA', item.id)">
+                        Solicitar Reposição
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-if="listaAlertas.length === 0">
+                    <td colspan="5" class="text-center padding-lg">
+                      <span class="text-green">✔ Tudo certo! Nenhum alerta de estoque no momento.</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
 
-      </div>
-    </main>
+        </div>
+      </main>
 
-    <ModalMovimentacao :visivel="modalAberto" :tipoInicial="tipoMovimentacaoInicial" :listaOpcoes="listaProdutos"
-      :idPreSelecionado="idProdutoPreSelecionado" @ao-fechar="modalAberto = false"
-      @ao-confirmar="processarMovimentacao" />
-  </div>
+      <ModalMovimentacao :visivel="modalAberto" :tipoInicial="tipoMovimentacaoInicial" :listaOpcoes="listaProdutos"
+        :idPreSelecionado="idProdutoPreSelecionado" @ao-fechar="modalAberto = false"
+        @ao-confirmar="processarMovimentacao" />
+    </div>
+  </DashboardLayout>
 </template>
 
 <style scoped>
-/* (MANTENHA TODO O CSS IGUAL) */
 .text-center {
   text-align: center;
 }

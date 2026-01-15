@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DashboardLayout from '@/layouts/DashboardLayout.vue';
 import { ref, onMounted, computed } from 'vue';
 import api from '@/services/api';
 import type { Profissional, Atendimento, Sala, Cliente } from '@/types/index';
@@ -269,64 +270,66 @@ onMounted(() => {
 <!--TELA DO PROFISSIONAL-->
 
 <template>
-  <header class="cabecalho">
-    <div class="titulo">
-      <h1>Seus dashboards</h1>
-    </div>
-    <div class="infos-perfil">
-      <div class="foto">
-        <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
+  <DashboardLayout>
+    <header class="cabecalho">
+      <div class="titulo">
+        <h1>Seus dashboards</h1>
       </div>
-      <div class="texto">
-        <p class="nome">{{ usuarioLogado.nome || 'Usuário' }}</p>
-        <p class="email">{{ usuarioLogado.email || 'E-mail não informado' }}</p>
-      </div>
-    </div>
-  </header>
-
-  <main class="dashboard-layout">
-    <section class="coluna-dashboards">
-      <div class="grid-cards-principais">
-        <CardDashboardProfissional finalidade="rendimento" :chartData="saldoTotal" titulo="Saldo"/>
-        <CardDashboardProfissional
-          finalidade="agenda"
-          :qtdAgendadas="contarAtendimentosConfirmados"
-          :qtdFinalizadas="contarAtendimentosNoHistorico"
-          :qtdPendentesPagamento="contarAtendimentosAguardandoPagamento"
-        />
-      </div>
-
-      <div class="grid-graficos">
-        <CardDashboardProfissional finalidade="grafico-pagamentos" :chartData="dataStatusPagamento" />
-        <CardDashboardProfissional finalidade="grafico-rendimento" :chartData="dataGanhosMensais" />
-        <CardDashboardProfissional finalidade="grafico-genero" :chartData="dataGeneroPizza"/>
-        <CardDashboardProfissional finalidade="grafico-idade" :chartData="dataIdadePizza"/>
-      </div>
-    </section>
-
-    <aside class="coluna-calendario">
-      <div class="card-calendario-fixo">
-        <h3>Dias Bloqueados</h3>
-        <p class="legenda">Datas em que você marcou como "Bloqueado".</p>
-
-        <div class="lista-bloqueios">
-          <div v-for="bloqueio in apenasBloqueados" :key="bloqueio.id" class="item-bloqueio">
-            <span class="ponto-vermelho"></span>
-            <div class="info-bloqueio">
-              <strong>{{ formatarData(bloqueio.dataHoraInicio) }}</strong>
-              <span>{{ formatarHora(bloqueio.dataHoraInicio) }} - {{ formatarHora(bloqueio.dataHoraFim) }}</span>
-            </div>
-          </div>
-          <div v-if="apenasBloqueados.length === 0" class="sem-bloqueios">
-            Nenhum bloqueio registrado.
-          </div>
-          <div class="link">
-            <RouterLink to="/profissional/disponibilidade" class="router-link">Informar faltas -></RouterLink>
-          </div>
+      <div class="infos-perfil">
+        <div class="foto">
+          <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
+        </div>
+        <div class="texto">
+          <p class="nome">{{ usuarioLogado.nome || 'Usuário' }}</p>
+          <p class="email">{{ usuarioLogado.email || 'E-mail não informado' }}</p>
         </div>
       </div>
-    </aside>
-  </main>
+    </header>
+
+    <main class="dashboard-layout">
+      <section class="coluna-dashboards">
+        <div class="grid-cards-principais">
+          <CardDashboardProfissional finalidade="rendimento" :chartData="saldoTotal" titulo="Saldo"/>
+          <CardDashboardProfissional
+            finalidade="agenda"
+            :qtdAgendadas="contarAtendimentosConfirmados"
+            :qtdFinalizadas="contarAtendimentosNoHistorico"
+            :qtdPendentesPagamento="contarAtendimentosAguardandoPagamento"
+          />
+        </div>
+
+        <div class="grid-graficos">
+          <CardDashboardProfissional finalidade="grafico-pagamentos" :chartData="dataStatusPagamento" />
+          <CardDashboardProfissional finalidade="grafico-rendimento" :chartData="dataGanhosMensais" />
+          <CardDashboardProfissional finalidade="grafico-genero" :chartData="dataGeneroPizza"/>
+          <CardDashboardProfissional finalidade="grafico-idade" :chartData="dataIdadePizza"/>
+        </div>
+      </section>
+
+      <aside class="coluna-calendario">
+        <div class="card-calendario-fixo">
+          <h3>Dias Bloqueados</h3>
+          <p class="legenda">Datas em que você marcou como "Bloqueado".</p>
+
+          <div class="lista-bloqueios">
+            <div v-for="bloqueio in apenasBloqueados" :key="bloqueio.id" class="item-bloqueio">
+              <span class="ponto-vermelho"></span>
+              <div class="info-bloqueio">
+                <strong>{{ formatarData(bloqueio.dataHoraInicio) }}</strong>
+                <span>{{ formatarHora(bloqueio.dataHoraInicio) }} - {{ formatarHora(bloqueio.dataHoraFim) }}</span>
+              </div>
+            </div>
+            <div v-if="apenasBloqueados.length === 0" class="sem-bloqueios">
+              Nenhum bloqueio registrado.
+            </div>
+            <div class="link">
+              <RouterLink to="/profissional/disponibilidade" class="router-link">Informar faltas -></RouterLink>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </DashboardLayout>
 </template>
 
 <style lang="css" scoped>

@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import api from '@/services/api';
 import SolicitacaoCard from '@/components/cards/SolicitacaoCard.vue';
 import SolicitacaoAdmModal from '@/components/modals/SolicitacaoAdmModal.vue';
+import DashboardLayout from '@/layouts/DashboardLayout.vue';
 
 // --- TIPAGENS ---
 interface Solicitacao {
@@ -147,44 +148,46 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="pagina-aprovacao">
-    <div class="toast-container">
-      <TransitionGroup name="toast">
-        <div v-for="toast in toasts" :key="toast.id" class="toast" :class="toast.tipo">
-          <span class="icon" v-if="toast.tipo === 'sucesso'">✅</span>
-          <span class="icon" v-else-if="toast.tipo === 'erro'">❌</span>
-          <span class="icon" v-else>🔔</span>
-          {{ toast.mensagem }}
-        </div>
-      </TransitionGroup>
-    </div>
-
-    <header class="header-pagina">
-      <h1 class="titulo-principal">Gerenciar Agendamentos</h1>
-    </header>
-
-    <section class="conteudo">
-      <h2 class="subtitulo-secao">Solicitações de Consulta</h2>
-
-      <div v-if="loading" class="estado-lista">
-        <p>Carregando solicitações...</p>
-      </div>
-
-      <div v-else-if="listaSolicitacoes.length === 0" class="estado-lista">
-        <p>Nenhuma solicitação pendente.</p>
-      </div>
-
-      <div v-else class="grid-solicitacoes">
-        <TransitionGroup name="list">
-          <SolicitacaoCard v-for="solicitacao in listaSolicitacoes" :key="solicitacao.id" :dados="solicitacao"
-            @ao-recusar="abrirModalRecusa" @ao-confirmar="abrirModalConfirmacao" />
+  <DashboardLayout>
+    <div class="pagina-aprovacao">
+      <div class="toast-container">
+        <TransitionGroup name="toast">
+          <div v-for="toast in toasts" :key="toast.id" class="toast" :class="toast.tipo">
+            <span class="icon" v-if="toast.tipo === 'sucesso'">✅</span>
+            <span class="icon" v-else-if="toast.tipo === 'erro'">❌</span>
+            <span class="icon" v-else>🔔</span>
+            {{ toast.mensagem }}
+          </div>
         </TransitionGroup>
       </div>
-    </section>
 
-    <SolicitacaoAdmModal :visivel="modalAberto" :acao="tipoAcao" :item="itemSelecionado"
-      @ao-fechar="modalAberto = false" @ao-salvar="processarDecisao" />
-  </div>
+      <header class="header-pagina">
+        <h1 class="titulo-principal">Gerenciar Agendamentos</h1>
+      </header>
+
+      <section class="conteudo">
+        <h2 class="subtitulo-secao">Solicitações de Consulta</h2>
+
+        <div v-if="loading" class="estado-lista">
+          <p>Carregando solicitações...</p>
+        </div>
+
+        <div v-else-if="listaSolicitacoes.length === 0" class="estado-lista">
+          <p>Nenhuma solicitação pendente.</p>
+        </div>
+
+        <div v-else class="grid-solicitacoes">
+          <TransitionGroup name="list">
+            <SolicitacaoCard v-for="solicitacao in listaSolicitacoes" :key="solicitacao.id" :dados="solicitacao"
+              @ao-recusar="abrirModalRecusa" @ao-confirmar="abrirModalConfirmacao" />
+          </TransitionGroup>
+        </div>
+      </section>
+
+      <SolicitacaoAdmModal :visivel="modalAberto" :acao="tipoAcao" :item="itemSelecionado"
+        @ao-fechar="modalAberto = false" @ao-salvar="processarDecisao" />
+    </div>
+  </DashboardLayout>
 </template>
 
 <style scoped>
