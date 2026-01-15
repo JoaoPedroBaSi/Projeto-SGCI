@@ -4,12 +4,11 @@ import ModalMovimentacao from '@/components/modals/ModalMovimentacao.vue';
 import { estoqueService, type InventarioItem, type MovimentacaoHistorico } from '@/services/estoqueService';
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 
-// --- Estado ---
 const abaAtiva = ref<'visao-geral' | 'historico' | 'alertas'>('visao-geral');
 const busca = ref('');
 const modalAberto = ref(false);
 const tipoMovimentacaoInicial = ref<'ENTRADA' | 'SAIDA'>('ENTRADA');
-const idProdutoPreSelecionado = ref<number | null>(null); // NOVO
+const idProdutoPreSelecionado = ref<number | null>(null);
 const carregando = ref(true);
 
 const listaProdutos = ref<InventarioItem[]>([]);
@@ -49,8 +48,6 @@ function criarDataLocal(isoString: string | null) {
   const [ano, mes, dia] = dataPart.split('-').map(Number);
   return new Date(ano, mes - 1, dia, 12, 0, 0);
 }
-
-// --- COMPUTEDS ---
 
 const produtosComputados = computed(() => {
   let lista = listaProdutos.value;
@@ -100,14 +97,12 @@ const produtosComputados = computed(() => {
   });
 });
 
-// CORREÇÃO DA BUSCA NO HISTÓRICO
 const historicoFiltrado = computed(() => {
   let lista = listaHistorico.value;
 
   if (busca.value && busca.value.trim() !== '') {
     const termo = busca.value.toLowerCase().trim();
     lista = lista.filter(h =>
-      // Usamos || '' para evitar erro se o campo for nulo
       (h.inventario?.nome || '').toLowerCase().includes(termo) ||
       (h.profissional?.nome || '').toLowerCase().includes(termo) ||
       (h.tipo || '').toLowerCase().includes(termo)
@@ -129,12 +124,9 @@ const listaAlertas = computed(() => {
 const kpiEstoqueBaixo = computed(() => produtosComputados.value.filter(p => p.status === 'baixo').length);
 const kpiCriticos = computed(() => produtosComputados.value.filter(p => p.status === 'critico').length);
 
-// --- MÉTODOS ATUALIZADOS ---
-
-// Agora aceita um ID opcional para pré-selecionar no modal
 function abrirModal(tipo: 'ENTRADA' | 'SAIDA', produtoId: number | null = null) {
   tipoMovimentacaoInicial.value = tipo;
-  idProdutoPreSelecionado.value = produtoId; // Guarda o ID
+  idProdutoPreSelecionado.value = produtoId;
   modalAberto.value = true;
 }
 

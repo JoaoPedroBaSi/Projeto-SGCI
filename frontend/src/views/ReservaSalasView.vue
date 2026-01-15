@@ -38,7 +38,6 @@ function adicionarToast(mensagem: string, tipo: 'sucesso' | 'erro' | 'info' = 's
   }, 4000);
 }
 
-// Recebe notificações de erro/info vindas do Modal
 function lidarComNotificacaoModal(payload: { mensagem: string, tipo: 'sucesso' | 'erro' | 'info' }) {
   adicionarToast(payload.mensagem, payload.tipo);
 }
@@ -80,7 +79,6 @@ async function buscarSalas() {
   }
 }
 
-// --- LÓGICA REDIRECIONAMENTO ---
 function processarSucessoReserva(payload: { total: string }) {
   modalAberto.value = false;
 

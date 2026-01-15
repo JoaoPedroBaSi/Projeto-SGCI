@@ -5,7 +5,6 @@ import SolicitacaoCard from '@/components/cards/SolicitacaoCard.vue';
 import SolicitacaoAdmModal from '@/components/modals/SolicitacaoAdmModal.vue';
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 
-// --- TIPAGENS ---
 interface Solicitacao {
   id: number;
   titulo: string;
@@ -23,7 +22,6 @@ interface Toast {
   tipo: 'sucesso' | 'erro' | 'info';
 }
 
-// Estados
 const listaSolicitacoes = ref<Solicitacao[]>([]);
 const loading = ref(false);
 const toasts = ref<Toast[]>([]);
@@ -33,7 +31,6 @@ const modalAberto = ref(false);
 const tipoAcao = ref('');
 const itemSelecionado = ref<Solicitacao | null>(null);
 
-// --- FUNÇÕES DE TOAST ---
 function adicionarToast(mensagem: string, tipo: 'sucesso' | 'erro' | 'info' = 'sucesso') {
   const id = Date.now();
   toasts.value.push({ id, mensagem, tipo });
@@ -42,7 +39,6 @@ function adicionarToast(mensagem: string, tipo: 'sucesso' | 'erro' | 'info' = 's
   }, 5000);
 }
 
-// Buscar dados
 async function fetchSolicitacoes(isPolling = false) {
   if (!isPolling) loading.value = true;
 
@@ -51,10 +47,8 @@ async function fetchSolicitacoes(isPolling = false) {
       params: { status: 'PENDENTE' }
     });
 
-    // Filtra apenas os pendentes
     const pendentes = response.data;
 
-    // Mapeia os dados novos
     const novaListaMapeada: Solicitacao[] = pendentes.map((item: any) => {
       const dataObj = new Date(item.dataHoraInicio);
       const dataFormatada = dataObj.toLocaleString('pt-BR', {
@@ -75,7 +69,6 @@ async function fetchSolicitacoes(isPolling = false) {
       };
     });
 
-    // LÓGICA DE DETECÇÃO DE NOVOS ITENS
     if (isPolling && novaListaMapeada.length > listaSolicitacoes.value.length) {
       const idsAtuais = new Set(listaSolicitacoes.value.map(s => s.id));
       const novosItens = novaListaMapeada.filter(novo => !idsAtuais.has(novo.id));
@@ -85,7 +78,6 @@ async function fetchSolicitacoes(isPolling = false) {
       }
     }
 
-    // Atualiza a lista da tela
     listaSolicitacoes.value = novaListaMapeada;
 
   } catch (error) {
@@ -98,7 +90,6 @@ async function fetchSolicitacoes(isPolling = false) {
   }
 }
 
-// Processar Ação
 async function processarDecisao(payload: any) {
   const { id, acao } = payload;
   try {
@@ -130,16 +121,13 @@ function abrirModalConfirmacao(item: Solicitacao) {
   modalAberto.value = true;
 }
 
-// Inicialização
 onMounted(() => {
   fetchSolicitacoes();
   pollingInterval = setInterval(() => {
-    // SÓ faz nova busca se a anterior já tiver terminado
-    // Isso evita "empilhar" requisições e derrubar o banco
     if (!loading.value) {
       fetchSolicitacoes(true);
     }
-  }, 20000); // 30 segundos
+  }, 20000);
 });
 
 onUnmounted(() => {
@@ -198,7 +186,6 @@ onUnmounted(() => {
   min-height: 100vh;
 }
 
-/* SISTEMA DE TOAST */
 .toast-container {
   position: fixed;
   top: 20px;
@@ -264,7 +251,6 @@ onUnmounted(() => {
   position: absolute;
 }
 
-/* HEADER - Simplificado */
 .header-pagina {
   display: flex;
   align-items: center;
@@ -278,9 +264,6 @@ onUnmounted(() => {
   margin: 0;
 }
 
-/* CSS do Perfil removido (avatar, notificações, etc.) */
-
-/* CONTEUDO */
 .subtitulo-secao {
   color: #2CAFB6;
   font-size: 1.3rem;

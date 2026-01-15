@@ -3,7 +3,6 @@ import { ref, onMounted, markRaw } from 'vue';
 import { useRouter } from 'vue-router';
 import logoSgci from '@/assets/logo-sgci.png';
 
-// --- IMPORTAÇÃO DOS ÍCONES ---
 import {
   Home,
   Calendar,
@@ -16,15 +15,14 @@ import {
   Package,
   CalendarCheck,
   Clock,
-  Briefcase, // <--- NOVO: Para Gestão
-  Handshake  // <--- NOVO: Para Parcerias
+  Briefcase,
+  Handshake
 } from 'lucide-vue-next';
 
 const router = useRouter();
 const userName = ref('');
 const userType = ref('');
 
-// Estrutura para controlar quais menus estão abertos
 const openMenus = ref<Record<string, boolean>>({});
 
 interface MenuItem {
@@ -46,7 +44,6 @@ const toggleMenu = (key: string) => {
   if (openMenus.value[key]) {
     openMenus.value[key] = false;
   } else {
-    // openMenus.value = {}; // Descomente se quiser fechar um ao abrir outro
     openMenus.value[key] = true;
   }
 };
@@ -127,14 +124,14 @@ onMounted(() => {
         {
           label: 'Financeiro', icon: markRaw(Coins), key: 'fin_prof',
           children: [
-             { label: 'Meu Extrato', route: '/profissional/financeiro' }
+            { label: 'Meu Extrato', route: '/profissional/financeiro' }
           ]
         },
         {
-           label: 'Conta', icon: markRaw(User), key: 'conta_prof',
-           children: [
-             { label: 'Meu Perfil', route: '/perfil' }
-           ]
+          label: 'Conta', icon: markRaw(User), key: 'conta_prof',
+          children: [
+            { label: 'Meu Perfil', route: '/perfil' }
+          ]
         }
       ];
     }
@@ -168,7 +165,7 @@ onMounted(() => {
         {
           label: 'Finanças', icon: markRaw(Coins), key: 'fin_admin',
           children: [
-             { label: 'Visão Geral', route: '#financeiro-admin' } // Placeholder
+            { label: 'Visão Geral', route: '#financeiro-admin' } // Placeholder
           ]
         },
 
@@ -176,8 +173,8 @@ onMounted(() => {
         {
           label: 'Recursos', icon: markRaw(Package), key: 'recursos_admin',
           children: [
-             { label: 'Gerenciar Salas', route: '/admin/salas' },
-             { label: 'Controle de Estoque', route: '/admin/estoque' }
+            { label: 'Gerenciar Salas', route: '/admin/salas' },
+            { label: 'Controle de Estoque', route: '/admin/estoque' }
           ]
         },
 
@@ -185,8 +182,8 @@ onMounted(() => {
         {
           label: 'Parcerias', icon: markRaw(Handshake), key: 'parcerias_admin',
           children: [
-             { label: 'Lista de Parceiros', route: '/parcerias' },
-             { label: 'Novo Parceiro', route: '/cadastro/parceria' }
+            { label: 'Lista de Parceiros', route: '/parcerias' },
+            { label: 'Novo Parceiro', route: '/cadastro/parceria' }
           ]
         },
 
@@ -194,7 +191,7 @@ onMounted(() => {
         {
           label: 'Conta', icon: markRaw(User), key: 'conta_admin',
           children: [
-             { label: 'Meu Perfil', route: '/perfil' }
+            { label: 'Meu Perfil', route: '/perfil' }
           ]
         }
       ];
@@ -217,42 +214,25 @@ onMounted(() => {
         <div v-for="(item, index) in menuItems" :key="index">
 
           <div v-if="item.children" class="menu-group">
-            <button
-              @click="toggleMenu(item.key!)"
-              class="menu-item menu-button"
-              :class="{ 'active-parent': openMenus[item.key!] }"
-            >
+            <button @click="toggleMenu(item.key!)" class="menu-item menu-button"
+              :class="{ 'active-parent': openMenus[item.key!] }">
               <div class="left-content">
                 <component :is="item.icon" class="icon-svg" />
                 <span class="label-text">{{ item.label }}</span>
               </div>
 
-              <ChevronDown
-                class="arrow-icon"
-                :class="{ 'rotated': openMenus[item.key!] }"
-                :size="16"
-              />
+              <ChevronDown class="arrow-icon" :class="{ 'rotated': openMenus[item.key!] }" :size="16" />
             </button>
 
             <div v-show="openMenus[item.key!]" class="submenu">
-              <router-link
-                v-for="child in item.children"
-                :key="child.route"
-                :to="child.route!"
-                class="submenu-item"
-                active-class="active-sub"
-              >
+              <router-link v-for="child in item.children" :key="child.route" :to="child.route!" class="submenu-item"
+                active-class="active-sub">
                 {{ child.label }}
               </router-link>
             </div>
           </div>
 
-          <router-link
-            v-else
-            :to="item.route!"
-            class="menu-item"
-            active-class="active"
-          >
+          <router-link v-else :to="item.route!" class="menu-item" active-class="active">
             <div class="left-content">
               <component :is="item.icon" class="icon-svg" />
               <span class="label-text">{{ item.label }}</span>
@@ -304,31 +284,42 @@ onMounted(() => {
 .sidebar {
   width: 260px;
   min-width: 260px;
-  background-color: #117a8b; /* Teal */
+  background-color: #117a8b;
+  /* Teal */
   color: white;
   display: flex;
   flex-direction: column;
   padding: 30px 20px;
 
-  /* Habilita o scroll vertical */
   overflow-y: auto;
-  /* Remove scroll horizontal */
   overflow-x: hidden;
 
-  /* --- O SEGREDO DO SCROLL INVISÍVEL --- */
-  scrollbar-width: none;  /* Firefox */
-  -ms-overflow-style: none;  /* IE e Edge Legacy */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-/* Esconde a barra no Chrome, Safari e Opera */
 .sidebar::-webkit-scrollbar {
   display: none;
 }
 
-/* LOGO */
-.logo { text-align: center; margin-bottom: 40px; }
-.logo-img { width: 80px; height: auto; display: block; margin: 0 auto 10px auto; }
-.titulo { color: white; font-weight: bold; font-size: 2rem; margin: 0; }
+.logo {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.logo-img {
+  width: 80px;
+  height: auto;
+  display: block;
+  margin: 0 auto 10px auto;
+}
+
+.titulo {
+  color: white;
+  font-weight: bold;
+  font-size: 2rem;
+  margin: 0;
+}
 
 /* =========================================
    ITENS DO MENU
@@ -338,11 +329,8 @@ onMounted(() => {
   align-items: center;
   width: 100%;
   padding: 12px 15px;
-
-  /* --- FORÇA BRUTA NA COR BRANCA --- */
   color: #ffffff !important;
   text-decoration: none;
-
   border-radius: 8px;
   margin-bottom: 5px;
   transition: 0.3s;
@@ -354,12 +342,10 @@ onMounted(() => {
   justify-content: flex-start;
 }
 
-/* Garante que o texto dentro do botão/link seja branco */
 .menu-item .label-text {
   color: #ffffff !important;
 }
 
-/* CONFIGURAÇÃO DOS ÍCONES LUCIDE */
 :deep(.icon-svg) {
   width: 20px;
   height: 20px;
@@ -376,8 +362,9 @@ onMounted(() => {
   flex-grow: 1;
 }
 
-/* Efeito Hover e Ativo */
-.menu-item:hover, .active, .active-parent {
+.menu-item:hover,
+.active,
+.active-parent {
   background-color: rgba(255, 255, 255, 0.15);
   font-weight: bold;
 }
@@ -387,7 +374,7 @@ onMounted(() => {
    ========================================= */
 .submenu {
   margin-left: 12px;
-  border-left: 1px solid rgba(255,255,255,0.3);
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
   padding-left: 5px;
   margin-bottom: 10px;
   width: 100%;
@@ -406,13 +393,13 @@ onMounted(() => {
 
 .submenu-item:hover {
   color: #ffffff !important;
-  background-color: rgba(255,255,255,0.05);
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .active-sub {
   color: #ffffff !important;
   font-weight: bold;
-  background-color: rgba(255,255,255,0.1);
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* =========================================
