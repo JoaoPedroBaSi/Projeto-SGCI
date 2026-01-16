@@ -1,12 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-// ==========================================================
-// 1. IMPORTS DAS VIEWS (SEUS + DA EQUIPE)
-// ==========================================================
-
 import HomeView from '../views/HomeView.vue'
+import AutenticacaoView from '@/views/AutenticacaoView.vue'
 
-// --- SEUS IMPORTS (HEAD) ---
 import CadastroClienteView from '../views/CadastroClienteView.vue'
 import CadastroProfissionalView from '../views/CadastroProfissionalView.vue'
 import RedefinirSenhaView from '../views/RedefinirSenha.vue'
@@ -18,22 +14,17 @@ import AprovacaoProfissional from '@/views/AprovacaoProfissional.vue'
 import SolicitacaoReposicaoView from '@/views/SolicitacaoReposicaoView.vue'
 import FinanceiroView from '@/views/FinanceiroView.vue'
 
-// --- IMPORTS SPRINT 4 (ADMIN SALAS) ---
 import SalasView from '@/views/SalasView.vue'
 import AprovacaoReservasView from '@/views/AprovacaoReservasView.vue'
 
-// Dashboards (Sua versão)
-import ClientDashboardView from '@/views/ClientDashboardView.vue'
-import ProfissionalDashboardView from '@/views/ProfissionalDashboardView.vue'
+import DashboardClienteView from '@/views/atendimento/dashboard/DashboardCliente.vue'
+import DashboardProfissionalView from '@/views/atendimento/dashboard/DashboardProfissional.vue'
 
-// --- IMPORTS DA EQUIPE (MAIN) ---
 import AprovarAgendamentosView from '../views/AprovarAgendamentosView.vue'
 import ReservaSalasView from '@/views/ReservaSalasView.vue'
 import ControleEstoqueView from '@/views/ControleEstoqueView.vue'
 
-// ==========================================================
-// 2. CONFIGURAÇÃO DAS ROTAS
-// ==========================================================
+// CONFIGURAÇÃO DAS ROTAS
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -43,10 +34,12 @@ const router = createRouter({
       name: 'home',
       component: HomeView,
     },
-
+    {
+      path: '/autenticacao',
+      name: 'autenticacao',
+      component: AutenticacaoView
+    },
     { path: '/login', redirect: '/' },
-
-    // --- CADASTRO E RECUPERAÇÃO ---
     {
       path: '/cadastro/cliente',
       name: 'cadastro-cliente',
@@ -67,8 +60,6 @@ const router = createRouter({
       name: 'esqueci-senha',
       component: EsqueciSenha
     },
-
-    // --- ÁREA ADMIN (SUAS TAREFAS) ---
     {
       path: '/admin/dashboard',
       name: 'admin-dashboard',
@@ -91,44 +82,33 @@ const router = createRouter({
       component: AprovacaoReservasView,
       meta: { requiresAuth: true }
     },
-
-    // --- ÁREA COMUM ---
     {
       path: '/perfil',
       name: 'perfil',
       component: PerfilView,
       meta: { requiresAuth: true }
     },
-
-    // --- SEUS DASHBOARDS (Rota antiga) ---
     {
       path: '/dashboard/cliente',
       name: 'dashboard-cliente',
-      component: ClientDashboardView,
+      component: DashboardClienteView,
       meta: { requiresAuth: true }
     },
     {
       path: '/dashboard/profissional',
       name: 'dashboard-profissional',
-      component: ProfissionalDashboardView,
+      component: DashboardProfissionalView,
       meta: { requiresAuth: true }
     },
     {
        path: '/dashboard',
        redirect: '/dashboard/cliente'
     },
-
     {
       path: '/about',
       name: 'about',
       component: () => import('../views/AboutView.vue'),
     },
-
-    // ==========================================================
-    // ROTAS DA EQUIPE (VINDAS DA MAIN)
-    // ==========================================================
-
-    // Dashboards da Equipe (Note que eles usaram caminhos diferentes)
     {
       path: '/cliente/dashboard',
       name: 'dashboardCliente',
@@ -139,8 +119,6 @@ const router = createRouter({
       name: 'dashboardProfissional',
       component: () => import('../views/atendimento/dashboard/DashboardProfissional.vue'),
     },
-
-    // Agendamento e Histórico
     {
       path: '/cliente/agendar',
       name: 'agendarAtendimento',
@@ -166,8 +144,6 @@ const router = createRouter({
       name: 'historicoProfissional',
       component: () => import('../views/atendimento/agendaProfissional/HistoricoProfissional.vue'),
     },
-
-    // Disponibilidade
     {
       path: '/profissional/cadastro/disponibilidade',
       name: 'cadastroDisponibilidadeProfissional',
@@ -178,8 +154,6 @@ const router = createRouter({
       name: 'disponibilidadeProfissional',
       component: () => import('../views/atendimento/disponibilidade/ExibicaoDisponibilidade.vue'),
     },
-
-    // Parcerias
     {
       path: '/cadastro/parceria',
       name: 'cadastroParceria',
@@ -190,8 +164,6 @@ const router = createRouter({
       name: 'listaParceria',
       component: () => import('../views/atendimento/parceria/ListaParceria.vue'),
     },
-
-    // Admin Outros (Equipe)
     {
       path: '/admin/solicitacoes',
       name: 'admin-solicitacoes',
@@ -202,31 +174,23 @@ const router = createRouter({
       name: 'admin-estoque',
       component: ControleEstoqueView
     },
-
-    // Reservas (Visão Profissional da Equipe)
     {
       path: '/profissional/reservas',
       name: 'profissional-reservas',
       component: ReservaSalasView
     },
-
-    // ==========================================================
-    // SUAS ROTAS PROFISSIONAIS (MANTIDAS)
-    // ==========================================================
     {
       path: '/profissional/solicitar-reposicao',
       name: 'solicitar-reposicao',
       component: SolicitacaoReposicaoView,
       meta: { requiresAuth: true }
     },
-
     {
       path: '/profissional/financeiro',
       name: 'financeiro-profissional',
       component: FinanceiroView,
       meta: { requiresAuth: true }
     },
-
     {
       path: '/profissional/pagamento-salas',
       name: 'pagamento-salas',
