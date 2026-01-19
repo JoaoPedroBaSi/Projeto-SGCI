@@ -16,7 +16,8 @@ import {
   CalendarCheck,
   Clock,
   Briefcase,
-  Handshake
+  Handshake,
+  ClipboardList
 } from 'lucide-vue-next';
 
 const router = useRouter();
@@ -99,11 +100,18 @@ onMounted(() => {
       menuItems.value = [
         { label: 'Início', icon: markRaw(Home), route: '/profissional/dashboard' },
         {
-          label: 'Agenda', icon: markRaw(Calendar), key: 'agenda_prof',
+          label: 'Atendimentos', icon: markRaw(Calendar), key: 'agenda_prof',
           children: [
             { label: 'Minha Agenda', route: '/profissional/agenda' },
             { label: 'Histórico', route: '/profissional/historico' },
             { label: 'Meus Pacientes', route: '#pacientes' }
+          ]
+        },
+        {
+          label: 'Prontuários', icon: markRaw(ClipboardList), key: 'pront_prof',
+          children: [
+            { label: 'Meus Prontuários', route: '#prontuarios' }, // Adicionar rota correta
+            { label: 'Registrar Relatório', route: '#relatórios' } // Adicionar rota correta
           ]
         },
         {
@@ -116,14 +124,16 @@ onMounted(() => {
         {
           label: 'Salas e Recursos', icon: markRaw(Building), key: 'infra_prof',
           children: [
+
+            { label: 'Reservar Sala', route: '/profissional/pagamento-salas' },
             { label: 'Minhas Reservas', route: '/profissional/reservas' },
-            { label: 'Alugar Sala', route: '/profissional/pagamento-salas' },
-            { label: 'Solicitar Material', route: '/profissional/solicitar-reposicao' }
+            { label: 'Consultar Estoque', route: '/profissional/solicitar-reposicao' }
           ]
         },
         {
           label: 'Financeiro', icon: markRaw(Coins), key: 'fin_prof',
           children: [
+            { label: 'Pagar Aluguel', route: '#aluguel'}, // Adicionar rota correta
             { label: 'Meu Extrato', route: '/profissional/financeiro' }
           ]
         },
@@ -141,10 +151,8 @@ onMounted(() => {
     // ==========================================================
     else if (tipo === 'admin') {
       menuItems.value = [
-        // GRUPO 1: INÍCIO
         { label: 'Início', icon: markRaw(Home), route: '/admin/dashboard' },
 
-        // GRUPO 2: GESTÃO
         {
           label: 'Gestão', icon: markRaw(Briefcase), key: 'gestao_admin',
           children: [
@@ -152,42 +160,38 @@ onMounted(() => {
           ]
         },
 
-        // GRUPO 3: ATENDIMENTOS
         {
           label: 'Atendimentos', icon: markRaw(CalendarCheck), key: 'atend_admin',
           children: [
-            { label: 'Solicitações de Agenda', route: '/admin/solicitacoes' },
+            { label: 'Aprovar Consultas', route: '/admin/solicitacoes' },
+          ]
+        },
+
+        {
+          label: 'Finanças', icon: markRaw(Coins), key: 'fin_admin',
+          children: [
+            { label: 'Transações', route: '#financeiro-admin' }, // Adicionar rota correta
+            { label: 'Tabela de Preços', route: '#tabela-precos' } // Adicionar rota correta
+          ]
+        },
+
+        {
+          label: 'Recursos', icon: markRaw(Package), key: 'recursos_admin',
+          children: [
+            { label: 'Salas', route: '/admin/salas' },
+            { label: 'Inventário', route: '/admin/estoque' },
             { label: 'Aprovar Reservas', route: '/admin/reservas' }
           ]
         },
 
-        // GRUPO 4: FINANÇAS
-        {
-          label: 'Finanças', icon: markRaw(Coins), key: 'fin_admin',
-          children: [
-            { label: 'Visão Geral', route: '#financeiro-admin' } // Placeholder
-          ]
-        },
-
-        // GRUPO 5: RECURSOS (Estoque e Salas)
-        {
-          label: 'Recursos', icon: markRaw(Package), key: 'recursos_admin',
-          children: [
-            { label: 'Gerenciar Salas', route: '/admin/salas' },
-            { label: 'Controle de Estoque', route: '/admin/estoque' }
-          ]
-        },
-
-        // GRUPO 6: PARCERIAS
         {
           label: 'Parcerias', icon: markRaw(Handshake), key: 'parcerias_admin',
           children: [
-            { label: 'Lista de Parceiros', route: '/parcerias' },
+            { label: 'Gestão de Parceiros', route: '/parcerias' },
             { label: 'Novo Parceiro', route: '/cadastro/parceria' }
           ]
         },
 
-        // GRUPO 7: CONTA
         {
           label: 'Conta', icon: markRaw(User), key: 'conta_admin',
           children: [
