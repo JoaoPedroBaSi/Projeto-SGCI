@@ -8,6 +8,7 @@ import type { Profissional, Atendimento, Sala, Cliente } from '@/types/index';
 import { useRoute } from 'vue-router';
 import CardAtendimento from '@/components/cards/atendimento/consulta/CardAtendimento.vue';
 import CardDashboardProfissional from '@/components/cards/atendimento/dashboard/CardDashboardProfissional.vue';
+import CardInfosLogin from '@/components/cards/login/CardInfosLogin.vue';
 
 // Tipos auxiliares para a combinação de dados
 type DadosAnexadosSala = { nomeSala: string };
@@ -16,6 +17,7 @@ type AtendimentoCompleto = Atendimento & DadosAnexadosSala & DadosAnexadosProfis
 
 const route = useRoute();
 const atendimentos = ref<AtendimentoCompleto[]>([]);
+const salas = ref<Sala[]>([])
 const clienteLogado = ref<Cliente | null>(null);
 const isLoading = ref(true);
 const error = ref<string | null>(null);
@@ -30,44 +32,56 @@ const fecharDetalhes = () => {
   atendimentoSelecionado.value = null;
 };
 
-// O ID do cliente torna-se computado baseado na URL para ser iterativo
-const clienteLogadoId = computed(() => Number(route.params.id));
-
 const carregarDados = async () => {
   isLoading.value = true;
   error.value = null;
 
+  // 0. Recuperação e Configuração do Token
+  const token = localStorage.getItem('auth_token');
+
+  if (!token) {
+    console.error("Token 'auth_token' não encontrado.");
+    error.value = "Sessão expirada. Por favor, faça login novamente.";
+    isLoading.value = false;
+    // router.push('/login'); // Opcional: redirecionar se necessário
+    return;
+  }
+
+  // Anexa o token para todas as chamadas desta função
+  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
   try {
-    const [atendResponse, salaResponse, profResponse, cliResponse] = await Promise.all([
-      api.get<Atendimento[]>('/atendimento'),
-      api.get<Sala[]>('/sala'),
-      api.get<Profissional[]>('/profissional'),
-      api.get<Cliente[]>('/cliente')
+    const [atendRes, salaRes] = await Promise.allSettled([
+      api.get<any[]>('/atendimento'),
+      api.get<any[]>('/sala')
     ]);
 
-    // 1. Identifica o cliente logado
-    clienteLogado.value = cliResponse.data.find(c => c.id === clienteLogadoId.value) || null;
+    let dadosSalas: any[] = [];
+    if (salaRes.status === 'fulfilled') {
+      dadosSalas = salaRes.value.data;
+      salas.value = dadosSalas;
+    }
 
-    // 2. Mapeia e combina os dados
-    const atendimentosCombinados: AtendimentoCompleto[] = atendResponse.data.map(atendimento => {
-      const sala = salaResponse.data.find(s => s.id === atendimento.salaId);
-      const profissional = profResponse.data.find(p => p.id === atendimento.profissionalId);
+    if (atendRes.status === 'fulfilled') {
+      atendimentos.value = atendRes.value.data.map((a: any) => ({
+        ...a,
+        // Busca o nome da sala pelo ID
+        nomeSala: dadosSalas.find(s => s.id === a.salaId)?.nome || 'Sala N/A',
 
-      return {
-        ...atendimento,
-        nomeSala: sala ? sala.nome : 'Sala Indefinida',
-        nomeProfissional: profissional ? profissional.nome : 'Profissional indefinido'
-      };
-    });
+        // Dados do Profissional (Vindo do Preload do Adonis)
+        nomeProfissional: a.profissional?.nome || 'Profissional N/A',
 
-    // 3. Filtra apenas os atendimentos do cliente atual
-    atendimentos.value = atendimentosCombinados.filter(
-      a => a.clienteId === clienteLogadoId.value
-    );
+        // Disponibilidades (Conforme sua regra de negócio)
+        disponibilidades: a.profissional?.disponibilidades || []
+      }));
 
+      console.log("Atendimentos e disponibilidades carregados:", atendimentos.value);
+    } else {
+      console.warn("Falha ao carregar atendimentos:", atendRes.reason);
+    }
   } catch (err) {
-    error.value = "Erro ao carregar dados do dashboard.";
-    console.error(err);
+    console.error("Erro crítico no dashboard:", err);
+    error.value = "Não foi possível carregar os dados do painel.";
   } finally {
     isLoading.value = false;
   }
@@ -105,28 +119,13 @@ const saldoTotal = computed(() => {
 
 onMounted(carregarDados);
 </script>
-Para tornar esta tela responsiva (ajustando o layout para diferentes tamanhos de tela) sem alterar as cores, fontes ou o estilo visual que você já definiu, apliquei ajustes na estrutura de grid e no flexbox do cabeçalho.
-
-As principais mudanças focam em permitir que o cabeçalho se organize verticalmente em celulares e que a lista de cards de resumo (Detalhamento) se adapte de 3 colunas para 1 conforme o espaço diminui.
-
-Código Responsivo Ajustado
-Snippet de código
-
 <template>
   <DashboardLayout>
     <header class="cabecalho">
       <div class="titulo">
         <h1>Seus dashboards</h1>
       </div>
-      <div class="infos-perfil">
-        <div class="foto">
-          <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
-        </div>
-        <div class="texto">
-          <p class="nome">{{ clienteLogado?.nome || 'Usuário' }}</p>
-          <p class="email">{{ clienteLogado?.email || 'E-mail não informado' }}</p>
-        </div>
-      </div>
+      <CardInfosLogin/>
     </header>
 
     <div class="secao-titulo">
@@ -207,17 +206,6 @@ Snippet de código
 
   .titulo { display: flex; gap: 20px; margin: 20px 0; }
   .titulo h1 { color: #128093; font-size: 28px; font-weight: 800; margin: 0; }
-
-  .infos-perfil {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border-left: 1px solid #eee;
-    padding-left: 20px;
-  }
-  .infos-perfil img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
-  .texto p { margin: 0; line-height: 1.2; }
-  .texto .email { color: #666; font-size: 0.85rem; }
 
   /* --- SEÇÃO TOTAL GASTO --- */
   .container-linha-unica { padding: 10px 50px; }

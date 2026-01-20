@@ -22,12 +22,31 @@ export default class AtendimentosController {
   ) {}
   //Mostra todos os atendimentos
 
-  public async index({}: HttpContext) {
-    // Adicionado preload
-    return await Atendimento.query()
-      .preload('cliente', (query) => query.select('id', 'nome'))
-      .preload('profissional', (query) => query.select('id', 'nome'))
-      .orderBy('id', 'desc')
+  public async index({ auth, request }: HttpContext) {
+  const user = await auth.authenticate()
+
+  // Pega o status da URL (ex: /atendimento?status=PENDENTE)
+  const statusFiltrado = request.input('status')
+
+  const query = Atendimento.query()
+    .preload('cliente', (q) => q.select('id', 'nome'))
+    .preload('profissional', (q) => {
+      q.select('id', 'nome')
+      q.preload('disponibilidades') // Mantendo sua regra de disponibilidade
+    })
+
+    // Aplicamos filtros baseados no perfil
+    // Assumindo que seu Model User tem um campo 'tipo' ou 'role'
+    if (user.perfil_tipo === 'cliente') {
+      query.where('cliente_id', user.id)
+    } else if (user.perfil_tipo === 'profissional') {
+      query.where('profissional_id', user.id)
+    }
+    if (statusFiltrado) {
+      query.where('status', statusFiltrado)
+    }
+    // Se for 'admin', não entra em nenhum IF e traz todos os registros (.all)
+    return await query.orderBy('id', 'desc')
   }
 
   //Mostra atendimentos individualmente

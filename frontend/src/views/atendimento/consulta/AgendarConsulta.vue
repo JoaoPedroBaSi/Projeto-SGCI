@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CardNovoAtendimento from '@/components/cards/atendimento/consulta/CardNovoAtendimento.vue';
+import CardInfosLogin from '@/components/cards/login/CardInfosLogin.vue';
 import api from '@/services/api';
 import type { Profissional } from '@/types';
 import { onMounted, ref, watch } from 'vue';
@@ -17,10 +18,22 @@ const carregarDados = async (idParaBuscar?: number) => {
   isLoading.value = true;
   error.value = null;
 
+  // 1. Recupera o token correto
+  const token = localStorage.getItem('auth_token');
+
+  if (!token) {
+    error.value = "Sessão expirada. Faça login novamente.";
+    isLoading.value = false;
+    return { nomeProfissional: 'Não autorizado' };
+  }
+
+  // 2. Configura o token no Axios para as requisições abaixo
+  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
   try {
-    // Busca as duas listas em paralelo
+    // Busca as duas listas em paralelo (Agora com o Token nos headers)
     const [resProfissionais, resFuncoes] = await Promise.all([
-      api.get<Profissional[]>('/profissional'),
+      api.get<Profissional[]>('/profissionais'),
       api.get<any[]>('/funcao')
     ]);
 
@@ -32,15 +45,24 @@ const carregarDados = async (idParaBuscar?: number) => {
     });
     mapeamentoFuncoes.value = mapa;
 
-    // Lógica que você já tinha para o profissional selecionado
     const profissionalEncontrado = profissionais.value.find(p => p.id === idParaBuscar);
+
+    // Se o profissional encontrado tiver disponibilidades (vinda do preload do backend)
+    // elas já estarão acessíveis aqui em profissionalEncontrado.disponibilidades
+
     return {
       nomeProfissional: profissionalEncontrado ? profissionalEncontrado.nome : 'Profissional indefinido'
     };
 
   } catch (err: any) {
     console.error("Erro ao carregar dados:", err);
-    error.value = "Falha ao carregar dados do servidor.";
+
+    if (err.response?.status === 401) {
+      error.value = "Sessão inválida. Por favor, saia e entre novamente.";
+    } else {
+      error.value = "Falha ao carregar dados do servidor.";
+    }
+
     return { nomeProfissional: 'Erro ao carregar' };
   } finally {
     isLoading.value = false;
@@ -62,17 +84,8 @@ watch(() => route.params.id, (novoId) => {
   <header class="cabecalho">
     <div class="acoes">
       <RouterLink class="consulta" to="/cliente/dashboard">< Voltar</RouterLink>
-      <RouterLink class="disponibilidade" to="/profissional/disponibilidade">Consultar disponibilidade dos profissionais</RouterLink>
     </div>
-    <div class="infos-perfil">
-        <div class="foto">
-          <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
-        </div>
-        <div class="texto">
-          <p class="nome">{{ usuarioLogado.nome || 'Usuário' }}</p>
-          <p class="email">{{ usuarioLogado.email || 'E-mail não informado' }}</p>
-        </div>
-      </div>
+    <CardInfosLogin/>
   </header>
 
 <main>
@@ -89,35 +102,6 @@ watch(() => route.params.id, (novoId) => {
     align-items: center;
     background-color: white;
   }
-  .infos-perfil img {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-  .infos-perfil {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border-left: 1px solid #eee;
-    padding-left: 20px;
-  }
-  .texto{
-    gap: 2px;
-  }
-  .texto p {
-    margin: 0;
-    line-height: 1.2;
-  }
-  .texto .email {
-    color: #666;
-    font-size: 0.85rem;
-  }
-  .acoes {
-    margin: 30px;
-    display: flex;
-    gap: 20px;
-  }
   .acoes a {
     padding: 10px 20px;
     text-align: center;
@@ -127,10 +111,6 @@ watch(() => route.params.id, (novoId) => {
   }
   .consulta {
     border: 2px solid #128093; color: #128093;
-  }
-  .disponibilidade{
-    color: white;
-    background-color: #128093;
   }
   .historico-link {
     border: 2px solid blue; color: blue;

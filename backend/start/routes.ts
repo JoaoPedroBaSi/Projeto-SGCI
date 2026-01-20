@@ -62,11 +62,13 @@ router.resource('/mov_inventario', '#controllers/mov_inventarios_controller').ex
 // 🚑 ATENDIMENTOS
 // =======================================================
 router.group(() => {
-    router.get('/atendimento', '#controllers/atendimentos_controller.index').middleware(middleware.adminOnly())
+    router.get('/atendimento', '#controllers/atendimentos_controller.index').use(middleware.auth()).use(middleware.clienteOrProfissionalOnly())
     router.get('/atendimento/:id', '#controllers/atendimentos_controller.show').middleware(middleware.clienteOrProfissionalOnly())
     router.post('/atendimento', '#controllers/atendimentos_controller.store').middleware(middleware.clienteOnly())
     router.put('/atendimento/:id', '#controllers/atendimentos_controller.update').middleware(middleware.clienteOnly())
     router.delete('/atendimento/:id', '#controllers/atendimentos_controller.destroy').middleware(middleware.clienteOrProfissionalOnly())
+    router.patch('/atendimento/:id/recusar', 'AtendimentosController.recusar').use(middleware.auth())
+    router.patch('/atendimento/:id/aprovar', 'AtendimentosController.aprovar').use(middleware.auth())
 
     // Prontuário
     router.post('/atendimentos/:id/prontuario', '#controllers/prontuarios_controller.store')
@@ -119,8 +121,8 @@ router.get('/espiar-senha/:email', async ({ params, request }) => {
 
   if (senhaParaTestar) {
     const bateu = await hash.verify(user.password, senhaParaTestar)
-    resultado_teste = bateu 
-      ? "✅ SUCESSO! A senha bate com o hash." 
+    resultado_teste = bateu
+      ? "✅ SUCESSO! A senha bate com o hash."
       : "❌ FALHA! A senha informada não gera esse hash."
   }
 
@@ -136,12 +138,12 @@ router.get('/espiar-senha/:email', async ({ params, request }) => {
 router.get('/marreta/:email/:senhaNova', async ({ params }) => {
   try {
     const user = await User.findByOrFail('email', params.email)
-    user.password = params.senhaNova 
+    user.password = params.senhaNova
     await user.save()
-    
-    return { 
+
+    return {
       sucesso: true,
-      mensagem: 'SENHA ALTERADA NA FORÇA BRUTA!', 
+      mensagem: 'SENHA ALTERADA NA FORÇA BRUTA!',
       email: user.email,
       nova_senha_definida: params.senhaNova,
       hash_gerado: user.password

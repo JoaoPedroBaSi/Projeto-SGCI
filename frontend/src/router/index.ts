@@ -89,6 +89,11 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/consulta/aprovacao',
+      name: 'aprovacaoConsulta',
+      component: () => import('../views/atendimento/consulta/AprovarConsulta.vue'),
+    },
+    {
       path: '/dashboard/cliente',
       name: 'dashboard-cliente',
       component: DashboardClienteView,
