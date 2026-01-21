@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+// MUDANÇA 1: Importando a instância configurada da API em vez do axios puro
+import api from '@/services/api';
 
 const router = useRouter();
 
@@ -44,10 +45,11 @@ const toggleFormCliente = () => { if (!expandirFormCliente.value) { expandirForm
 const toggleFormProfissional = () => { if (!expandirFormProfissional.value) { expandirFormCliente.value = false; } expandirFormProfissional.value = !expandirFormProfissional.value; }
 const resetaFormsInternos = () => { expandirFormCliente.value = false; expandirFormProfissional.value = false; }
 
-// === LOGIN (CORRIGIDO: NOME DA CHAVE LOCALSTORAGE) ===
+// === LOGIN ===
 const fazerLogin = async () => {
     try {
-        const response = await axios.post('http://localhost:3333/login', {
+        // MUDANÇA 2: Usando api.post e apenas a rota final
+        const response = await api.post('/login', {
             email: loginData.email,
             password: loginData.senha
         });
@@ -61,12 +63,10 @@ const fazerLogin = async () => {
         if (tokenObj) {
             const tokenValue = tokenObj.token || tokenObj;
             localStorage.setItem('auth_token', tokenValue);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${tokenValue}`;
+            // O interceptador do api.ts vai pegar esse token automaticamente na próxima requisição
         }
         
         if (user) {
-            // ✅ CORREÇÃO AQUI: Mudamos de 'auth_user' para 'user_data'
-            // Isso garante que o Sidebar encontre os dados e não te deslogue.
             localStorage.setItem('user_data', JSON.stringify(user));
         }
 
@@ -96,7 +96,7 @@ const fazerLogin = async () => {
     }
 }
 
-// === CADASTROS (MANTIDOS IGUAIS) ===
+// === CADASTROS ===
 const fazerCadastroCliente = async () => {
     if (formCliente.senha !== formCliente.confirmarSenha) return alert('As senhas não coincidem!');
     try {
@@ -111,7 +111,10 @@ const fazerCadastroCliente = async () => {
             genero: formCliente.genero,
             dataNascimento: formCliente.dataNascimento ? new Date(formCliente.dataNascimento).toISOString().split('T')[0] : null,
         };
-        const resposta = await axios.post('http://localhost:3333/register', payload);
+        
+        // MUDANÇA 3: Usando api.post e rota relativa
+        const resposta = await api.post('/register', payload);
+        
         if (resposta.status === 201 || resposta.status === 200) {
             alert('Cliente cadastrado com sucesso!');
             expandirCadastro.value = false;
@@ -144,9 +147,12 @@ const fazerCadastroProfissional = async () => {
         if (formProfissional.comprovante) {
             formData.append('comprovante', formProfissional.comprovante, formProfissional.comprovante.name);
         }
-        const resposta = await axios.post('http://localhost:3333/register', formData, {
+        
+        // MUDANÇA 4: Usando api.post. Mantemos o header multipart/form-data
+        const resposta = await api.post('/register', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
+        
         if (resposta.status === 201 || resposta.status === 200) {
             alert('Profissional cadastrado com sucesso! Aguarde aprovação.');
             expandirCadastro.value = false;
