@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
-import api from '@/services/api'; // O JEITO CERTO (Usando seu arquivo configurado)
+import api from '@/services/api'; // O JEITO CERTO 
 const router = useRouter();
 
 // DADOS DO FORMULÁRIO (Cliente)
