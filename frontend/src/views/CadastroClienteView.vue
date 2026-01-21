@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
-
+import api from '@/services/api'; // O JEITO CERTO (Usando seu arquivo configurado)
 const router = useRouter();
 
 // DADOS DO FORMULÁRIO (Cliente)
@@ -58,7 +57,7 @@ const fazerCadastro = async () => {
         };
 
         // 3. Enviar para o Adonis
-        const resposta = await axios.post('http://localhost:3333/register', dados);
+        const resposta = await api.post('/register', dados);
 
         // 4. Sucesso
         if (resposta.status === 201) {
