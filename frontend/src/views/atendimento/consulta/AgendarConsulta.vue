@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import CardNovoAtendimento from '@/components/cards/atendimento/consulta/CardNovoAtendimento.vue';
-import CardInfosLogin from '@/components/cards/login/CardInfosLogin.vue';
+import CardInfosLogin from '@/components/cards/atendimento/login/CardInfosLogin.vue';
 import api from '@/services/api';
 import type { Profissional } from '@/types';
 import { onMounted, ref, watch } from 'vue';

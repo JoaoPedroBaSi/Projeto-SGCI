@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import api from '#services/api' // Ajuste o caminho do seu axios
+import api from '@/services/api' // Ajuste o caminho do seu axios
 import CardAprovacao from '@/components/cards/atendimento/consulta/CardAprovacao.vue'
 
 const atendimentosPendentes = ref([])

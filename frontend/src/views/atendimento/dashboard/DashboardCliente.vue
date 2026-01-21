@@ -8,7 +8,7 @@ import type { Profissional, Atendimento, Sala, Cliente } from '@/types/index';
 import { useRoute } from 'vue-router';
 import CardAtendimento from '@/components/cards/atendimento/consulta/CardAtendimento.vue';
 import CardDashboardProfissional from '@/components/cards/atendimento/dashboard/CardDashboardProfissional.vue';
-import CardInfosLogin from '@/components/cards/login/CardInfosLogin.vue';
+import CardInfosLogin from '@/components/cards/atendimento/login/CardInfosLogin.vue';
 
 // Tipos auxiliares para a combinação de dados
 type DadosAnexadosSala = { nomeSala: string };
