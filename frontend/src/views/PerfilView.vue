@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 import { ref, onMounted, reactive, computed } from 'vue';
-// CORREÇÃO 1: Usando a instância 'api' configurada (importante para o Render!)
+// IMPORTANTE: Use a instância 'api' configurada para apontar para o Render
 import api from '@/services/api';
 
 const user = reactive({
@@ -31,41 +31,48 @@ const isAdmin = computed(() => {
     return user.perfil_tipo && user.perfil_tipo.toLowerCase() === 'admin';
 });
 
-// --- CORREÇÃO 2: BUSCA ROBUSTA DE DADOS ---
+// --- FUNÇÃO DE BUSCA DE DADOS ---
 const fetchPerfil = async () => {
     try {
-        // Usa api.get (já envia token e URL correta)
+        // Chama a rota GET /me usando a instância api configurada
         const response = await api.get('/me');
         const data = response.data;
         
-        console.log("DADOS RECEBIDOS:", data); // Debug no console
+        console.log("DADOS RECEBIDOS DO BACKEND:", data); // Verifique o console do navegador
 
+        // Mapeia os dados da raiz da resposta
         user.id = data.id;
         user.email = data.email;
-        user.perfil_tipo = data.perfil_tipo || data.perfilTipo || 'CLIENTE';
+        user.perfil_tipo = data.perfil_tipo || 'CLIENTE';
 
-        // Tenta pegar dados do objeto 'perfil' ou da raiz 'user'
-        // Isso resolve o problema de vir vazio se o backend mudar a estrutura
+        // O controller retorna um objeto 'perfil' com os dados específicos (cliente ou profissional)
         const perfilData = data.perfil || {};
         
-        user.fullName = perfilData.nome || perfilData.fullName || data.nome || data.fullName || 'Usuário Sem Nome';
-        user.cpf = perfilData.cpf || data.cpf || '';
-        user.telefone = perfilData.telefone || data.telefone || '';
-        user.genero = perfilData.genero || data.genero || 'MASCULINO';
+        // Mapeia os dados do perfil, com fallbacks para garantir que não fique "undefined"
+        // Tenta 'nome' (comum em tabelas brasileiras) ou 'fullName'
+        user.fullName = perfilData.nome || perfilData.fullName || 'Usuário'; 
+        user.cpf = perfilData.cpf || '';
+        user.telefone = perfilData.telefone || '';
+        user.genero = perfilData.genero || 'MASCULINO';
         
-        // Dados específicos de Profissional
+        // Dados específicos de Profissional (se existirem)
         user.registro_conselho = perfilData.registro_conselho || perfilData.registroConselho || '';
         user.conselho_uf = perfilData.conselho_uf || perfilData.conselhoUf || '';
         user.biografia = perfilData.biografia || '';
 
-        // Tratamento de Data
-        const rawDate = perfilData.data_nascimento || perfilData.dataNascimento || data.data_nascimento;
+        // Tratamento de Data de Nascimento
+        // O banco pode retornar como 'data_nascimento' ou 'dataNascimento'
+        const rawDate = perfilData.data_nascimento || perfilData.dataNascimento;
         if (rawDate) {
+            // Formata para YYYY-MM-DD para o input type="date"
             user.dataNascimento = rawDate.toString().split('T')[0];
+        } else {
+            user.dataNascimento = '';
         }
 
     } catch (error) {
         console.error("Erro ao buscar perfil:", error);
+        // Opcional: Mostrar erro para o usuário se falhar totalmente
     }
 };
 
@@ -81,32 +88,43 @@ const cancelEdit = () => {
 
 const saveEdit = async () => {
     try {
+        // Prepara o payload para envio. O controller espera receber campos para atualizar 'cliente' ou 'profissional'
         const payload = {
             nome: user.fullName,
             telefone: user.telefone,
             data_nascimento: user.dataNascimento,
             genero: user.genero,
+            // Campos específicos de profissional (serão ignorados pelo back se for cliente, ou você pode filtrar)
             biografia: user.biografia,
             registro_conselho: user.registro_conselho,
             conselho_uf: user.conselho_uf
         };
 
-        // Usa api.put (ou patch)
+        // Chama a rota PUT /me (conforme seu controller update)
         await api.put('/me', payload);
+        
         alert('Dados atualizados com sucesso!');
         isEditing.value = false;
-        await fetchPerfil(); 
+        await fetchPerfil(); // Recarrega os dados para confirmar a atualização
     } catch (error: any) {
-        console.error(error);
-        alert(error.response?.data?.message || 'Erro ao atualizar.');
+        console.error("Erro ao atualizar:", error);
+        alert(error.response?.data?.message || 'Erro ao atualizar perfil.');
     }
 };
 
-const openPasswordModal = () => { passwordForm.currentPassword = ''; passwordForm.newPassword = ''; passwordForm.confirmPassword = ''; showPasswordModal.value = true; };
+// Funções do Modal de Senha
+const openPasswordModal = () => { 
+    passwordForm.currentPassword = ''; 
+    passwordForm.newPassword = ''; 
+    passwordForm.confirmPassword = ''; 
+    showPasswordModal.value = true; 
+};
 const closePasswordModal = () => { showPasswordModal.value = false; };
 
 const changePassword = async () => {
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) return alert("Senhas não conferem.");
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+        return alert("A nova senha e a confirmação não conferem.");
+    }
     try {
         await api.put('/auth/change-password', {
             current_password: passwordForm.currentPassword,
@@ -114,9 +132,13 @@ const changePassword = async () => {
         });
         alert("Senha alterada com sucesso!");
         closePasswordModal();
-    } catch (e) { alert("Erro ao alterar senha. Verifique sua senha atual."); }
+    } catch (e: any) { 
+        console.error("Erro ao mudar senha:", e);
+        alert(e.response?.data?.message || "Erro ao alterar senha. Verifique sua senha atual."); 
+    }
 };
 
+// Busca os dados ao montar o componente
 onMounted(() => { fetchPerfil(); });
 </script>
 
@@ -150,7 +172,7 @@ onMounted(() => { fetchPerfil(); });
                         <h3 class="section-title">Dados Pessoais</h3>
                         <div class="input-wrapper">
                             <label>Nome Completo</label>
-                            <input type="text" v-model="user.fullName" :disabled="!isEditing" class="input-pill" placeholder="Seu nome aqui" />
+                            <input type="text" v-model="user.fullName" :disabled="!isEditing" class="input-pill" placeholder="Seu nome completo" />
                         </div>
                         <div class="input-wrapper">
                             <label>CPF</label>
@@ -165,6 +187,7 @@ onMounted(() => { fetchPerfil(); });
                             <select v-model="user.genero" :disabled="!isEditing" class="input-pill">
                                 <option value="MASCULINO">Masculino</option>
                                 <option value="FEMININO">Feminino</option>
+                                <option value="OUTRO">Outro</option>
                             </select>
                         </div>
                     </div>
@@ -195,7 +218,7 @@ onMounted(() => { fetchPerfil(); });
                                 </div>
                                 <div class="input-wrapper pequeno">
                                     <label>UF</label>
-                                    <input type="text" v-model="user.conselho_uf" :disabled="!isEditing" class="input-pill" placeholder="RN" />
+                                    <input type="text" v-model="user.conselho_uf" :disabled="!isEditing" class="input-pill" placeholder="UF" maxlength="2" />
                                 </div>
                             </div>
                         </div>
@@ -209,7 +232,7 @@ onMounted(() => { fetchPerfil(); });
 
                     <div class="input-wrapper mt-3">
                         <label>Biografia Profissional</label>
-                        <textarea v-model="user.biografia" :disabled="!isEditing" class="input-pill area" placeholder="Fale sobre sua experiência..."></textarea>
+                        <textarea v-model="user.biografia" :disabled="!isEditing" class="input-pill area" placeholder="Fale um pouco sobre sua experiência..."></textarea>
                     </div>
                 </div>
 
@@ -249,7 +272,7 @@ onMounted(() => { fetchPerfil(); });
 </template>
 
 <style scoped>
-/* ESTILOS REFINADOS */
+/* ESTILOS REFINADOS - Mantidos para consistência visual */
 .page-content { padding: 30px 50px; font-family: 'Montserrat', sans-serif; color: #334155; }
 .page-title { color: #117a8b; font-size: 1.8rem; font-weight: 800; margin-bottom: 20px; }
 .profile-card { background: white; border-radius: 20px; padding: 40px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
