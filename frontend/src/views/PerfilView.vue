@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 import { ref, onMounted, reactive, computed } from 'vue';
-import axios from 'axios';
-
-// URL fixa para garantir que funcione
-const API_URL = 'http://localhost:3333';
+// CORREÇÃO 1: Usando a instância 'api' configurada (importante para o Render!)
+import api from '@/services/api';
 
 const user = reactive({
     id: null,
@@ -25,7 +23,7 @@ const originalData = ref({});
 const showPasswordModal = ref(false);
 const passwordForm = reactive({ currentPassword: '', newPassword: '', confirmPassword: '' });
 
-// COMPUTED: Verifica se é profissional de forma insensível a maiúsculas
+// COMPUTED
 const isProfissional = computed(() => {
     return user.perfil_tipo && user.perfil_tipo.toLowerCase() === 'profissional';
 });
@@ -33,44 +31,39 @@ const isAdmin = computed(() => {
     return user.perfil_tipo && user.perfil_tipo.toLowerCase() === 'admin';
 });
 
-const getAuthHeader = () => ({ headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` } });
-
-// --- CORREÇÃO PRINCIPAL AQUI ---
+// --- CORREÇÃO 2: BUSCA ROBUSTA DE DADOS ---
 const fetchPerfil = async () => {
     try {
-        const response = await axios.get(`${API_URL}/me`, getAuthHeader());
+        // Usa api.get (já envia token e URL correta)
+        const response = await api.get('/me');
         const data = response.data;
         
-        console.log("DEBUG PERFIL:", data); // Olhe o console (F12) se der erro
+        console.log("DADOS RECEBIDOS:", data); // Debug no console
 
         user.id = data.id;
         user.email = data.email;
+        user.perfil_tipo = data.perfil_tipo || data.perfilTipo || 'CLIENTE';
+
+        // Tenta pegar dados do objeto 'perfil' ou da raiz 'user'
+        // Isso resolve o problema de vir vazio se o backend mudar a estrutura
+        const perfilData = data.perfil || {};
         
-        // CORREÇÃO: Lê snake_case OU camelCase (garantia contra inconsistências do backend)
-        user.perfil_tipo = data.perfil_tipo || data.perfilTipo || ''; 
+        user.fullName = perfilData.nome || perfilData.fullName || data.nome || data.fullName || 'Usuário Sem Nome';
+        user.cpf = perfilData.cpf || data.cpf || '';
+        user.telefone = perfilData.telefone || data.telefone || '';
+        user.genero = perfilData.genero || data.genero || 'MASCULINO';
+        
+        // Dados específicos de Profissional
+        user.registro_conselho = perfilData.registro_conselho || perfilData.registroConselho || '';
+        user.conselho_uf = perfilData.conselho_uf || perfilData.conselhoUf || '';
+        user.biografia = perfilData.biografia || '';
 
-        // Verifica se veio o objeto 'perfil' (onde ficam os dados específicos)
-        if (data.perfil) {
-            // Tenta ler snake_case OU camelCase para todos os campos
-            user.fullName = data.perfil.nome || data.perfil.fullName || data.nome; // Tenta pegar de todo lugar
-            user.cpf = data.perfil.cpf;
-            user.telefone = data.perfil.telefone;
-            user.genero = data.perfil.genero;
-            
-            // Campos de Profissional
-            user.registro_conselho = data.perfil.registro_conselho || data.perfil.registroConselho;
-            user.conselho_uf = data.perfil.conselho_uf || data.perfil.conselhoUf;
-            user.biografia = data.perfil.biografia;
-
-            // Tratamento de Data
-            const dataNasc = data.perfil.data_nascimento || data.perfil.dataNascimento;
-            if (dataNasc) {
-                user.dataNascimento = dataNasc.toString().split('T')[0];
-            }
-        } else {
-            // Fallback se não tiver objeto perfil (ex: admin ou erro de carga)
-            user.fullName = data.name || data.fullName || data.nome;
+        // Tratamento de Data
+        const rawDate = perfilData.data_nascimento || perfilData.dataNascimento || data.data_nascimento;
+        if (rawDate) {
+            user.dataNascimento = rawDate.toString().split('T')[0];
         }
+
     } catch (error) {
         console.error("Erro ao buscar perfil:", error);
     }
@@ -98,25 +91,27 @@ const saveEdit = async () => {
             conselho_uf: user.conselho_uf
         };
 
-        await axios.put(`${API_URL}/me`, payload, getAuthHeader());
+        // Usa api.put (ou patch)
+        await api.put('/me', payload);
         alert('Dados atualizados com sucesso!');
         isEditing.value = false;
-        await fetchPerfil(); // Recarrega para confirmar
+        await fetchPerfil(); 
     } catch (error: any) {
+        console.error(error);
         alert(error.response?.data?.message || 'Erro ao atualizar.');
     }
 };
 
-// ... Funções de Senha ...
 const openPasswordModal = () => { passwordForm.currentPassword = ''; passwordForm.newPassword = ''; passwordForm.confirmPassword = ''; showPasswordModal.value = true; };
 const closePasswordModal = () => { showPasswordModal.value = false; };
+
 const changePassword = async () => {
     if (passwordForm.newPassword !== passwordForm.confirmPassword) return alert("Senhas não conferem.");
     try {
-        await axios.put(`${API_URL}/auth/change-password`, {
+        await api.put('/auth/change-password', {
             current_password: passwordForm.currentPassword,
             new_password: passwordForm.newPassword
-        }, getAuthHeader());
+        });
         alert("Senha alterada com sucesso!");
         closePasswordModal();
     } catch (e) { alert("Erro ao alterar senha. Verifique sua senha atual."); }
@@ -141,7 +136,9 @@ onMounted(() => { fetchPerfil(); });
                     </div>
                     <div class="user-info">
                         <h2>{{ user.fullName || 'Carregando...' }}</h2>
-                        <span class="role-text">{{ isProfissional ? `${user.registro_conselho || 'Sem Registro'} - ${user.conselho_uf || 'UF'}` : (isAdmin ? 'Administrador' : 'Cliente') }}</span>
+                        <span class="role-text">
+                            {{ isProfissional ? 'Profissional de Saúde' : (isAdmin ? 'Administrador' : 'Cliente / Paciente') }}
+                        </span>
                     </div>
                     <button v-if="!isEditing" class="btn-edit" @click="enableEdit">✎ EDITAR</button>
                 </div>
@@ -151,20 +148,37 @@ onMounted(() => { fetchPerfil(); });
                 <div class="form-row">
                     <div class="form-col" v-if="!isAdmin">
                         <h3 class="section-title">Dados Pessoais</h3>
-                        <div class="input-wrapper"><label>Nome Completo</label><input type="text" v-model="user.fullName" :disabled="!isEditing" class="input-pill" /></div>
-                        <div class="input-wrapper"><label>CPF</label><input type="text" v-model="user.cpf" disabled class="input-pill locked" /></div>
-                        <div class="input-wrapper"><label>Data de Nascimento</label><input type="date" v-model="user.dataNascimento" :disabled="!isEditing" class="input-pill" /></div>
-                        <div class="input-wrapper"><label>Gênero</label>
+                        <div class="input-wrapper">
+                            <label>Nome Completo</label>
+                            <input type="text" v-model="user.fullName" :disabled="!isEditing" class="input-pill" placeholder="Seu nome aqui" />
+                        </div>
+                        <div class="input-wrapper">
+                            <label>CPF</label>
+                            <input type="text" v-model="user.cpf" disabled class="input-pill locked" placeholder="000.000.000-00" />
+                        </div>
+                        <div class="input-wrapper">
+                            <label>Data de Nascimento</label>
+                            <input type="date" v-model="user.dataNascimento" :disabled="!isEditing" class="input-pill" />
+                        </div>
+                        <div class="input-wrapper">
+                            <label>Gênero</label>
                             <select v-model="user.genero" :disabled="!isEditing" class="input-pill">
-                                <option value="MASCULINO">Masculino</option><option value="FEMININO">Feminino</option>
+                                <option value="MASCULINO">Masculino</option>
+                                <option value="FEMININO">Feminino</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="form-col border-left">
                         <h3 class="section-title">Contato</h3>
-                        <div class="input-wrapper"><label>E-mail (Login)</label><input type="email" v-model="user.email" disabled class="input-pill locked" /></div>
-                        <div class="input-wrapper" v-if="!isAdmin"><label>Telefone</label><input type="tel" v-model="user.telefone" :disabled="!isEditing" class="input-pill" /></div>
+                        <div class="input-wrapper">
+                            <label>E-mail (Login)</label>
+                            <input type="email" v-model="user.email" disabled class="input-pill locked" />
+                        </div>
+                        <div class="input-wrapper" v-if="!isAdmin">
+                            <label>Telefone</label>
+                            <input type="tel" v-model="user.telefone" :disabled="!isEditing" class="input-pill" placeholder="(00) 00000-0000" />
+                        </div>
                     </div>
                 </div>
 
@@ -175,14 +189,20 @@ onMounted(() => { fetchPerfil(); });
                     <div class="form-row">
                         <div class="form-col">
                             <div class="row-dupla">
-                                <div class="input-wrapper"><label>Registro do Conselho</label><input type="text" v-model="user.registro_conselho" :disabled="!isEditing" class="input-pill" /></div>
-                                <div class="input-wrapper pequeno"><label>UF</label><input type="text" v-model="user.conselho_uf" :disabled="!isEditing" class="input-pill" /></div>
+                                <div class="input-wrapper">
+                                    <label>Registro do Conselho</label>
+                                    <input type="text" v-model="user.registro_conselho" :disabled="!isEditing" class="input-pill" placeholder="Ex: CRM 12345" />
+                                </div>
+                                <div class="input-wrapper pequeno">
+                                    <label>UF</label>
+                                    <input type="text" v-model="user.conselho_uf" :disabled="!isEditing" class="input-pill" placeholder="RN" />
+                                </div>
                             </div>
                         </div>
                         <div class="form-col">
                             <div class="input-wrapper">
                                 <label>Documentação</label>
-                                <div class="doc-badge">📄 Comprovante de Credenciamento.pdf</div>
+                                <div class="doc-badge">📄 Status: Em análise / Aprovado</div>
                             </div>
                         </div>
                     </div>
@@ -195,7 +215,7 @@ onMounted(() => { fetchPerfil(); });
 
                 <div class="footer-actions">
                     <div v-if="isEditing" class="edit-buttons">
-                        <button @click="cancelEdit" class="btn-action btn-discard">Descartar Alterações</button>
+                        <button @click="cancelEdit" class="btn-action btn-discard">Cancelar</button>
                         <button @click="saveEdit" class="btn-action btn-save">Salvar Alterações</button>
                     </div>
 
@@ -220,7 +240,7 @@ onMounted(() => { fetchPerfil(); });
                     <div class="input-wrapper"><label>Confirmar Senha</label><input class="input-pill" type="password" v-model="passwordForm.confirmPassword" /></div>
                     <div class="modal-actions">
                         <button @click="closePasswordModal" class="btn-modal btn-modal-cancel">Cancelar</button>
-                        <button @click="changePassword" class="btn-modal btn-modal-save">Alterar Senha</button>
+                        <button @click="changePassword" class="btn-modal btn-modal-save">Salvar</button>
                     </div>
                 </div>
             </div>
@@ -229,7 +249,7 @@ onMounted(() => { fetchPerfil(); });
 </template>
 
 <style scoped>
-/* COPIE TODO O CSS DA RESPOSTA ANTERIOR, É O MESMO */
+/* ESTILOS REFINADOS */
 .page-content { padding: 30px 50px; font-family: 'Montserrat', sans-serif; color: #334155; }
 .page-title { color: #117a8b; font-size: 1.8rem; font-weight: 800; margin-bottom: 20px; }
 .profile-card { background: white; border-radius: 20px; padding: 40px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
