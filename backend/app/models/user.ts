@@ -51,12 +51,12 @@ export default class User extends compose(BaseModel, AuthFinder) {
   // onde a coluna 'userId' for igual ao meu id"
   
   @hasOne(() => Cliente, {
-    foreignKey: 'userId' 
+    foreignKey: 'id' 
   })
   declare cliente: HasOne<typeof Cliente>
 
   @hasOne(() => Profissional, {
-    foreignKey: 'userId'
+    foreignKey: 'id'
   })
   declare profissional: HasOne<typeof Profissional>
   // ============================================================
