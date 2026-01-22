@@ -9,14 +9,12 @@ import Sala from '#models/sala'
 import Atendimento from '#models/atendimento'
 
 export default class Profissional extends BaseModel {
-  // Define o nome da tabela explicitamente
+  // Define o nome da tabela explicitamente (boa prática)
   public static table = 'profissionais'
 
+  // ID é fornecido externamente (ex: vem da tabela `users`), não é gerado automaticamente
   @column({ isPrimary: true })
   declare id: number
-
-  @column()
-  declare userId: number
 
   @column({ columnName: 'funcao_id' })
   declare funcaoId: number
@@ -74,7 +72,10 @@ export default class Profissional extends BaseModel {
   @belongsTo(() => Funcao)
   declare funcao: BelongsTo<typeof Funcao>
 
-  @belongsTo(() => User)
+  @belongsTo(() => User, {
+    foreignKey: 'id', // A chave estrangeira é o próprio ID
+    localKey: 'id'
+  })
   declare user: BelongsTo<typeof User>
 
   @manyToMany(() => Especializacao, {
@@ -85,7 +86,7 @@ export default class Profissional extends BaseModel {
   @hasMany(() => Disponibilidade)
   declare disponibilidades: HasMany<typeof Disponibilidade>
 
-  // Relação correta com salas via reservas
+  // Relação com salas via reservas
   @manyToMany(() => Sala, {
     pivotTable: 'reservas',
     pivotColumns: ['data_hora_inicio', 'data_hora_fim', 'status', 'pagamento_efetuado'],

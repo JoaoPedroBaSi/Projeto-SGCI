@@ -5,13 +5,9 @@ import Atendimento from '#models/atendimento'
 import User from '#models/user'
 
 export default class Cliente extends BaseModel {
+  // O ID não é gerado aqui — é fornecido pela tabela `users` (não auto-increment).
   @column({ isPrimary: true })
   declare id: number
-
-  // O ID é o mesmo do usuário, então userId é redundante, 
-  // mas mantemos se sua lógica depender dele explicitamente.
-  @column()
-  declare userId: number
 
   @column({ columnName: 'nome' }) 
   declare name: string
@@ -28,13 +24,11 @@ export default class Cliente extends BaseModel {
   @column()
   declare telefone: string
 
-  // === CAMPOS ADICIONADOS PARA CORRIGIR O SEEDER ===
   @column()
   declare email: string
 
   @column()
   declare senha: string
-  // =================================================
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -42,9 +36,11 @@ export default class Cliente extends BaseModel {
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 
-  // Relacionamentos
+  // --- RELACIONAMENTOS ---
+
   @belongsTo(() => User, {
     foreignKey: 'id', // A chave estrangeira é o próprio ID
+    localKey: 'id'
   })
   declare user: BelongsTo<typeof User>
 

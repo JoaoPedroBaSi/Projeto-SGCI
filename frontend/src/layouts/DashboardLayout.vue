@@ -17,7 +17,8 @@ import {
   Clock,
   Briefcase,
   Handshake,
-  ClipboardList
+  ClipboardList,
+  UserCheck // Novo ícone para o modo paciente
 } from 'lucide-vue-next';
 
 const router = useRouter();
@@ -54,6 +55,8 @@ onMounted(() => {
   if (data) {
     const user = JSON.parse(data);
     userName.value = user.fullName || user.nome || 'Usuário';
+    
+    // Normaliza o tipo para minúsculo para evitar erros de comparação
     const tipo = (user.perfil_tipo || user.perfilTipo || 'cliente').toLowerCase();
     userType.value = tipo;
 
@@ -74,14 +77,14 @@ onMounted(() => {
           label: 'Saúde', icon: markRaw(HeartPulse), key: 'saude',
           children: [
             { label: 'Prontuário', route: '/cliente/historico' },
-            { label: 'Inventário', route: '#inventario' },
+            { label: 'Inventário', route: '#inventario' }, // Ajuste rota se houver
             { label: 'Farmácias Parceiras', route: '/parcerias' }
           ]
         },
         {
           label: 'Finanças', icon: markRaw(Coins), key: 'financas',
           children: [
-            { label: 'Pagamentos', route: '#pagamentos' }
+            { label: 'Pagamentos', route: '#pagamentos' } // Ajuste rota se houver
           ]
         },
         {
@@ -110,8 +113,8 @@ onMounted(() => {
         {
           label: 'Prontuários', icon: markRaw(ClipboardList), key: 'pront_prof',
           children: [
-            { label: 'Meus Prontuários', route: '#prontuarios' }, // Adicionar rota correta
-            { label: 'Registrar Relatório', route: '#relatórios' } // Adicionar rota correta
+            { label: 'Meus Prontuários', route: '#prontuarios' },
+            { label: 'Registrar Relatório', route: '#relatorios' }
           ]
         },
         {
@@ -124,7 +127,6 @@ onMounted(() => {
         {
           label: 'Salas e Recursos', icon: markRaw(Building), key: 'infra_prof',
           children: [
-
             { label: 'Reservar Sala', route: '/profissional/pagamento-salas' },
             { label: 'Minhas Reservas', route: '/profissional/reservas' },
             { label: 'Consultar Estoque', route: '/profissional/solicitar-reposicao' }
@@ -133,7 +135,7 @@ onMounted(() => {
         {
           label: 'Financeiro', icon: markRaw(Coins), key: 'fin_prof',
           children: [
-            { label: 'Pagar Aluguel', route: '#aluguel'}, // Adicionar rota correta
+            { label: 'Pagar Aluguel', route: '#aluguel'},
             { label: 'Meu Extrato', route: '/profissional/financeiro' }
           ]
         },
@@ -147,34 +149,30 @@ onMounted(() => {
     }
 
     // ==========================================================
-    // 3. MENU DO ADMIN (ATUALIZADO - 7 GRUPOS DO FIGMA)
+    // 3. MENU DO ADMIN
     // ==========================================================
     else if (tipo === 'admin') {
       menuItems.value = [
         { label: 'Início', icon: markRaw(Home), route: '/admin/dashboard' },
-
         {
           label: 'Gestão', icon: markRaw(Briefcase), key: 'gestao_admin',
           children: [
             { label: 'Aprovar Profissionais', route: '/admin/aprovacoes' }
           ]
         },
-
         {
           label: 'Atendimentos', icon: markRaw(CalendarCheck), key: 'atend_admin',
           children: [
             { label: 'Aprovar Consultas', route: '/admin/solicitacoes' },
           ]
         },
-
         {
           label: 'Finanças', icon: markRaw(Coins), key: 'fin_admin',
           children: [
-            { label: 'Transações', route: '#financeiro-admin' }, // Adicionar rota correta
-            { label: 'Tabela de Preços', route: '#tabela-precos' } // Adicionar rota correta
+            { label: 'Transações', route: '#financeiro-admin' },
+            { label: 'Tabela de Preços', route: '#tabela-precos' }
           ]
         },
-
         {
           label: 'Recursos', icon: markRaw(Package), key: 'recursos_admin',
           children: [
@@ -183,7 +181,6 @@ onMounted(() => {
             { label: 'Aprovar Reservas', route: '/admin/reservas' }
           ]
         },
-
         {
           label: 'Parcerias', icon: markRaw(Handshake), key: 'parcerias_admin',
           children: [
@@ -191,7 +188,6 @@ onMounted(() => {
             { label: 'Novo Parceiro', route: '/cadastro/parceria' }
           ]
         },
-
         {
           label: 'Conta', icon: markRaw(User), key: 'conta_admin',
           children: [
@@ -214,7 +210,7 @@ onMounted(() => {
         <h2 class="titulo">SGCI</h2>
       </div>
 
-      <nav>
+      <nav class="nav-content">
         <div v-for="(item, index) in menuItems" :key="index">
 
           <div v-if="item.children" class="menu-group">
@@ -224,7 +220,6 @@ onMounted(() => {
                 <component :is="item.icon" class="icon-svg" />
                 <span class="label-text">{{ item.label }}</span>
               </div>
-
               <ChevronDown class="arrow-icon" :class="{ 'rotated': openMenus[item.key!] }" :size="16" />
             </button>
 
@@ -244,6 +239,18 @@ onMounted(() => {
           </router-link>
 
         </div>
+
+        <div v-if="userType === 'profissional'" class="patient-mode-section">
+          <div class="divider-line"></div>
+          <p class="section-label">MODO PESSOAL</p>
+          <router-link to="/cliente/dashboard" class="menu-item patient-btn" active-class="active-patient">
+            <div class="left-content">
+              <UserCheck class="icon-svg" />
+              <span class="label-text">Sou Paciente</span>
+            </div>
+          </router-link>
+        </div>
+
       </nav>
 
       <button @click="logout" class="btn-logout">
@@ -269,9 +276,7 @@ onMounted(() => {
 /* =========================================
    RESET E ESTRUTURA
    ========================================= */
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 .dashboard-container {
   display: flex;
@@ -288,42 +293,27 @@ onMounted(() => {
 .sidebar {
   width: 260px;
   min-width: 260px;
-  background-color: #117a8b;
-  /* Teal */
+  background-color: #117a8b; /* Teal */
   color: white;
   display: flex;
   flex-direction: column;
   padding: 30px 20px;
+  overflow: hidden; /* Impede scroll global na sidebar */
+}
 
-  overflow-y: auto;
+.nav-content {
+  flex: 1;
+  overflow-y: auto; /* Scroll apenas nos itens de menu */
   overflow-x: hidden;
-
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  margin-bottom: 20px;
+  /* Scrollbar fina para ficar bonito */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }
 
-.sidebar::-webkit-scrollbar {
-  display: none;
-}
-
-.logo {
-  text-align: center;
-  margin-bottom: 40px;
-}
-
-.logo-img {
-  width: 80px;
-  height: auto;
-  display: block;
-  margin: 0 auto 10px auto;
-}
-
-.titulo {
-  color: white;
-  font-weight: bold;
-  font-size: 2rem;
-  margin: 0;
-}
+.logo { text-align: center; margin-bottom: 30px; flex-shrink: 0; }
+.logo-img { width: 80px; height: auto; display: block; margin: 0 auto 10px auto; }
+.titulo { color: white; font-weight: bold; font-size: 2rem; margin: 0; }
 
 /* =========================================
    ITENS DO MENU
@@ -346,30 +336,59 @@ onMounted(() => {
   justify-content: flex-start;
 }
 
-.menu-item .label-text {
-  color: #ffffff !important;
-}
+.menu-item .label-text { color: #ffffff !important; }
 
 :deep(.icon-svg) {
-  width: 20px;
-  height: 20px;
+  width: 20px; height: 20px;
   stroke: #ffffff !important;
   stroke-width: 2px;
   fill: none !important;
   transition: stroke 0.3s;
 }
 
-.left-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-grow: 1;
+.left-content { display: flex; align-items: center; gap: 12px; flex-grow: 1; }
+
+.menu-item:hover, .active, .active-parent {
+  background-color: rgba(255, 255, 255, 0.15);
+  font-weight: bold;
 }
 
-.menu-item:hover,
-.active,
-.active-parent {
-  background-color: rgba(255, 255, 255, 0.15);
+/* =========================================
+   MODO PACIENTE (ESTILO ESPECIAL)
+   ========================================= */
+.patient-mode-section {
+  margin-top: 20px;
+  padding-top: 10px;
+}
+
+.divider-line {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.3);
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+.section-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  padding-left: 10px;
+}
+
+.patient-btn {
+  background-color: rgba(0, 0, 0, 0.2); /* Fundo mais escuro para destacar */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.patient-btn:hover {
+  background-color: #2dd4bf; /* Cor destaque ao passar o mouse */
+  border-color: #2dd4bf;
+}
+
+.active-patient {
+  background-color: #2dd4bf !important;
   font-weight: bold;
 }
 
@@ -395,16 +414,8 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-.submenu-item:hover {
-  color: #ffffff !important;
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-.active-sub {
-  color: #ffffff !important;
-  font-weight: bold;
-  background-color: rgba(255, 255, 255, 0.1);
-}
+.submenu-item:hover { color: #ffffff !important; background-color: rgba(255, 255, 255, 0.05); }
+.active-sub { color: #ffffff !important; font-weight: bold; background-color: rgba(255, 255, 255, 0.1); }
 
 /* =========================================
    SETA (CHEVRON)
@@ -415,16 +426,14 @@ onMounted(() => {
   opacity: 0.8;
   margin-left: auto;
 }
-
-.rotated {
-  transform: rotate(180deg);
-}
+.rotated { transform: rotate(180deg); }
 
 /* =========================================
    BOTÃO SAIR
    ========================================= */
 .btn-logout {
   margin-top: auto;
+  flex-shrink: 0;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.5);
   color: #ffffff !important;
@@ -439,14 +448,8 @@ onMounted(() => {
   width: 100%;
 }
 
-.btn-logout:hover {
-  background-color: #ffffff;
-  color: #117a8b !important;
-}
-
-.btn-logout:hover :deep(.icon-svg) {
-  stroke: #117a8b !important;
-}
+.btn-logout:hover { background-color: #ffffff; color: #117a8b !important; }
+.btn-logout:hover :deep(.icon-svg) { stroke: #117a8b !important; }
 
 /* =========================================
    CONTEÚDO PRINCIPAL
@@ -458,31 +461,8 @@ onMounted(() => {
   height: 100%;
 }
 
-.top-header {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.top-header h2 {
-  color: #117a8b;
-  font-size: 1.8rem;
-  margin: 0;
-}
-
-.badge {
-  background-color: #2dd4bf;
-  color: #0f766e;
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: bold;
-}
-
-.divider {
-  border: 0;
-  border-top: 1px solid #e2e8f0;
-  margin-bottom: 30px;
-}
+.top-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+.top-header h2 { color: #117a8b; font-size: 1.8rem; margin: 0; }
+.badge { background-color: #2dd4bf; color: #0f766e; padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
+.divider { border: 0; border-top: 1px solid #e2e8f0; margin-bottom: 30px; }
 </style>
