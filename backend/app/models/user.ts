@@ -17,6 +17,7 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column({ isPrimary: true })
   declare id: number
 
+  // Mapeia 'full_name' do banco para 'fullName' do código
   @column({ columnName: 'full_name' }) 
   declare fullName: string | null
 
@@ -29,8 +30,10 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column()
   declare perfil_tipo: 'cliente' | 'profissional' | 'admin' | null
 
+  // Campo opcional, pode não existir no banco dependendo da sua migration, 
+  // mas não atrapalha se estiver aqui como null
   @column()
-  declare perfil_id: number | null
+  declare perfil_id: number | null 
 
   @column()
   declare status: 'ativo' | 'pendente' | 'inativo' | null
@@ -41,15 +44,22 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column.dateTime()
   declare password_reset_token_expires_at: DateTime | null
 
-  // --- CORREÇÃO AQUI ---
-  // Removemos { foreignKey: 'id' } para o Adonis usar o padrão 'userId'
-  // Se o seu banco usa 'user_id' na tabela clientes/profissionais, isso vai funcionar.
-  @hasOne(() => Cliente)
+  // ============================================================
+  // 🔗 RELACIONAMENTOS (CORRIGIDO)
+  // ============================================================
+  // Dizemos ao User: "Procure seu filho na tabela Clientes 
+  // onde a coluna 'userId' for igual ao meu id"
+  
+  @hasOne(() => Cliente, {
+    foreignKey: 'userId' 
+  })
   declare cliente: HasOne<typeof Cliente>
 
-  @hasOne(() => Profissional)
+  @hasOne(() => Profissional, {
+    foreignKey: 'userId'
+  })
   declare profissional: HasOne<typeof Profissional>
-  // ---------------------
+  // ============================================================
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -59,9 +69,11 @@ export default class User extends compose(BaseModel, AuthFinder) {
 
   static accessTokens = DbAccessTokensProvider.forModel(User)
 
+  // Hook para criptografar a senha antes de salvar
   @beforeSave()
   public static async handlePasswordHashing(user: User) {
     if (user.$dirty.password) {
+        // Evita re-hash se já estiver hashada (começa com $)
         if (user.password && user.password.startsWith('$')) return
         user.password = await hash.make(user.password)
     }
