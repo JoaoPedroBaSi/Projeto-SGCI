@@ -32,7 +32,7 @@ export default class AuthController {
             id: user.id,
             email: user.email,
             perfil_tipo: user.perfil_tipo, // <--- ADICIONADO AQUI
-            nome: user.name
+            nome: user.fullName
         }
       })
 
@@ -84,7 +84,7 @@ export default class AuthController {
       const user = new User()
       user.email = email
       user.password = password
-      user.name = fullName  
+      user.fullName = fullName  
       
       // IMPORTANTE: Salvando o tipo na tabela users
       user.perfil_tipo = perfil_tipo 
