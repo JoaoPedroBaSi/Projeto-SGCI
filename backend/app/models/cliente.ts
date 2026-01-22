@@ -14,7 +14,7 @@ export default class Cliente extends BaseModel {
   declare userId: number
 
   @column()
-  declare nome: string
+  declare name: string
 
   @column()
   declare genero: 'MASCULINO' | 'FEMININO'

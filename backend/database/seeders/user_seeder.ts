@@ -36,7 +36,7 @@ export default class extends BaseSeeder {
       { id: userCliente.id },
       {
         id: userCliente.id,
-        nome: 'Cliente Exemplo',
+        name: 'Cliente Exemplo',
         cpf: '111.111.111-11',
         telefone: '11999999999',
         email: userCliente.email,

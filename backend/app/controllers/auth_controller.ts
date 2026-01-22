@@ -32,7 +32,7 @@ export default class AuthController {
             id: user.id,
             email: user.email,
             perfil_tipo: user.perfil_tipo, // <--- ADICIONADO AQUI
-            nome: user.fullName
+            nome: user.name
         }
       })
 
@@ -94,7 +94,7 @@ export default class AuthController {
       if (perfil_tipo === 'cliente') {
         await Cliente.create({
             id: user.id,
-            nome: fullName,
+            name: fullName,
             genero: payload.genero,
             dataNascimento: payload.dataNascimento ? DateTime.fromJSDate(new Date(payload.dataNascimento)) : DateTime.now(),
             cpf: payload.cpf,
