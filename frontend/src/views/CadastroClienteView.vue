@@ -47,7 +47,7 @@ const fazerCadastro = async () => {
     try {
         // 2. Preparar o pacote para o Back-end
         const dados = {
-            fullName: form.nome,
+            full_name: form.nome,
             email: form.email,
             password: form.senha,
             password_confirmation: form.confirmarSenha, // CORRIGIDO: snake_case para o Adonis

@@ -101,7 +101,7 @@ const fazerCadastroCliente = async () => {
     if (formCliente.senha !== formCliente.confirmarSenha) return alert('As senhas não coincidem!');
     try {
         const payload = {
-            fullName: formCliente.nome,
+            full_name: formCliente.nome,
             email: formCliente.email,
             password: formCliente.senha,
             password_confirmation: formCliente.confirmarSenha,
