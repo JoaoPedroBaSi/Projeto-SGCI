@@ -3,6 +3,7 @@ import DashboardLayout from '@/layouts/DashboardLayout.vue';
 import { ref, onMounted, reactive, computed } from 'vue';
 import axios from 'axios';
 
+// URL fixa para garantir que funcione
 const API_URL = 'http://localhost:3333';
 
 const user = reactive({
@@ -45,27 +46,33 @@ const fetchPerfil = async () => {
         user.id = data.id;
         user.email = data.email;
         
-        // CORREÇÃO: Lê snake_case OU camelCase
+        // CORREÇÃO: Lê snake_case OU camelCase (garantia contra inconsistências do backend)
         user.perfil_tipo = data.perfil_tipo || data.perfilTipo || ''; 
 
+        // Verifica se veio o objeto 'perfil' (onde ficam os dados específicos)
         if (data.perfil) {
             // Tenta ler snake_case OU camelCase para todos os campos
-            user.fullName = data.perfil.nome || data.perfil.fullName;
+            user.fullName = data.perfil.nome || data.perfil.fullName || data.nome; // Tenta pegar de todo lugar
             user.cpf = data.perfil.cpf;
             user.telefone = data.perfil.telefone;
             user.genero = data.perfil.genero;
             
+            // Campos de Profissional
             user.registro_conselho = data.perfil.registro_conselho || data.perfil.registroConselho;
             user.conselho_uf = data.perfil.conselho_uf || data.perfil.conselhoUf;
             user.biografia = data.perfil.biografia;
 
+            // Tratamento de Data
             const dataNasc = data.perfil.data_nascimento || data.perfil.dataNascimento;
             if (dataNasc) {
                 user.dataNascimento = dataNasc.toString().split('T')[0];
             }
+        } else {
+            // Fallback se não tiver objeto perfil (ex: admin ou erro de carga)
+            user.fullName = data.name || data.fullName || data.nome;
         }
     } catch (error) {
-        console.error("Erro perfil:", error);
+        console.error("Erro ao buscar perfil:", error);
     }
 };
 
@@ -94,13 +101,13 @@ const saveEdit = async () => {
         await axios.put(`${API_URL}/me`, payload, getAuthHeader());
         alert('Dados atualizados com sucesso!');
         isEditing.value = false;
-        await fetchPerfil();
+        await fetchPerfil(); // Recarrega para confirmar
     } catch (error: any) {
         alert(error.response?.data?.message || 'Erro ao atualizar.');
     }
 };
 
-// ... Senha igual ...
+// ... Funções de Senha ...
 const openPasswordModal = () => { passwordForm.currentPassword = ''; passwordForm.newPassword = ''; passwordForm.confirmPassword = ''; showPasswordModal.value = true; };
 const closePasswordModal = () => { showPasswordModal.value = false; };
 const changePassword = async () => {
@@ -110,9 +117,9 @@ const changePassword = async () => {
             current_password: passwordForm.currentPassword,
             new_password: passwordForm.newPassword
         }, getAuthHeader());
-        alert("Senha alterada!");
+        alert("Senha alterada com sucesso!");
         closePasswordModal();
-    } catch (e) { alert("Erro ao alterar senha."); }
+    } catch (e) { alert("Erro ao alterar senha. Verifique sua senha atual."); }
 };
 
 onMounted(() => { fetchPerfil(); });
@@ -134,7 +141,7 @@ onMounted(() => { fetchPerfil(); });
                     </div>
                     <div class="user-info">
                         <h2>{{ user.fullName || 'Carregando...' }}</h2>
-                        <span class="role-text">{{ isProfissional ? `${user.registro_conselho || 'Sem Registro'} - ${user.conselho_uf || 'UF'}` : 'Usuário do Sistema' }}</span>
+                        <span class="role-text">{{ isProfissional ? `${user.registro_conselho || 'Sem Registro'} - ${user.conselho_uf || 'UF'}` : (isAdmin ? 'Administrador' : 'Cliente') }}</span>
                     </div>
                     <button v-if="!isEditing" class="btn-edit" @click="enableEdit">✎ EDITAR</button>
                 </div>

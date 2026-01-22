@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import axios from 'axios';
+// CORREÇÃO 1: Usando a instância configurada da API (com token automático)
+import api from '@/services/api'; 
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 
 // --- INTERFACES ---
@@ -29,7 +30,7 @@ const historico = ref<HistoricoPedido[]>([]);
 const loading = ref(true);
 const termoBusca = ref('');
 
-// --- DADOS MOCKADOS (PARA TESTE VISUAL APENAS SE A LISTA ESTIVER VAZIA) ---
+// --- DADOS MOCKADOS (Fallback visual apenas) ---
 const mockEstoque = [
     { id: 1, item: 'Luva Látex (Tam. M)', quantidade: 2, unidade: 'Cx. 100un', lote: '2901', qtySolicitada: 1 },
     { id: 2, item: 'Seringa 5ml Descartável', quantidade: 10, unidade: 'Pct 50un', lote: '8821', qtySolicitada: 1 },
@@ -37,25 +38,21 @@ const mockEstoque = [
     { id: 4, item: 'Papel Lençol Hospitalar', quantidade: 12, unidade: 'Rolo 50m', lote: '3321', qtySolicitada: 1 },
 ];
 
-const getAuthHeader = () => {
-    const token = localStorage.getItem('auth_token');
-    return { headers: { 'Authorization': `Bearer ${token}` } };
-};
-
 // --- LÓGICA ---
 
 // 1. Carregar Dados
 const carregarDados = async () => {
     loading.value = true;
     try {
-        // Busca inventário real
-        const resEstoque = await axios.get('http://localhost:3333/inventario', getAuthHeader());
+        // CORREÇÃO 2: Chamada limpa (sem header manual)
+        // O api.ts já injeta o token e a URL base
+        const resEstoque = await api.get('/inventario');
         
         // Se vier do banco, usa os dados do banco.
-        if (resEstoque.data.length > 0) {
+        if (resEstoque.data && resEstoque.data.length > 0) {
              estoque.value = resEstoque.data.map((i: any) => ({ 
                 ...i, 
-                item: i.nome || i.item, // Garante que lê o nome
+                item: i.nome || i.item, // Normaliza o nome
                 qtySolicitada: 1 
             }));
         } else {
@@ -64,11 +61,11 @@ const carregarDados = async () => {
         }
 
         // Busca Histórico
-        const resHistorico = await axios.get('http://localhost:3333/pedidos-reposicao', getAuthHeader());
+        const resHistorico = await api.get('/pedidos-reposicao');
         historico.value = resHistorico.data;
 
     } catch (error) {
-        console.error("Erro ao carregar dados, usando fallback visual:", error);
+        console.error("Erro ao carregar dados (API pode estar offline ou rota inexistente). Usando fallback visual.", error);
         estoque.value = mockEstoque;
     } finally {
         loading.value = false;
@@ -97,17 +94,19 @@ const decrementar = (item: ItemEstoque) => { if (item.qtySolicitada > 1) item.qt
 // 5. Enviar Solicitação
 const solicitarItem = async (item: ItemEstoque) => {
     try {
-        await axios.post('http://localhost:3333/pedidos-reposicao', {
+        // CORREÇÃO 3: Chamada POST limpa
+        await api.post('/pedidos-reposicao', {
             inventario_id: item.id, 
             quantidade: item.qtySolicitada
-        }, getAuthHeader());
+        });
 
         alert(`Solicitação de ${item.qtySolicitada}x ${item.item} enviada com sucesso!`);
         // Atualiza histórico
         carregarDados();
-    } catch (error) {
+    } catch (error: any) {
         console.error(error);
-        alert('Erro ao solicitar reposição.');
+        const msg = error.response?.data?.message || 'Erro ao solicitar reposição.';
+        alert(msg);
     }
 };
 

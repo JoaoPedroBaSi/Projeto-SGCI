@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 import { ref, onMounted, reactive } from 'vue';
-import axios from 'axios';
+// CORREÇÃO 1: Usando a instância configurada da API
+import api from '@/services/api';
 
-const API_URL = 'http://localhost:3333';
 const isLoading = ref(true);
 const salas = ref<any[]>([]);
 const showModal = ref(false);
@@ -18,14 +18,12 @@ const form = reactive({
     status: 'DISPONIVEL'
 });
 
-const getAuthHeader = () => {
-    const token = localStorage.getItem('auth_token');
-    return { headers: { 'Authorization': `Bearer ${token}` } };
-};
+// CORREÇÃO 2: Função getAuthHeader removida (o api.ts já faz isso)
 
 const fetchSalas = async () => {
     try {
-        const response = await axios.get(`${API_URL}/sala`, getAuthHeader());
+        // CORREÇÃO 3: Chamada direta para a rota relativa
+        const response = await api.get('/sala');
         salas.value = response.data;
     } catch (error) {
         console.error("Erro ao buscar salas:", error);
@@ -39,10 +37,11 @@ const openModal = (sala: any = null) => {
         isEditing.value = true;
         form.id = sala.id;
         form.nome = sala.nome;
-        // CORREÇÃO: Lendo camelCase do backend
+        // Backend manda camelCase (capacidadePacientes), Form usa snake_case
         form.capacidade_pacientes = sala.capacidadePacientes;
         form.preco_aluguel = Number(sala.precoAluguel);
-        // Tratamento seguro de data
+        
+        // Tratamento seguro de data para o input type="date"
         form.data_disponibilidade = sala.dataDisponibilidade ? sala.dataDisponibilidade.split('T')[0] : '';
         form.status = sala.status;
     } else {
@@ -59,6 +58,7 @@ const openModal = (sala: any = null) => {
 
 const saveSala = async () => {
     try {
+        // Convertendo para o formato que o Adonis espera (camelCase)
         const payload = {
             nome: form.nome,
             capacidadePacientes: Number(form.capacidade_pacientes),
@@ -69,18 +69,23 @@ const saveSala = async () => {
         };
 
         if (isEditing.value && form.id) {
-            await axios.put(`${API_URL}/sala/${form.id}`, payload, getAuthHeader());
+            // CORREÇÃO 4: api.put sem headers manuais
+            await api.put(`/sala/${form.id}`, payload);
             alert('Sala atualizada com sucesso!');
         } else {
-            await axios.post(`${API_URL}/sala`, payload, getAuthHeader());
+            // CORREÇÃO 5: api.post sem headers manuais
+            await api.post('/sala', payload);
             alert('Sala cadastrada com sucesso!');
         }
+
         showModal.value = false;
         fetchSalas(); 
+
     } catch (error: any) {
         console.error("Erro ao salvar:", error);
         const msg = error.response?.data?.message || 'Erro ao salvar sala.';
         let errors = '';
+
         if (error.response?.data?.errors) {
              errors = error.response.data.errors.map((e: any) => `• ${e.message}`).join('\n');
         }
@@ -90,21 +95,22 @@ const saveSala = async () => {
 
 const deleteSala = async (id: number) => {
     if (!confirm('Tem certeza que deseja excluir esta sala?')) return;
+
     try {
-        await axios.delete(`${API_URL}/sala/${id}`, getAuthHeader());
+        // CORREÇÃO 6: api.delete
+        await api.delete(`/sala/${id}`);
         fetchSalas();
     } catch (error) {
-        alert('Erro ao excluir sala.');
+        alert('Erro ao excluir sala. Verifique se não há agendamentos vinculados.');
     }
 };
 
-// Helper Atualizado: Lê camelCase
+// Formatadores visuais
 const formatMoney = (val: any) => {
     if (val === undefined || val === null || isNaN(Number(val))) return 'R$ 0,00';
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(val));
 };
 
-// Helper Atualizado: Lê camelCase e trata ISO string
 const formatDate = (dateStr: string) => {
     if (!dateStr) return '--';
     const date = new Date(dateStr);

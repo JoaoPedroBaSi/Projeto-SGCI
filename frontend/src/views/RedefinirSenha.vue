@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useRouter, useRoute } from 'vue-router'; // Adicionei useRoute
-import axios from 'axios'; // Adicionei axios
+import { useRouter, useRoute } from 'vue-router'; 
+// CORREÇÃO: Usando a instância api configurada em vez de axios puro
+import api from '@/services/api'; 
 
 const router = useRouter();
 const route = useRoute(); // Para pegar o token da URL
@@ -26,8 +27,8 @@ const redefinirSenha = async () => {
     }
 
     try {
-        // 3. A CHAMADA REAL PARA O BACKEND
-        await axios.post('http://localhost:3333/redefinir-senha', {
+        // 3. A CHAMADA CORRETA (Usando api.post e rota relativa)
+        await api.post('/redefinir-senha', {
             token: token,
             password: novaSenha.value // Enviando como 'password'
         });
@@ -48,13 +49,11 @@ const redefinirSenha = async () => {
 <template>
     <div class="page-layout">
         
-        <!-- LADO ESQUERDO (FOTO) -->
         <div class="lado-esquerdo">
             <img src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?q=80&w=2080&auto=format&fit=crop" alt="Médica" />
             <div class="filtro-verde"></div>
         </div>
 
-        <!-- LADO DIREITO (FORMULÁRIO) -->
         <div class="lado-direito">
             <div class="card-redefinir">
                 
@@ -156,9 +155,6 @@ const redefinirSenha = async () => {
     font-size: 1.8rem;
     font-weight: bold;
     color: white;
-    /* Fundo do título similar ao botão, opcional para destacar como na imagem */
-    /* background-color: #2dd4bf; color: #0f766e; padding: 10px; border-radius: 8px; */ 
-    /* Deixei sem fundo pois fica mais limpo, mas você pode descomentar acima */
 }
 
 /* === CAMPOS === */

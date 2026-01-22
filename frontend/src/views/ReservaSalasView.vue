@@ -10,7 +10,7 @@ interface Sala {
   id: number;
   nome: string;
   tipo: 'consultorio' | 'exames' | 'terapia';
-  capacidade: number;
+  capacidadePacientes: number;
   preco: number;
   status: 'disponivel' | 'ocupada';
 }
@@ -66,7 +66,7 @@ async function buscarSalas() {
         id: s.id,
         nome: s.nome,
         tipo: tipoIcone,
-        capacidade: s.capacidadePacientes,
+        capacidadePacientes: s.capacidadePacientes,
         preco: Number(s.precoAluguel),
         status: s.status === 'DISPONIVEL' ? 'disponivel' : 'ocupada'
       };

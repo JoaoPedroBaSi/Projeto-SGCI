@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+// CORREÇÃO: Usando api configurada em vez de axios puro
+import api from '@/services/api';
 
 const router = useRouter();
 
@@ -18,14 +19,15 @@ const enviarSolicitacao = async () => {
     loading.value = true;
 
     try {
-        // Envia para o seu backend (mesma rota que você usava no modal)
-        await axios.post('http://localhost:3333/esqueci-senha', {
+        // CORREÇÃO: Chamada limpa usando api.post
+        // O backend vai receber, gerar o token e enviar o e-mail
+        await api.post('/esqueci-senha', {
             email: email.value
         });
 
         alert("Se o e-mail estiver cadastrado, você receberá um link em breve!");
         
-        // Opcional: Voltar para o login automaticamente após o sucesso
+        // Redireciona para o login para o usuário aguardar o e-mail
         router.push('/'); 
 
     } catch (error: any) {

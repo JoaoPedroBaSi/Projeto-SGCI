@@ -44,9 +44,15 @@ const formatarData = (dataIso: string) => {
 const carregarPendentes = async () => {
     loading.value = true;
     try {
-        // Atenção à rota no plural
-        const response = await axios.get('http://localhost:3333/profissionais');
+        const token = localStorage.getItem('auth_token');
+        // Busca TODOS os profissionais
+        const response = await axios.get('http://localhost:3333/profissionais', {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        // Filtra apenas os pendentes no front (ou no back se tiver filtro)
         profissionais.value = response.data.filter((p: Profissional) => p.status === 'pendente');
+        
     } catch (error) {
         console.error("Erro ao carregar:", error);
     } finally {
@@ -92,9 +98,14 @@ const enviarStatus = async (status: 'aprovado' | 'rejeitado') => {
     if (!profissionalSelecionado.value) return;
 
     try {
+        const token = localStorage.getItem('auth_token');
+        
+        // Rota para atualizar status (PATCH é ideal para atualização parcial)
         await axios.patch(`http://localhost:3333/profissionais/${profissionalSelecionado.value.id}/status`, {
             status: status,
             observacoes_admin: textoObservacao.value // Envia o texto (vazio ou preenchido)
+        }, {
+            headers: { Authorization: `Bearer ${token}` }
         });
         
         const msg = status === 'aprovado' ? 'Profissional Aprovado! ✅' : 'Profissional Rejeitado. ⛔';
@@ -104,7 +115,7 @@ const enviarStatus = async (status: 'aprovado' | 'rejeitado') => {
         carregarPendentes(); 
     } catch (error) {
         console.error(error);
-        alert("Erro ao atualizar status.");
+        alert("Erro ao atualizar status. Verifique se você é Admin.");
     }
 }
 
@@ -160,8 +171,8 @@ onMounted(() => {
                     <div class="modal-bottom-info">
                         <div class="info-line">
                             <strong>Registro do Conselho:</strong> {{ profissionalSelecionado.registro_conselho }} 
-                            <span class="separator"></span> <strong>UF:</strong> {{ profissionalSelecionado.conselho_uf }}
-                            <span class="separator"></span> <strong>Especialização:</strong> {{ profissionalSelecionado.funcao?.nome }}
+                            <span class="separator">|</span> <strong>UF:</strong> {{ profissionalSelecionado.conselho_uf }}
+                            <span class="separator">|</span> <strong>Especialização:</strong> {{ profissionalSelecionado.funcao?.nome }}
                         </div>
                         <div class="bio-box"><strong>Biografia:</strong><p>{{ profissionalSelecionado.biografia || 'Nenhuma biografia informada.' }}</p></div>
                         <div class="comprovante-link"><strong>Comprovante de Credenciamento: </strong><a href="#" class="link-teal" @click.prevent>comprovante_credenciamento.pdf</a></div>
@@ -235,7 +246,7 @@ onMounted(() => {
 
 .modal-bottom-info { margin-top: 15px; font-size: 0.9rem; color: #4b5563; }
 .info-line { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #f3f4f6; }
-.separator { margin: 0 10px; }
+.separator { margin: 0 10px; color: #d1d5db; }
 .bio-box { margin-bottom: 15px; }
 .bio-box p { font-size: 0.85rem; margin-top: 5px; line-height: 1.4; }
 .link-teal { color: #2dd4bf; text-decoration: underline; cursor: pointer; font-weight: 600; }
@@ -259,6 +270,7 @@ onMounted(() => {
     font-size: 0.95rem;
     resize: none;
     outline: none;
+    box-sizing: border-box;
 }
 .textarea-obs:focus { border-color: #2dd4bf; }
 

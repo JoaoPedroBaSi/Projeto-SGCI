@@ -1,14 +1,8 @@
 <script setup lang="ts">
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 import { ref, onMounted, computed } from 'vue';
-import axios from 'axios';
-
-// === CONFIGURAÇÕES ===
-const API_URL = 'http://localhost:3333';
-
-const getAuthHeader = () => {
-    return { headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` } };
-};
+// CORREÇÃO: Usando a instância configurada da API
+import api from '@/services/api';
 
 // === ESTADO ===
 const cobrancas = ref<any[]>([]);
@@ -17,21 +11,32 @@ const metodoSelecionado = ref('PIX');
 const itemSelecionadoParaPagar = ref<any>(null);
 const isLoading = ref(false);
 
-// === 1. BUSCAR DADOS REAIS DO BACK-END ===
+// === 1. BUSCAR DADOS ===
 const carregarDados = async () => {
     isLoading.value = true;
     try {
-        const response = await axios.get(`${API_URL}/minhas-financas`, getAuthHeader());
-        
-        // Preenche as listas com o que veio do banco
-        cobrancas.value = response.data.pendentes;
-        historico.value = response.data.historico;
+        const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
+        const meuId = Number(userData.id);
+
+        // Busca todas as transações
+        const response = await api.get('/transacao');
+        const todas = response.data;
+
+        // Filtra apenas as minhas transações
+        const minhas = todas.filter((t: any) => Number(t.userId || t.user_id) === meuId);
+
+        // Separa o que é Cobrança (Pendente + Saída) do Histórico
+        cobrancas.value = minhas.filter((t: any) => 
+            (t.status === 'PENDENTE' || t.status === 'ATRASADO') && t.tipo === 'SAIDA'
+        );
+
+        historico.value = minhas.filter((t: any) => 
+            t.status !== 'PENDENTE' && t.status !== 'ATRASADO'
+        );
 
         // Seleciona o primeiro item automaticamente se houver contas
-        if(cobrancas.value.length > 0) {
+        if(cobrancas.value.length > 0 && !itemSelecionadoParaPagar.value) {
             itemSelecionadoParaPagar.value = cobrancas.value[0];
-        } else {
-            itemSelecionadoParaPagar.value = null;
         }
 
     } catch (error) {
@@ -47,17 +52,24 @@ const confirmarPagamento = async () => {
     
     isLoading.value = true;
     try {
-        const id = itemSelecionadoParaPagar.value.id;
+        const item = itemSelecionadoParaPagar.value;
+        const profId = item.userId || item.user_id; // Identifica de quem é a conta
+
+        // Chama a rota de processar pagamento
+        await api.post('/pagamento/processar', {
+            profissionalId: profId,
+            valor: item.valor,
+            formaPagamento: metodoSelecionado.value,
+            transacaoId: item.id // Envia o ID da transação para dar baixa
+        });
         
-        // Chama a rota de pagar no back-end
-        await axios.post(`${API_URL}/transacao/${id}/pagar`, {}, getAuthHeader());
+        alert(`Pagamento confirmado com sucesso via ${metodoSelecionado.value}!`);
         
-        alert(`Pagamento confirmado com sucesso!`);
-        
-        // Recarrega a tela para atualizar as listas
-        await carregarDados();
+        itemSelecionadoParaPagar.value = null;
+        await carregarDados(); // Recarrega a tela
 
     } catch (error: any) {
+        console.error(error);
         const msg = error.response?.data?.message || 'Erro ao processar pagamento.';
         alert(msg);
     } finally {
@@ -73,7 +85,6 @@ const totalPendente = computed(() => {
 
 const proximoVencimento = computed(() => {
     if (cobrancas.value.length > 0) {
-        // Usa a data de criação ou vencimento (ajuste conforme seu model)
         const data = cobrancas.value[0].createdAt || cobrancas.value[0].created_at;
         return formatDate(data);
     }
@@ -130,7 +141,8 @@ onMounted(() => {
                 <div class="left-column">
                     <h3 class="section-title">Cobranças em Aberto</h3>
                     
-                    <div v-if="cobrancas.length === 0" class="empty-state">
+                    <div v-if="isLoading && cobrancas.length === 0" class="text-muted">Carregando...</div>
+                    <div v-else-if="cobrancas.length === 0" class="empty-state">
                         Nenhuma cobrança pendente. 🥳
                     </div>
 
@@ -142,7 +154,7 @@ onMounted(() => {
                         @click="selecionarCobranca(item)"
                     >
                         <div class="cobranca-info">
-                            <h4>{{ item.descricao }}</h4>
+                            <h4>{{ item.finalidade || item.descricao || 'Pagamento Pendente' }}</h4>
                             <span class="ref">Data: {{ formatDate(item.createdAt || item.created_at) }}</span>
                             <span class="badge bg-red">PENDENTE</span>
                         </div>
@@ -156,8 +168,8 @@ onMounted(() => {
                     
                     <div v-for="hist in historico" :key="hist.id" class="historico-item">
                         <div class="hist-info">
-                            <span class="hist-desc">{{ hist.descricao }}</span>
-                            <span class="hist-ref">Pago em {{ formatDate(hist.updatedAt || hist.updated_at) }}</span>
+                            <span class="hist-desc">{{ hist.finalidade || hist.descricao }}</span>
+                            <span class="hist-ref">Status: {{ hist.status }} - {{ formatDate(hist.updatedAt || hist.updated_at) }}</span>
                         </div>
                         <div class="hist-valor">
                             {{ formatMoney(hist.valor) }}
@@ -168,7 +180,7 @@ onMounted(() => {
 
                 <div class="right-column">
                     <div class="checkout-card" v-if="itemSelecionadoParaPagar">
-                        <h3>{{ itemSelecionadoParaPagar.descricao }}</h3>
+                        <h3>{{ itemSelecionadoParaPagar.finalidade || itemSelecionadoParaPagar.descricao }}</h3>
                         <p class="total-pagar">Total a pagar: <strong>{{ formatMoney(itemSelecionadoParaPagar.valor) }}</strong></p>
 
                         <div class="metodos-pagamento">
@@ -250,7 +262,7 @@ onMounted(() => {
 .text-muted { color: #94a3b8; font-size: 0.9rem; font-style: italic; }
 
 .historico-item { background: white; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; opacity: 0.7; }
-.hist-desc { display: block; font-weight: 600; color: #94a3b8; text-decoration: line-through; }
+.hist-desc { display: block; font-weight: 600; color: #94a3b8; }
 .hist-ref { font-size: 0.75rem; color: #166534; }
 .hist-valor { font-weight: 700; color: #94a3b8; display: flex; align-items: center; gap: 10px; }
 .icon-file { cursor: pointer; color: #117a8b; }
@@ -282,4 +294,10 @@ onMounted(() => {
 .btn-confirmar:disabled { background: #ccc; cursor: not-allowed; }
 
 .mt-4 { margin-top: 2rem; }
+.empty-state { text-align: center; color: #94a3b8; font-style: italic; padding: 20px; border: 1px dashed #e2e8f0; border-radius: 8px; }
+
+@media (max-width: 900px) {
+    .content-grid { grid-template-columns: 1fr; }
+    .right-column { position: static; }
+}
 </style>

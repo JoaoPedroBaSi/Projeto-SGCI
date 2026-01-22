@@ -1,44 +1,40 @@
 <script setup lang="ts">
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 import { ref, onMounted, computed } from 'vue';
-import axios from 'axios';
+// CORREÇÃO 1: Usando a instância configurada da API (funciona no Render)
+import api from '@/services/api';
 
-const API_URL = 'http://localhost:3333';
 const isLoading = ref(true);
 const transacoes = ref<any[]>([]);
 
 // Variável para DEBUG (ver o que chegou no console/tela)
 const debugInfo = ref('');
 
-const getAuthHeader = () => {
-    const token = localStorage.getItem('auth_token');
-    return { headers: { 'Authorization': `Bearer ${token}` } };
-};
-
 const fetchFinanceiro = async () => {
+    isLoading.value = true;
     try {
         const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
-        const meuId = Number(userData.id); // Converte para número para garantir
+        const meuId = Number(userData.id); 
         
         console.log("=== DEBUG FINANCEIRO ===");
         console.log("Meu ID:", meuId);
 
-        // Busca todas as transações
-        const response = await axios.get(`${API_URL}/transacao`, getAuthHeader());
+        // CORREÇÃO 2: Chamada limpa usando api.get (já vai com token e URL certa)
+        const response = await api.get('/transacao');
         const todas = response.data;
         
         console.log("Dados brutos do banco:", todas);
 
-        // FILTRO INTELIGENTE (Corrige o problema de String vs Number)
+        // FILTRO INTELIGENTE
         transacoes.value = todas.filter((t: any) => {
-            // Tenta ler userId ou user_id
+            // Tenta ler userId (camelCase) ou user_id (snake_case)
             const idTransacao = Number(t.userId || t.user_id);
             return idTransacao === meuId;
         });
 
-        // Se a lista estiver vazia, guarda info para mostrar na tela
+        // Debug visual se a lista estiver vazia
         if (transacoes.value.length === 0) {
-            debugInfo.value = `Banco retornou ${todas.length} itens. Meu ID é ${meuId}.`;
+            debugInfo.value = `O banco retornou ${todas.length} registros no total. Nenhum pertence ao ID ${meuId}.`;
         }
 
     } catch (error) {
@@ -48,12 +44,12 @@ const fetchFinanceiro = async () => {
     }
 };
 
-// Computeds
+// COMPUTEDS (Separa o que é dívida do que é histórico)
 const contasAPagar = computed(() => {
     return transacoes.value.filter(t => {
-        // Garante que lê status maiúsculo ou minúsculo
         const st = (t.status || '').toUpperCase();
         const tp = (t.tipo || '').toUpperCase();
+        // Só mostra se for SAIDA e estiver PENDENTE
         return st === 'PENDENTE' && tp === 'SAIDA';
     });
 });
@@ -61,6 +57,7 @@ const contasAPagar = computed(() => {
 const historico = computed(() => {
     return transacoes.value.filter(t => {
         const st = (t.status || '').toUpperCase();
+        // Mostra tudo que NÃO está pendente (Concluído, Cancelado, etc)
         return st !== 'PENDENTE';
     });
 });
@@ -69,23 +66,30 @@ const pagarConta = async (transacao: any) => {
     if(!confirm(`Confirmar pagamento de R$ ${transacao.valor}?`)) return;
 
     try {
-        // Tenta pegar o ID do profissional de várias formas para não falhar
-        const profId = transacao.profissionalId || transacao.user_id || transacao.userId;
+        // Tenta pegar o ID do profissional de várias formas
+        const profId = transacao.profissionalId || transacao.profissional_id || transacao.user_id;
 
-        await axios.post(`${API_URL}/pagamento/processar`, {
+        await api.post('/pagamento/processar', {
             profissionalId: profId, 
             valor: transacao.valor,
             formaPagamento: 'PIX'
-        }, getAuthHeader());
+        });
 
         alert('Pagamento processado com sucesso!');
-        transacao.status = 'CONCLUIDA'; 
+        // Atualiza a lista para sumir das pendências
+        fetchFinanceiro();
+        
     } catch (error) {
         console.error(error);
-        alert('Simulação: Pagamento registrado visualmente.');
-        transacao.status = 'CONCLUIDA';
+        alert('Erro ao processar pagamento. Tente novamente.');
     }
 };
+
+// Helper de Data
+const formatarData = (dataIso: string) => {
+    if (!dataIso) return '--/--/----';
+    return new Date(dataIso).toLocaleDateString('pt-BR');
+}
 
 onMounted(() => {
     fetchFinanceiro();
@@ -97,15 +101,13 @@ onMounted(() => {
         <div class="page-content">
             <h1 class="page-title">Financeiro</h1>
 
-            <!-- Seção de Pendências -->
             <div class="section-block">
                 <h3 class="section-title text-red">🔻 Contas a Pagar</h3>
                 
-                <div v-if="isLoading" class="loading">Carregando...</div>
+                <div v-if="isLoading" class="loading">Carregando financeiro...</div>
                 
                 <div v-else-if="contasAPagar.length === 0" class="empty-state">
                     <p>Nenhuma conta pendente.</p>
-                    <!-- Mostra debug se estiver vazio para te ajudar -->
                     <small v-if="debugInfo" style="color: gray; display: block; margin-top: 10px;">
                         Debug: {{ debugInfo }}
                     </small>
@@ -114,25 +116,23 @@ onMounted(() => {
                 <div v-else class="grid-cards">
                     <div v-for="item in contasAPagar" :key="item.id" class="card-divida">
                         <div class="info">
-                            <!-- Usa finalidade, com fallback para descricao -->
-                            <h4>{{ item.finalidade || item.descricao || 'Pagamento' }}</h4>
-                            <span class="data">{{ new Date(item.createdAt).toLocaleDateString() }}</span>
+                            <h4>{{ item.finalidade || item.descricao || 'Pagamento Pendente' }}</h4>
+                            <span class="data">Vencimento: {{ formatarData(item.createdAt || item.created_at) }}</span>
                         </div>
-                        <div class="valor">
-                            R$ {{ Number(item.valor).toFixed(2) }}
+                        <div class="valor-box">
+                            <span class="valor">R$ {{ Number(item.valor).toFixed(2) }}</span>
+                            <button @click="pagarConta(item)" class="btn-pagar">
+                                PAGAR
+                            </button>
                         </div>
-                        <button @click="pagarConta(item)" class="btn-pagar">
-                            PAGAR AGORA
-                        </button>
                     </div>
                 </div>
             </div>
 
             <hr class="divider">
 
-            <!-- Seção de Histórico -->
             <div class="section-block">
-                <h3 class="section-title text-gray">📜 Histórico</h3>
+                <h3 class="section-title text-gray">📜 Histórico de Movimentações</h3>
                 
                 <div class="table-container">
                     <table>
@@ -147,7 +147,7 @@ onMounted(() => {
                         </thead>
                         <tbody>
                             <tr v-for="item in historico" :key="item.id">
-                                <td>{{ new Date(item.createdAt).toLocaleDateString() }}</td>
+                                <td>{{ formatarData(item.createdAt || item.created_at) }}</td>
                                 <td>{{ item.finalidade || item.descricao || 'Transação' }}</td>
                                 <td>
                                     <span :class="(item.tipo || '').toUpperCase() === 'ENTRADA' ? 'tag-green' : 'tag-red'">
@@ -155,15 +155,15 @@ onMounted(() => {
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="status-badge">{{ item.status }}</span>
+                                    <span class="status-badge" :class="item.status">{{ item.status }}</span>
                                 </td>
-                                <td>R$ {{ Number(item.valor).toFixed(2) }}</td>
+                                <td><strong>R$ {{ Number(item.valor).toFixed(2) }}</strong></td>
+                            </tr>
+                            <tr v-if="historico.length === 0">
+                                <td colspan="5" class="text-center">Nenhum histórico disponível.</td>
                             </tr>
                         </tbody>
                     </table>
-                    <div v-if="historico.length === 0" class="empty-table">
-                        Sem histórico recente.
-                    </div>
                 </div>
             </div>
 
@@ -182,24 +182,30 @@ onMounted(() => {
 /* Cards de Dívida */
 .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
 .card-divida { background: white; border-left: 5px solid #ef4444; border-radius: 10px; padding: 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-.card-divida h4 { margin: 0; color: #334155; }
-.card-divida .data { font-size: 0.8rem; color: #94a3b8; }
-.card-divida .valor { font-size: 1.2rem; font-weight: 800; color: #ef4444; }
-.btn-pagar { background-color: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-.btn-pagar:hover { background-color: #dc2626; }
+.card-divida h4 { margin: 0; color: #334155; font-size: 1rem; }
+.card-divida .data { font-size: 0.8rem; color: #94a3b8; display: block; margin-top: 5px; }
+
+.valor-box { text-align: right; }
+.valor { font-size: 1.2rem; font-weight: 800; color: #ef4444; display: block; margin-bottom: 8px; }
+
+.btn-pagar { background-color: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.8rem; }
+.btn-pagar:hover { background-color: #dc2626; transform: scale(1.05); }
 
 /* Tabela */
 .table-container { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
-th { text-align: left; padding: 15px; border-bottom: 2px solid #f1f5f9; color: #117a8b; font-size: 0.9rem; }
-td { padding: 15px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
-.tag-green { background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; }
-.tag-red { background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; }
-.status-badge { background: #f3f4f6; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
-.empty-table { padding: 20px; text-align: center; color: #94a3b8; }
-.loading { text-align: center; font-size: 1.2rem; color: #117a8b; padding: 20px; }
-</style>
-```
+th { text-align: left; padding: 15px; border-bottom: 2px solid #f1f5f9; color: #117a8b; font-size: 0.85rem; text-transform: uppercase; }
+td { padding: 15px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; vertical-align: middle; }
+.text-center { text-align: center; color: #94a3b8; padding: 30px; }
 
-**Salve, dê F5 e veja se apareceu!**
-Se não aparecer, olhe o texto cinza pequeno que vai aparecer na tela ("Debug: Banco retornou...") e me diga o que está escrito nele.
+/* Tags */
+.tag-green { background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
+.tag-red { background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
+
+.status-badge { background: #f3f4f6; padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+.status-badge.CONCLUIDA { background: #d1fae5; color: #065f46; }
+.status-badge.PENDENTE { background: #ffedd5; color: #9a3412; }
+
+.loading { text-align: center; font-size: 1.1rem; color: #117a8b; padding: 20px; font-weight: bold; }
+.empty-state { text-align: center; background: #f8fafc; padding: 30px; border-radius: 10px; border: 2px dashed #e2e8f0; color: #64748b; }
+</style>
