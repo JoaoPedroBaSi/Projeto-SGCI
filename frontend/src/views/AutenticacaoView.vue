@@ -128,7 +128,7 @@ const fazerCadastroProfissional = async () => {
     if (!formProfissional.funcaoId) return alert('Por favor, selecione sua profissão.');
     try {
         const formData = new FormData();
-        formData.append('fullName', formProfissional.nome || '');
+        formData.append('name', formProfissional.nome || '');
         formData.append('email', formProfissional.email || '');
         formData.append('password', formProfissional.senha || '');
         formData.append('password_confirmation', formProfissional.confirmarSenha || '');
