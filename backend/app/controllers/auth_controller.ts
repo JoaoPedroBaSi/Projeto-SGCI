@@ -32,7 +32,7 @@ export default class AuthController {
             id: user.id,
             email: user.email,
             perfil_tipo: user.perfil_tipo, // <--- ADICIONADO AQUI
-            nome: user.fullName
+            name: user.fullName
         }
       })
 
