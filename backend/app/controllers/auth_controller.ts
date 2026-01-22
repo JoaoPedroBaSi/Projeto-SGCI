@@ -84,6 +84,7 @@ export default class AuthController {
       const user = new User()
       user.email = email
       user.password = password
+      user.name = fullName  
       
       // IMPORTANTE: Salvando o tipo na tabela users
       user.perfil_tipo = perfil_tipo 

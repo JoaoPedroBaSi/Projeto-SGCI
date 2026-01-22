@@ -101,7 +101,7 @@ const fazerCadastroCliente = async () => {
     if (formCliente.senha !== formCliente.confirmarSenha) return alert('As senhas não coincidem!');
     try {
         const payload = {
-            full_name: formCliente.nome,
+            fullName: formCliente.nome,
             email: formCliente.email,
             password: formCliente.senha,
             password_confirmation: formCliente.confirmarSenha,
@@ -128,7 +128,7 @@ const fazerCadastroProfissional = async () => {
     if (!formProfissional.funcaoId) return alert('Por favor, selecione sua profissão.');
     try {
         const formData = new FormData();
-        formData.append('name', formProfissional.nome || '');
+        formData.append('fullName', formProfissional.nome || '');
         formData.append('email', formProfissional.email || '');
         formData.append('password', formProfissional.senha || '');
         formData.append('password_confirmation', formProfissional.confirmarSenha || '');

@@ -1,9 +1,7 @@
-<!-- João gabriel -->
-
 <script setup lang="ts">
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
-import api from '@/services/api'; // O JEITO CERTO 
+import api from '@/services/api'; 
 const router = useRouter();
 
 // DADOS DO FORMULÁRIO (Cliente)
@@ -47,10 +45,14 @@ const fazerCadastro = async () => {
     try {
         // 2. Preparar o pacote para o Back-end
         const dados = {
-            full_name: form.name,
+            // CORREÇÃO CRUCIAL AQUI 👇
+            // 1. A chave deve ser 'fullName' (igual ao AuthController do Adonis)
+            // 2. O valor deve ser form.nome (igual ao v-model do formulário)
+            fullName: form.nome, 
+            
             email: form.email,
             password: form.senha,
-            password_confirmation: form.confirmarSenha, // CORRIGIDO: snake_case para o Adonis
+            password_confirmation: form.confirmarSenha,
             cpf: form.cpf,
             telefone: form.telefone,
             genero: form.genero,
@@ -99,23 +101,18 @@ const buscarCep = () => {
 }
 </script>
 
-<!-- (Mantenha o <template> e o <style> exatamente como você já tem) -->
-
 <template>
     <div class="cadastro-layout">
-        <!-- LADO ESQUERDO -->
         <div class="lado-esquerdo">
             <img src="https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?q=80&w=1932&auto=format&fit=crop" alt="Paciente e Médico" />
             <div class="filtro-verde"></div>
         </div>
 
-        <!-- LADO DIREITO -->
         <div class="lado-direito">
             <div class="card-cadastro">
                 <h1>Cadastro de Cliente</h1>
                 <p class="subtitulo">Preencha seus dados para criar sua conta.</p>
 
-                <!-- O .prevent evita que a página recarregue -->
                 <form @submit.prevent="fazerCadastro">
                     
                     <h3 class="secao-titulo">Dados Pessoais</h3>
@@ -176,7 +173,6 @@ const buscarCep = () => {
                             <button type="button" class="btn-buscar" @click="buscarCep">Buscar</button>
                         </div>
                     </div>
-                    <!-- Campos de endereço continuam aqui (apenas visuais por enquanto) -->
                     <div class="form-row">
                         <div class="form-group dois-tercos">
                             <label>Rua</label>
