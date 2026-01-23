@@ -17,7 +17,6 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column({ isPrimary: true })
   declare id: number
 
-  // Mapeia 'full_name' do banco para 'fullName' do código
   @column({ columnName: 'full_name' }) 
   declare fullName: string | null
 
@@ -30,8 +29,6 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column()
   declare perfil_tipo: 'cliente' | 'profissional' | 'admin' | null
 
-  // Campo opcional, pode não existir no banco dependendo da sua migration, 
-  // mas não atrapalha se estiver aqui como null
   @column()
   declare perfil_id: number | null 
 
@@ -47,16 +44,17 @@ export default class User extends compose(BaseModel, AuthFinder) {
   // ============================================================
   // 🔗 RELACIONAMENTOS (CORRIGIDO)
   // ============================================================
-  // Dizemos ao User: "Procure seu filho na tabela Clientes 
-  // onde a coluna 'userId' for igual ao meu id"
   
+  // MUDE ISTO AGORA: De 'userId' para 'id'
   @hasOne(() => Cliente, {
-    foreignKey: 'id' 
+    foreignKey: 'id', // <--- TEM QUE SER 'id'
+    localKey: 'id'
   })
   declare cliente: HasOne<typeof Cliente>
 
   @hasOne(() => Profissional, {
-    foreignKey: 'id'
+    foreignKey: 'id', // <--- TEM QUE SER 'id'
+    localKey: 'id'
   })
   declare profissional: HasOne<typeof Profissional>
   // ============================================================
@@ -69,11 +67,9 @@ export default class User extends compose(BaseModel, AuthFinder) {
 
   static accessTokens = DbAccessTokensProvider.forModel(User)
 
-  // Hook para criptografar a senha antes de salvar
   @beforeSave()
   public static async handlePasswordHashing(user: User) {
     if (user.$dirty.password) {
-        // Evita re-hash se já estiver hashada (começa com $)
         if (user.password && user.password.startsWith('$')) return
         user.password = await hash.make(user.password)
     }
