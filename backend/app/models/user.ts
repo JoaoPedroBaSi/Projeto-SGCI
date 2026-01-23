@@ -42,18 +42,20 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare password_reset_token_expires_at: DateTime | null
 
   // ============================================================
-  // 🔗 RELACIONAMENTOS (CORRIGIDO)
+  // 🔗 RELACIONAMENTOS (AQUI ESTAVA O ERRO!)
   // ============================================================
   
-  // MUDE ISTO AGORA: De 'userId' para 'id'
+  // ATENÇÃO: Mudamos de 'userId' para 'id'
+  // Isso diz ao Adonis: "Use o meu ID (ex: 10) para buscar o registro ID 10 na outra tabela"
+  
   @hasOne(() => Cliente, {
-    foreignKey: 'id', // <--- TEM QUE SER 'id'
+    foreignKey: 'id', // <--- MUDANÇA CRUCIAL
     localKey: 'id'
   })
   declare cliente: HasOne<typeof Cliente>
 
   @hasOne(() => Profissional, {
-    foreignKey: 'id', // <--- TEM QUE SER 'id'
+    foreignKey: 'id', // <--- MUDANÇA CRUCIAL
     localKey: 'id'
   })
   declare profissional: HasOne<typeof Profissional>

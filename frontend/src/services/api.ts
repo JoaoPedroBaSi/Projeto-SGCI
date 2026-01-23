@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Usa a variável de ambiente ou o link do Render direto
-const API_URL = import.meta.env.VITE_API_URL || 'https://sgci-api.onrender.com';
+// URL do Backend no Render
+const API_URL = 'https://sgci-api.onrender.com';
 
 console.log('🔗 Conectando na API:', API_URL);
 
@@ -12,9 +12,9 @@ const api = axios.create({
   },
 });
 
+// Interceptador de Requisição
 api.interceptors.request.use((config) => {
-  // === A CORREÇÃO ESTÁ AQUI ===
-  // Seu navegador salvou como 'auth_token', então temos que ler 'auth_token'
+  // CORREÇÃO: Busca a chave certa 'auth_token'
   const token = localStorage.getItem('auth_token');
   
   if (token) {
@@ -25,5 +25,16 @@ api.interceptors.request.use((config) => {
 }, (error) => {
   return Promise.reject(error);
 });
+
+// Interceptador de Erro (Debug)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      console.error('⛔ Erro de Autenticação:', error.response.data);
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default api;
