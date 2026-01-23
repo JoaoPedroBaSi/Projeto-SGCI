@@ -22,8 +22,10 @@ router.get('/redefinir-senha', '#controllers/auth_controller.showRedefinirSenha'
 // 👤 PERFIL DO USUÁRIO LOGADO (PROTEGIDAS)
 // =======================================================
 router.group(() => {
-  router.get('/me', '#controllers/users_controller.show')
-  router.put('/me', '#controllers/users_controller.update')
+  // CORREÇÃO AQUI: Apontando para o 'perfils_controller' que nós arrumamos!
+  router.get('/me', '#controllers/perfils_controller.show')
+  router.put('/me', '#controllers/perfils_controller.update')
+  
   router.put('/auth/change-password', '#controllers/auth_controller.changePassword')
 }).use(middleware.auth())
 
@@ -35,9 +37,8 @@ router.resource('/especializacao', '#controllers/especializacoes_controller').ex
 router.resource('/cliente', '#controllers/clientes_controller').except(['create', 'edit'])
 
 // =======================================================
-// 🩺 PROFISSIONAIS (CORRIGIDO)
+// 🩺 PROFISSIONAIS
 // =======================================================
-// Adicionamos .middleware('*', middleware.auth()) para proteger a listagem e evitar erros no front
 router.resource('/profissionais', '#controllers/profissionais_controller')
       .except(['create', 'edit'])
       .middleware('*', middleware.auth())
