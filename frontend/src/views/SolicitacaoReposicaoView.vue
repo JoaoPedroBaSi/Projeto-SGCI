@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 // CORREÇÃO 1: Usando a instância configurada da API (com token automático)
-import api from '@/services/api'; 
+import api from '@/services/api';
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 
 // --- INTERFACES ---
 interface ItemEstoque {
     id: number;
-    item: string; 
+    item: string;
     nome?: string; // Back-end pode mandar como 'nome'
     quantidade: number;
     unidade?: string;
@@ -17,8 +17,8 @@ interface ItemEstoque {
 
 interface HistoricoPedido {
     id: number;
-    inventario?: { nome: string }; 
-    item_nome?: string; 
+    inventario?: { nome: string };
+    item_nome?: string;
     created_at: string;
     status: string; // 'pendente', 'aprovado', 'rejeitado'
     quantidade: number;
@@ -47,13 +47,13 @@ const carregarDados = async () => {
         // CORREÇÃO 2: Chamada limpa (sem header manual)
         // O api.ts já injeta o token e a URL base
         const resEstoque = await api.get('/inventario');
-        
+
         // Se vier do banco, usa os dados do banco.
         if (resEstoque.data && resEstoque.data.length > 0) {
-             estoque.value = resEstoque.data.map((i: any) => ({ 
-                ...i, 
+             estoque.value = resEstoque.data.map((i: any) => ({
+                ...i,
                 item: i.nome || i.item, // Normaliza o nome
-                qtySolicitada: 1 
+                qtySolicitada: 1
             }));
         } else {
              // Se banco vazio, usa mock para validação visual
@@ -75,7 +75,7 @@ const carregarDados = async () => {
 // 2. Filtro de Busca
 const estoqueFiltrado = computed(() => {
     if (!termoBusca.value) return estoque.value;
-    return estoque.value.filter(i => 
+    return estoque.value.filter(i =>
         (i.item || '').toLowerCase().includes(termoBusca.value.toLowerCase())
     );
 });
@@ -96,7 +96,7 @@ const solicitarItem = async (item: ItemEstoque) => {
     try {
         // CORREÇÃO 3: Chamada POST limpa
         await api.post('/pedidos-reposicao', {
-            inventario_id: item.id, 
+            inventarioId: item.id,
             quantidade: item.qtySolicitada
         });
 
@@ -134,7 +134,7 @@ onMounted(() => {
 <template>
     <DashboardLayout>
         <div class="page-container">
-            
+
             <div class="header-section">
                 <div>
                     <h2 class="page-title">Solicitar Estoque</h2>
@@ -143,7 +143,7 @@ onMounted(() => {
             </div>
 
             <div class="main-layout">
-                
+
                 <div class="panel catalog-panel">
                     <div class="panel-header">
                         <h3>Catálogo de Insumos</h3>
@@ -166,7 +166,7 @@ onMounted(() => {
 
                     <div v-else class="items-list">
                         <div v-for="item in estoqueFiltrado" :key="item.id" class="item-row">
-                            
+
                             <div class="col-item info">
                                 <span class="item-name">{{ item.item }}</span>
                                 <span class="item-desc">{{ item.unidade || 'Unidade' }} • Lote {{ item.lote || 'N/A' }}</span>
@@ -193,7 +193,7 @@ onMounted(() => {
 
                 <div class="panel history-panel">
                     <h3>Histórico Recente</h3>
-                    
+
                     <div v-if="historico.length === 0" class="empty-history">
                         Sem pedidos recentes.
                     </div>

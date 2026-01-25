@@ -19,13 +19,11 @@ const emit = defineEmits(['ao-fechar', 'ao-confirmar', 'ao-notificar']);
 const abaAtiva = ref<'avulso' | 'recorrente'>('avulso');
 const enviando = ref(false);
 
-// Controle de disponibilidade
 const carregandoOcupados = ref(false);
-const horariosOcupados = ref<string[]>([]); // Lista de horas ocupadas (ex: "08:00")
+const horariosOcupados = ref<string[]>([]);
 
 const hoje = new Date().toISOString().split('T')[0];
 
-// --- ESTADOS AVULSO ---
 const dataSelecionada = ref(hoje);
 const horariosSelecionados = ref<string[]>([]);
 const horariosDisponiveis = [
@@ -34,7 +32,6 @@ const horariosDisponiveis = [
   '16:00', '17:00', '18:00'
 ];
 
-// --- ESTADOS RECORRENTE ---
 const recDataInicio = ref(hoje);
 const dataFutura = new Date();
 dataFutura.setDate(dataFutura.getDate() + 30);
@@ -49,7 +46,6 @@ const diasOpcoes = [
   { label: 'Q', value: 3 }, { label: 'Q', value: 4 }, { label: 'S', value: 5 }, { label: 'S', value: 6 },
 ];
 
-// --- BUSCA DE OCUPADOS---
 async function buscarDisponibilidade() {
   if (!props.sala || !dataSelecionada.value || abaAtiva.value !== 'avulso') return;
 
@@ -57,13 +53,20 @@ async function buscarDisponibilidade() {
   horariosOcupados.value = [];
 
   try {
-    const reservas = await reservaService.buscarOcupados(props.sala.id, dataSelecionada.value);
+    const todasReservas = await reservaService.buscarOcupados();
 
-    // Processa o retorno para extrair apenas a HORA
-    horariosOcupados.value = reservas.map((r: any) => {
-      if (!r.dataHoraInicio) return '';
-      const dataObj = new Date(r.dataHoraInicio);
-      // Pega a hora local ou UTC
+    const reservasDaSalaNoDia = todasReservas.filter((r: any) => {
+      const mesmaSala = r.sala_id === props.sala!.id;
+
+      const mesmaData = r.data_hora_inicio && r.data_hora_inicio.split('T')[0] === dataSelecionada.value;
+
+      const ativa = r.status !== 'REJEITADO';
+
+      return mesmaSala && mesmaData && ativa;
+    });
+
+    horariosOcupados.value = reservasDaSalaNoDia.map((r: any) => {
+      const dataObj = new Date(r.data_hora_inicio);
       const horas = String(dataObj.getHours()).padStart(2, '0');
       const minutos = String(dataObj.getMinutes()).padStart(2, '0');
       return `${horas}:${minutos}`;
@@ -73,6 +76,7 @@ async function buscarDisponibilidade() {
 
   } catch (error) {
     console.error("Erro ao buscar disponibilidade", error);
+    emit('ao-notificar', { mensagem: 'Falha ao sincronizar agenda.', tipo: 'erro' });
   } finally {
     carregandoOcupados.value = false;
   }
@@ -97,7 +101,7 @@ watch(() => abaAtiva.value, (val) => {
 
 
 function toggleHorario(hora: string) {
-  if (horariosOcupados.value.includes(hora)) return; 
+  if (horariosOcupados.value.includes(hora)) return;
 
   if (horariosSelecionados.value.includes(hora)) {
     horariosSelecionados.value = horariosSelecionados.value.filter(h => h !== hora);
@@ -141,7 +145,6 @@ const datasGeradasPreview = computed(() => {
   return listaPreview;
 });
 
-// --- CÁLCULO TOTAL ---
 const totalEstimado = computed(() => {
   const precoHora = props.sala?.preco || 0;
 
@@ -156,7 +159,6 @@ const totalEstimado = computed(() => {
   }
 });
 
-// --- ENVIO ---
 function gerarListaRecorrenteBackend() {
   const lista: { inicio: string, fim: string }[] = [];
   if (!recDataInicio.value || !recDataFim.value) return [];
@@ -184,15 +186,24 @@ function gerarListaRecorrenteBackend() {
 async function confirmarERedirecionar() {
   if (!props.sala) return;
 
-  const usuarioString = localStorage.getItem('usuario');
+  const usuarioString = localStorage.getItem('user_data');
   let profissionalId = null;
+
   if (usuarioString) {
-    try { profissionalId = JSON.parse(usuarioString).id; }
-    catch (e) { console.error(e); }
+    try {
+      const user = JSON.parse(usuarioString);
+      profissionalId = user.id || user.userId;
+    }
+    catch (e) {
+      console.error("Erro ao ler dados do usuário:", e);
+    }
   }
 
   if (!profissionalId) {
-    emit('ao-notificar', { mensagem: 'Sessão expirada. Faça login novamente.', tipo: 'erro' });
+    emit('ao-notificar', {
+      mensagem: 'Sessão expirada. Faça login novamente.',
+      tipo: 'erro'
+    });
     return;
   }
 
@@ -203,9 +214,11 @@ async function confirmarERedirecionar() {
       emit('ao-notificar', { mensagem: 'Selecione pelo menos um horário.', tipo: 'erro' });
       return;
     }
+
     listaParaEnviar = horariosSelecionados.value.map(hora => {
       const dataInicioIso = `${dataSelecionada.value}T${hora}`;
       const dataFimDate = new Date(dataInicioIso);
+
       dataFimDate.setHours(dataFimDate.getHours() + 1);
 
       const ano = dataFimDate.getFullYear();
@@ -213,9 +226,14 @@ async function confirmarERedirecionar() {
       const dia = String(dataFimDate.getDate()).padStart(2, '0');
       const horaF = String(dataFimDate.getHours()).padStart(2, '0');
       const minF = String(dataFimDate.getMinutes()).padStart(2, '0');
-      return { inicio: dataInicioIso, fim: `${ano}-${mes}-${dia}T${horaF}:${minF}` };
+
+      return {
+        inicio: dataInicioIso,
+        fim: `${ano}-${mes}-${dia}T${horaF}:${minF}`
+      };
     });
-  } else {
+  }
+  else {
     if (recDataInicio.value < hoje) {
       emit('ao-notificar', { mensagem: 'Início não pode ser no passado.', tipo: 'erro' });
       return;
@@ -224,7 +242,9 @@ async function confirmarERedirecionar() {
       emit('ao-notificar', { mensagem: 'Selecione os dias da semana.', tipo: 'erro' });
       return;
     }
+
     listaParaEnviar = gerarListaRecorrenteBackend();
+
     if (listaParaEnviar.length === 0) {
       emit('ao-notificar', { mensagem: 'Nenhuma data válida encontrada no período.', tipo: 'erro' });
       return;
@@ -232,19 +252,25 @@ async function confirmarERedirecionar() {
   }
 
   enviando.value = true;
+
   try {
     const resposta = await reservaService.criarEmLote({
       salaId: props.sala.id,
       profissionalId: profissionalId,
       horarios: listaParaEnviar
     });
+
     emit('ao-confirmar', { total: resposta.valorTotal });
+
   } catch (error: any) {
     if (error.response?.status === 409) {
-      emit('ao-notificar', { mensagem: 'Conflito: ' + error.response.data.message, tipo: 'erro' });
+      emit('ao-notificar', {
+        mensagem: 'Conflito: ' + (error.response.data.message || 'Horário já ocupado'),
+        tipo: 'erro'
+      });
     } else {
       const msg = error.response?.data?.message || error.message;
-      emit('ao-notificar', { mensagem: 'Erro: ' + msg, tipo: 'erro' });
+      emit('ao-notificar', { mensagem: 'Erro ao reservar: ' + msg, tipo: 'erro' });
     }
   } finally {
     enviando.value = false;
@@ -508,7 +534,6 @@ async function confirmarERedirecionar() {
   margin-top: 1.5rem;
 }
 
-/* GRID E BOTÕES */
 .flex-between {
   display: flex;
   justify-content: space-between;
@@ -567,7 +592,6 @@ async function confirmarERedirecionar() {
   color: #777;
 }
 
-/* LEGENDA */
 .legenda {
   display: flex;
   gap: 15px;
@@ -598,7 +622,6 @@ async function confirmarERedirecionar() {
   background: #2CAFB6;
 }
 
-/* RECORRENTE */
 .row-dates {
   display: flex;
   gap: 15px;
@@ -680,7 +703,6 @@ async function confirmarERedirecionar() {
   text-align: center;
 }
 
-/* FOOTER */
 .modal-footer {
   padding: 20px 25px;
   border-top: 1px solid #eee;

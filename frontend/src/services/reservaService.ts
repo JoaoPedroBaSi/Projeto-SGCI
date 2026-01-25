@@ -10,10 +10,8 @@ export interface CriarReservaLoteDTO {
 }
 
 export const reservaService = {
-  buscarOcupados: async (salaId: number, data: string) => {
-    const response = await api.get('/reserva/ocupados', {
-      params: { salaId, data }
-    });
+  buscarOcupados: async () => {
+    const response = await api.get('/reserva');
     return response.data;
   },
 

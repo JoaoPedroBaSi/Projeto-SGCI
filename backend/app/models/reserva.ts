@@ -16,7 +16,6 @@ export default class Reserva extends BaseModel {
   @column({ columnName: 'profissional_id' })
   declare profissionalId: number | null
 
-  // Adicionado da main (importante para o financeiro)
   @column({ columnName: 'transacao_id' })
   declare transacaoId: number | null
 
@@ -47,7 +46,7 @@ export default class Reserva extends BaseModel {
   // ===========================================
   // 🔗 RELACIONAMENTOS
   // ===========================================
-  
+
   @belongsTo(() => Sala)
   declare sala: BelongsTo<typeof Sala>
 

@@ -1,9 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-
-const getAssetUrl = (name: string) => {
-  return new URL(`../../assets/${name}`, import.meta.url).href;
-};
+// Importamos o ícone de Prédio/Sala da Lucide
+import { Building } from 'lucide-vue-next';
 
 interface Sala {
   id: number;
@@ -19,32 +16,17 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['ao-reservar']);
-
-const iconPath = computed(() => {
-  switch (props.dados.tipo) {
-    case 'consultorio': return 'material-symbols_desk-rounded.svg';
-    case 'exames': return 'material-symbols_stethoscope-rounded.svg';
-    case 'terapia': return 'ri_psychotherapy-line.svg';
-    default: return '';
-  }
-});
 </script>
 
 <template>
   <div class="card-sala">
-
     <div class="card-header-visual">
-
       <div class="status-badge" :class="dados.status">
         <span class="status-dot"></span>
         {{ dados.status === 'disponivel' ? 'Disponível' : 'Ocupada' }}
       </div>
 
-      <img
-        :src="getAssetUrl(iconPath)"
-        :alt="dados.tipo"
-        class="sala-svg"
-      />
+      <Building class="sala-icon-svg" />
     </div>
 
     <div class="card-body">
@@ -52,7 +34,8 @@ const iconPath = computed(() => {
         <h3 class="nome-sala">{{ dados.nome }}</h3>
         <div class="capacidade">
           <svg viewBox="0 0 24 24" fill="currentColor" class="icon-users">
-            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+            <path
+              d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
           </svg>
           <span>Capacidade: {{ dados.capacidadePacientes }}</span>
         </div>
@@ -62,16 +45,11 @@ const iconPath = computed(() => {
 
       <div class="footer-card">
         <span class="preco">R${{ dados.preco.toFixed(2).replace('.', ',') }} <small>/hora</small></span>
-        <button
-          class="btn-reservar"
-          :disabled="dados.status === 'ocupada'"
-          @click="emit('ao-reservar', dados)"
-        >
+        <button class="btn-reservar" :disabled="dados.status === 'ocupada'" @click="emit('ao-reservar', dados)">
           Reservar
         </button>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -80,7 +58,7 @@ const iconPath = computed(() => {
   background: white;
   border-radius: 12px;
   padding: 5px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
   transition: transform 0.2s;
@@ -103,11 +81,12 @@ const iconPath = computed(() => {
   width: 100%;
 }
 
-.sala-svg {
+.sala-icon-svg {
   width: 64px;
   height: 64px;
-  opacity: 0.6;
-  color: #546E7A;
+  stroke: #546E7A;
+  stroke-width: 1.5px;
+  opacity: 0.5;
 }
 
 .status-badge {
@@ -123,8 +102,9 @@ const iconPath = computed(() => {
   gap: 6px;
   z-index: 2;
   background-color: white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
+
 .status-badge.disponivel {
   color: #2E7D32;
 }
@@ -159,6 +139,7 @@ const iconPath = computed(() => {
 .info-sala {
   margin-bottom: 15px;
 }
+
 .nome-sala {
   font-size: 1rem;
   font-weight: 700;

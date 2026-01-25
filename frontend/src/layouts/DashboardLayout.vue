@@ -55,7 +55,7 @@ onMounted(() => {
   if (data) {
     const user = JSON.parse(data);
     userName.value = user.fullName || user.nome || 'Usuário';
-    
+
     // Normaliza o tipo para minúsculo para evitar erros de comparação
     const tipo = (user.perfil_tipo || user.perfilTipo || 'cliente').toLowerCase();
     userType.value = tipo;
@@ -259,15 +259,7 @@ onMounted(() => {
     </aside>
 
     <main class="content">
-      <header class="top-header">
-        <h2>Olá, {{ userName }}!</h2>
-        <span class="badge">{{ userType.toUpperCase() }}</span>
-      </header>
-
-      <hr class="divider">
-
       <slot></slot>
-
     </main>
   </div>
 </template>
@@ -282,7 +274,7 @@ onMounted(() => {
   display: flex;
   height: 100vh;
   width: 100vw;
-  background-color: #f0f9ff;
+  background-color: #ffffff;
   font-family: 'Montserrat', sans-serif;
   overflow: hidden;
 }
@@ -456,7 +448,7 @@ onMounted(() => {
    ========================================= */
 .content {
   flex: 1;
-  padding: 40px 60px;
+  padding: 0;
   overflow-y: auto;
   height: 100%;
 }

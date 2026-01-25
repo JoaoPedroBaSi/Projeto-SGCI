@@ -25,7 +25,7 @@ router.group(() => {
   // CORREÇÃO AQUI: Apontando para o 'perfils_controller' que nós arrumamos!
   router.get('/me', '#controllers/perfils_controller.show')
   router.put('/me', '#controllers/perfils_controller.update')
-  
+
   router.put('/auth/change-password', '#controllers/auth_controller.changePassword')
 }).use(middleware.auth())
 
@@ -54,7 +54,7 @@ router.patch('/profissionais/:id/status', '#controllers/profissionais_controller
 // 🏢 SALAS E INVENTÁRIO
 // =======================================================
 router.resource('/sala', '#controllers/salas_controller').except(['create', 'edit'])
-router.resource('/reserva', '#controllers/reservas_controller').except(['create', 'edit'])
+router.resource('/reserva', '#controllers/reservas_controller').except(['create', 'edit']).use('*', middleware.auth())
 router.resource('/disponibilidade', '#controllers/disponibilidades_controller').except(['create', 'edit'])
 router.resource('/inventario', '#controllers/inventarios_controller').except(['create', 'edit'])
 router.resource('/mov_inventario', '#controllers/mov_inventarios_controller').except(['create', 'edit'])

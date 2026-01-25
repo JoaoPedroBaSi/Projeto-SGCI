@@ -237,6 +237,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   width: 100%;
+  max-width: 90%;
+  margin: 0 auto;
 }
 
 .titulo-principal {
@@ -260,16 +262,15 @@ onMounted(() => {
 
 .conteudo-pagina {
   flex-grow: 1;
-
-  padding: 30px 0;
+  padding: 30px 20px;
   width: 100%;
   box-sizing: border-box;
 }
 
 .container-limite {
   width: 100%;
-  max-width: 100%;
-  margin: 0;
+  max-width: 90%;
+  margin: 0 auto;
 }
 
 .loading-state {
@@ -344,8 +345,9 @@ onMounted(() => {
 
 .grid-salas {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 350px));
   gap: 25px;
   width: 100%;
+  justify-content: start;
 }
 </style>
