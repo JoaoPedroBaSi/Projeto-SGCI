@@ -2,7 +2,7 @@ import { DateTime } from 'luxon'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import { BaseModel, column, belongsTo } from '@adonisjs/lucid/orm'
 import Inventario from '#models/inventario'
-import Profissional from '#models/profissional'
+import User from '#models/user'
 
 export default class MovimentacaoInventario extends BaseModel {
   public static table = 'movimentacao_inventario'
@@ -30,9 +30,13 @@ export default class MovimentacaoInventario extends BaseModel {
   declare updatedAt: DateTime
 
   // Chaves estrangeiras
-  @belongsTo(() => Inventario, { foreignKey: 'inventario_id' })
+  @belongsTo(() => Inventario, {
+    foreignKey: 'inventarioId',
+  })
   declare public inventario: BelongsTo<typeof Inventario>
 
-  @belongsTo(() => Profissional, { foreignKey: 'profissional_id' })
-  declare public profissional: BelongsTo<typeof Profissional>
+  @belongsTo(() => User, {
+    foreignKey: 'profissionalId',
+  })
+  declare public usuario: BelongsTo<typeof User>
 }

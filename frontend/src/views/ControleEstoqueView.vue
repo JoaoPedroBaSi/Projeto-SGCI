@@ -17,12 +17,16 @@ const usuarioLogado = ref({ nome: 'Usuário', email: '', id: 0 });
 
 onMounted(async () => {
   carregarDados();
-  const userStr = localStorage.getItem('usuario');
+  const userStr = localStorage.getItem('user_data');
   if (userStr) {
     try {
       const u = JSON.parse(userStr);
-      usuarioLogado.value = { nome: u.nome, email: u.email, id: u.id };
-    } catch (e) { }
+      usuarioLogado.value = {
+        nome: u.nome || u.fullName || 'Usuário',
+        email: u.email,
+        id: u.id || u.userId
+      };
+    } catch (e) { console.error("Erro ao ler user_data", e); }
   }
 });
 
@@ -137,17 +141,19 @@ async function processarMovimentacao(dados: any) {
   }
   try {
     await estoqueService.novaMovimentacao({
-      id_item: dados.id_item,
-      id_profissional: usuarioLogado.value.id,
+      inventario_id: dados.id_item,
+      profissional_id: usuarioLogado.value.id,
       tipo: dados.tipo,
       quantidade: dados.quantidade,
       observacao: dados.observacao
     });
+
     await carregarDados();
     modalAberto.value = false;
-    alert("Movimentação registrada!");
+    alert("Movimentação registrada com sucesso!");
   } catch (error: any) {
-    const msg = error.response?.data?.message || 'Erro ao processar';
+    console.error("Erro na validação:", error.response?.data);
+    const msg = error.response?.data?.message || 'Erro ao processar a movimentação.';
     alert(msg);
   }
 }

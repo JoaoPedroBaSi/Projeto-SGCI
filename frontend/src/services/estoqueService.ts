@@ -1,6 +1,5 @@
 import api from '@/services/api';
 
-// Tipagem exata do retorno do Backend
 export interface InventarioItem {
   id: number;
   nome: string;
@@ -14,8 +13,8 @@ export interface InventarioItem {
 }
 
 export interface MovimentacaoDTO {
-  id_item: number;
-  id_profissional: number;
+  inventario_id: number;
+  profissional_id: number;
   tipo: 'ENTRADA' | 'SAIDA';
   quantidade: number;
   observacao?: string;
@@ -23,8 +22,8 @@ export interface MovimentacaoDTO {
 
 export interface MovimentacaoHistorico {
   id: number;
-  idItem: number;
-  idProfissional: number;
+  inventarioId: number;
+  profissionalId: number;
   tipo: 'ENTRADA' | 'SAIDA';
   quantidade: number;
   observacao: string | null;

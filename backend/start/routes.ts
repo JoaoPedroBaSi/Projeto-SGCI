@@ -57,7 +57,7 @@ router.resource('/sala', '#controllers/salas_controller').except(['create', 'edi
 router.resource('/reserva', '#controllers/reservas_controller').except(['create', 'edit']).use('*', middleware.auth())
 router.resource('/disponibilidade', '#controllers/disponibilidades_controller').except(['create', 'edit'])
 router.resource('/inventario', '#controllers/inventarios_controller').except(['create', 'edit'])
-router.resource('/mov_inventario', '#controllers/mov_inventarios_controller').except(['create', 'edit'])
+router.resource('/mov_inventario', '#controllers/mov_inventarios_controller').except(['create', 'edit']).use('*', middleware.auth())
 
 // =======================================================
 // 🚑 ATENDIMENTOS
