@@ -4,7 +4,7 @@ import HomeView from '../views/HomeView.vue'
 import AutenticacaoView from '@/views/AutenticacaoView.vue'
 
 import CadastroClienteView from '../views/CadastroClienteView.vue'
-import CadastroProfissionalView from '../views/CadastroProfissionalView.vue'
+import CadastroProfissionalView from '../views/CadastroProfissionalView.vue' // (Antigo público, mantido por enquanto)
 import RedefinirSenhaView from '../views/RedefinirSenha.vue'
 import EsqueciSenha from '../views/EsqueciSenha.vue'
 
@@ -60,6 +60,8 @@ const router = createRouter({
       name: 'esqueci-senha',
       component: EsqueciSenha
     },
+    
+    // --- ROTAS DO ADMINISTRADOR ---
     {
       path: '/admin/dashboard',
       name: 'admin-dashboard',
@@ -69,6 +71,13 @@ const router = createRouter({
       path: '/admin/aprovacoes',
       name: 'aprovacao-profissional',
       component: AprovacaoProfissional
+    },
+    {
+      path: '/admin/cadastrar-profissional', // <--- NOVA ROTA DO ADMIN
+      name: 'admin-cadastrar-profissional',
+      // Importação dinâmica para garantir que carregue o arquivo novo na pasta correta
+      component: () => import('../views/admin/CadastrarProfissionalView.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/admin/salas',
@@ -82,6 +91,18 @@ const router = createRouter({
       component: AprovacaoReservasView,
       meta: { requiresAuth: true }
     },
+    {
+      path: '/admin/solicitacoes',
+      name: 'admin-solicitacoes',
+      component: AprovarAgendamentosView
+    },
+    {
+      path: '/admin/estoque',
+      name: 'admin-estoque',
+      component: ControleEstoqueView
+    },
+    // -----------------------------
+
     {
       path: '/perfil',
       name: 'perfil',
@@ -168,16 +189,6 @@ const router = createRouter({
       path: '/parcerias',
       name: 'listaParceria',
       component: () => import('../views/atendimento/parceria/ListaParceria.vue'),
-    },
-    {
-      path: '/admin/solicitacoes',
-      name: 'admin-solicitacoes',
-      component: AprovarAgendamentosView
-    },
-    {
-      path: '/admin/estoque',
-      name: 'admin-estoque',
-      component: ControleEstoqueView
     },
     {
       path: '/profissional/reservas',
