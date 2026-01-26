@@ -13,7 +13,7 @@ router.get('/', async () => {
 // 🔐 AUTENTICAÇÃO E REGISTRO (PÚBLICAS)
 // =======================================================
 router.post('/login', '#controllers/auth_controller.login')
-router.post('/register', '#controllers/auth_controller.register')
+router.post('/register', '#controllers/auth_controller.register') // Registro de Pacientes
 router.post('/esqueci-senha', '#controllers/auth_controller.esqueciSenha')
 router.post('/redefinir-senha', '#controllers/auth_controller.redefinirSenha')
 router.get('/redefinir-senha', '#controllers/auth_controller.showRedefinirSenha')
@@ -22,7 +22,7 @@ router.get('/redefinir-senha', '#controllers/auth_controller.showRedefinirSenha'
 // 👤 PERFIL DO USUÁRIO LOGADO (PROTEGIDAS)
 // =======================================================
 router.group(() => {
-  // CORREÇÃO AQUI: Apontando para o 'perfils_controller' que nós arrumamos!
+  // Apontando para o 'perfils_controller'
   router.get('/me', '#controllers/perfils_controller.show')
   router.put('/me', '#controllers/perfils_controller.update')
 
@@ -37,11 +37,13 @@ router.resource('/especializacao', '#controllers/especializacoes_controller').ex
 router.resource('/cliente', '#controllers/clientes_controller').except(['create', 'edit'])
 
 // =======================================================
-// 🩺 PROFISSIONAIS
+// 🩺 PROFISSIONAIS (CADASTRO RESTRITO AO ADMIN)
 // =======================================================
 router.resource('/profissionais', '#controllers/profissionais_controller')
       .except(['create', 'edit'])
-      .middleware('*', middleware.auth())
+      // CORREÇÃO: Usamos chamadas encadeadas (2 argumentos cada) para satisfazer o TypeScript
+      .middleware('*', middleware.auth())          // 1. Aplica Auth em TODAS as rotas
+      .middleware('store', middleware.adminOnly()) // 2. Adiciona AdminOnly APENAS no store
 
 // Rotas extras de Profissional
 router.put('/profissionais/:id/especializacoes', '#controllers/profissionais_controller.associarEspecializacao')

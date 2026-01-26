@@ -1,8 +1,11 @@
-// eslint-disable prettier/prettier
+/* eslint-disable prettier/prettier */
 import type { HttpContext } from '@adonisjs/core/http'
 import Profissional from '#models/profissional'
+import User from '#models/user'           // <--- IMPORTANTE: Importar User
+import Funcao from '#models/funcao'       // <--- IMPORTANTE: Importar Funcao
+import db from '@adonisjs/lucid/services/db' // <--- IMPORTANTE: Para Transações
 import { DateTime } from 'luxon'
-import { storeProfissionalValidator, updateProfissionalValidator } from '#validators/validator_profissional'
+import { updateProfissionalValidator } from '#validators/validator_profissional'
 import mail from '@adonisjs/mail/services/main'
 
 export default class ProfissionaisController {
@@ -21,21 +24,70 @@ export default class ProfissionaisController {
     }
   }
 
-  // --- CRIAR ---
-  public async store({ request, response, auth }: HttpContext) {
-    try {
-      const payload = await request.validateUsing(storeProfissionalValidator)
-      
-      const profissional = await Profissional.create({
-        ...payload,
-        userId: auth.user!.id,
-        dataNascimento: DateTime.fromJSDate(payload.dataNascimento),
-      })
+  // --- CRIAR (MÉTODO DO ADMIN) ---
+  // Este método agora recebe os dados completos do formulário do Admin
+  // e cria tanto o Usuário (Login) quanto o Perfil Profissional.
+  public async store({ request, response }: HttpContext) {
+    // Iniciamos uma transação: ou salva tudo (User + Profissional), ou não salva nada.
+    const trx = await db.transaction()
 
-      return response.status(201).send(profissional)
+    try {
+      // 1. Recebe todos os dados do formulário
+      // NOTA: Se você enviar arquivos (comprovante) no futuro, use request.file() aqui.
+      const dados = request.all()
+      
+      console.log("Tentando cadastrar profissional:", dados.email)
+
+      // 2. Cria o Usuário de Acesso (Tabela users)
+      const newUser = await User.create({
+        fullName: dados.nome,
+        email: dados.email,
+        password: dados.senha, // O Model do Adonis já deve fazer o hash da senha automaticamente
+        perfil_tipo: 'profissional',
+        status: 'ativo' // Já nasce ativo pois foi o Admin que criou
+      }, { client: trx })
+
+      // 3. Busca ou Cria a Função "MEDICO"
+      // Garante que não vai dar erro de chave estrangeira
+      const funcao = await Funcao.firstOrCreate(
+        { nome: 'MEDICO' },
+        { nome: 'MEDICO' },
+        { client: trx }
+      )
+
+      // 4. Cria o Perfil Profissional (Tabela profissionais)
+      // Usando o ID do usuário criado no passo 2
+      const profissional = await Profissional.create({
+        id: newUser.id, // ID Partilhado (O segredo do nosso sistema)
+        funcaoId: funcao.id,
+        nome: dados.nome,
+        cpf: dados.cpf,
+        telefone: dados.telefone,
+        genero: dados.genero,
+        // Converte string 'YYYY-MM-DD' para DateTime do Luxon
+        dataNascimento: dados.dataNascimento ? DateTime.fromISO(dados.dataNascimento) : undefined,
+        email: dados.email,
+        registro_conselho: dados.registro_conselho,
+        conselho_uf: dados.uf,
+        biografia: dados.biografia,
+        status: 'aprovado' // Admin criou, então já está aprovado
+      }, { client: trx })
+
+      // 5. Confirma a transação (Salva no banco de verdade)
+      await trx.commit()
+
+      return response.created(profissional)
+
     } catch (error) {
+      // Se der qualquer erro, desfaz tudo (apaga o user se tiver criado)
+      await trx.rollback()
       console.error("ERRO AO CRIAR PROFISSIONAL:", error)
-      return response.status(400).send({ message: 'Não foi possível criar o profissional', error })
+      
+      // Retorna uma mensagem amigável
+      return response.badRequest({ 
+        message: 'Erro ao cadastrar profissional. Verifique se o e-mail ou CPF já existem.',
+        error: error.message || error 
+      })
     }
   }
 
