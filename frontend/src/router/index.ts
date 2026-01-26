@@ -4,7 +4,8 @@ import HomeView from '../views/HomeView.vue'
 import AutenticacaoView from '@/views/AutenticacaoView.vue'
 
 import CadastroClienteView from '../views/CadastroClienteView.vue'
-import CadastroProfissionalView from '../views/CadastroProfissionalView.vue' // (Antigo público, mantido por enquanto)
+// REMOVIDO: Importação da tela antiga de cadastro de profissional
+
 import RedefinirSenhaView from '../views/RedefinirSenha.vue'
 import EsqueciSenha from '../views/EsqueciSenha.vue'
 
@@ -45,11 +46,7 @@ const router = createRouter({
       name: 'cadastro-cliente',
       component: CadastroClienteView
     },
-    {
-      path: '/cadastro/profissional',
-      name: 'cadastro-profissional',
-      component: CadastroProfissionalView
-    },
+    // REMOVIDO: Rota pública de cadastro de profissional (Agora é só pelo Admin)
     {
       path: '/redefinir-senha',
       name: 'redefinir-senha',
@@ -73,9 +70,9 @@ const router = createRouter({
       component: AprovacaoProfissional
     },
     {
-      path: '/admin/cadastrar-profissional', // <--- NOVA ROTA DO ADMIN
+      path: '/admin/cadastrar-profissional', 
       name: 'admin-cadastrar-profissional',
-      // Importação dinâmica para garantir que carregue o arquivo novo na pasta correta
+      // Importação dinâmica: O arquivo TEM que existir na pasta views/admin/
       component: () => import('../views/admin/CadastrarProfissionalView.vue'),
       meta: { requiresAuth: true }
     },
