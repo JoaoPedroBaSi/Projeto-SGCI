@@ -73,7 +73,7 @@ const router = createRouter({
       path: '/admin/cadastrar-profissional', 
       name: 'admin-cadastrar-profissional',
       // Importação dinâmica: O arquivo TEM que existir na pasta views/admin/
-      component: () => import('../views/admin/CadastrarProfissionalView.vue'),
+      component: () => import('../views/admin/CadastroProfissionalView.vue'),
       meta: { requiresAuth: true }
     },
     {
