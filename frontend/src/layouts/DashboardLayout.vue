@@ -157,6 +157,8 @@ onMounted(() => {
           {
             label: 'Gestão', icon: markRaw(Briefcase), key: 'gestao_admin',
             children: [
+              // AQUI ESTÁ A MUDANÇA: Adicionei o botão Novo Profissional
+              { label: 'Novo Profissional', route: '/admin/cadastrar-profissional' },
               { label: 'Aprovar Profissionais', route: '/admin/aprovacoes' }
             ]
           },
