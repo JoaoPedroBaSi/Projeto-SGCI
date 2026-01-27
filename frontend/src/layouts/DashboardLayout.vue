@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, markRaw } from 'vue';
 import { useRouter } from 'vue-router';
+// Certifique-se que o caminho da imagem está correto no seu projeto
 import logoSgci from '@/assets/logo-sgci.png';
 
 import {
@@ -18,13 +19,14 @@ import {
   Briefcase,
   Handshake,
   ClipboardList,
-  UserCheck // Novo ícone para o modo paciente
+  UserCheck
 } from 'lucide-vue-next';
 
 const router = useRouter();
 const userName = ref('');
 const userType = ref('');
 
+// Controle de menus abertos/fechados
 const openMenus = ref<Record<string, boolean>>({});
 
 interface MenuItem {
@@ -42,161 +44,164 @@ const logout = () => {
   router.push('/');
 };
 
-const toggleMenu = (key: string) => {
-  if (openMenus.value[key]) {
-    openMenus.value[key] = false;
-  } else {
-    openMenus.value[key] = true;
-  }
+const toggleMenu = (key?: string) => {
+  if (!key) return;
+  openMenus.value[key] = !openMenus.value[key];
 };
 
 onMounted(() => {
-  const data = localStorage.getItem('user_data');
-  if (data) {
-    const user = JSON.parse(data);
-    userName.value = user.fullName || user.nome || 'Usuário';
+  try {
+    const data = localStorage.getItem('user_data');
+    if (data) {
+      const user = JSON.parse(data);
+      userName.value = user.fullName || user.nome || 'Usuário';
 
-    // Normaliza o tipo para minúsculo para evitar erros de comparação
-    const tipo = (user.perfil_tipo || user.perfilTipo || 'cliente').toLowerCase();
-    userType.value = tipo;
+      // Normaliza o tipo para minúsculo e trata possíveis variações do backend
+      const tipo = (user.perfil_tipo || user.perfilTipo || 'cliente').toLowerCase();
+      userType.value = tipo;
 
-    // ==========================================================
-    // 1. MENU DO CLIENTE
-    // ==========================================================
-    if (tipo === 'cliente') {
-      menuItems.value = [
-        { label: 'Início', icon: markRaw(Home), route: '/cliente/dashboard' },
-        {
-          label: 'Atendimentos', icon: markRaw(Calendar), key: 'atendimentos',
-          children: [
-            { label: 'Agendar', route: '/cliente/agendar' },
-            { label: 'Minhas Consultas', route: '/cliente/agenda' }
-          ]
-        },
-        {
-          label: 'Saúde', icon: markRaw(HeartPulse), key: 'saude',
-          children: [
-            { label: 'Prontuário', route: '/cliente/historico' },
-            { label: 'Inventário', route: '#inventario' }, // Ajuste rota se houver
-            { label: 'Farmácias Parceiras', route: '/parcerias' }
-          ]
-        },
-        {
-          label: 'Finanças', icon: markRaw(Coins), key: 'financas',
-          children: [
-            { label: 'Pagamentos', route: '#pagamentos' } // Ajuste rota se houver
-          ]
-        },
-        {
-          label: 'Conta', icon: markRaw(User), key: 'conta',
-          children: [
-            { label: 'Meu Perfil', route: '/perfil' }
-          ]
-        }
-      ];
+      // ==========================================================
+      // 1. MENU DO CLIENTE
+      // ==========================================================
+      if (tipo === 'cliente') {
+        menuItems.value = [
+          { label: 'Início', icon: markRaw(Home), route: '/cliente/dashboard' },
+          {
+            label: 'Atendimentos', icon: markRaw(Calendar), key: 'atendimentos',
+            children: [
+              { label: 'Agendar', route: '/cliente/agendar' },
+              { label: 'Minhas Consultas', route: '/cliente/agenda' }
+            ]
+          },
+          {
+            label: 'Saúde', icon: markRaw(HeartPulse), key: 'saude',
+            children: [
+              { label: 'Prontuário', route: '/cliente/historico' },
+              { label: 'Inventário', route: '#inventario' },
+              { label: 'Farmácias Parceiras', route: '/parcerias' }
+            ]
+          },
+          {
+            label: 'Finanças', icon: markRaw(Coins), key: 'financas',
+            children: [
+              { label: 'Pagamentos', route: '#pagamentos' }
+            ]
+          },
+          {
+            label: 'Conta', icon: markRaw(User), key: 'conta',
+            children: [
+              { label: 'Meu Perfil', route: '/perfil' }
+            ]
+          }
+        ];
+      }
+
+      // ==========================================================
+      // 2. MENU DO PROFISSIONAL
+      // ==========================================================
+      else if (tipo === 'profissional') {
+        menuItems.value = [
+          { label: 'Início', icon: markRaw(Home), route: '/profissional/dashboard' },
+          {
+            label: 'Atendimentos', icon: markRaw(Calendar), key: 'agenda_prof',
+            children: [
+              { label: 'Minha Agenda', route: '/profissional/agenda' },
+              { label: 'Histórico', route: '/profissional/historico' },
+              { label: 'Meus Pacientes', route: '#pacientes' }
+            ]
+          },
+          {
+            label: 'Prontuários', icon: markRaw(ClipboardList), key: 'pront_prof',
+            children: [
+              { label: 'Meus Prontuários', route: '#prontuarios' },
+              { label: 'Registrar Relatório', route: '#relatorios' }
+            ]
+          },
+          {
+            label: 'Disponibilidade', icon: markRaw(Clock), key: 'disp_prof',
+            children: [
+              { label: 'Meus Horários', route: '/profissional/disponibilidade' },
+              { label: 'Cadastrar', route: '/profissional/cadastro/disponibilidade' }
+            ]
+          },
+          {
+            label: 'Salas e Recursos', icon: markRaw(Building), key: 'infra_prof',
+            children: [
+              { label: 'Reservar Sala', route: '/profissional/pagamento-salas' },
+              { label: 'Minhas Reservas', route: '/profissional/reservas' },
+              { label: 'Consultar Estoque', route: '/profissional/solicitar-reposicao' }
+            ]
+          },
+          {
+            label: 'Financeiro', icon: markRaw(Coins), key: 'fin_prof',
+            children: [
+              { label: 'Pagar Aluguel', route: '#aluguel' },
+              { label: 'Meu Extrato', route: '/profissional/financeiro' }
+            ]
+          },
+          {
+            label: 'Conta', icon: markRaw(User), key: 'conta_prof',
+            children: [
+              { label: 'Meu Perfil', route: '/perfil' }
+            ]
+          }
+        ];
+      }
+
+      // ==========================================================
+      // 3. MENU DO ADMIN
+      // ==========================================================
+      else if (tipo === 'admin') {
+        menuItems.value = [
+          { label: 'Início', icon: markRaw(Home), route: '/admin/dashboard' },
+          {
+            label: 'Gestão', icon: markRaw(Briefcase), key: 'gestao_admin',
+            children: [
+              { label: 'Aprovar Profissionais', route: '/admin/aprovacoes' }
+            ]
+          },
+          {
+            label: 'Atendimentos', icon: markRaw(CalendarCheck), key: 'atend_admin',
+            children: [
+              { label: 'Aprovar Consultas', route: '/admin/solicitacoes' },
+            ]
+          },
+          {
+            label: 'Finanças', icon: markRaw(Coins), key: 'fin_admin',
+            children: [
+              { label: 'Transações', route: '#financeiro-admin' },
+              { label: 'Tabela de Preços', route: '#tabela-precos' }
+            ]
+          },
+          {
+            label: 'Recursos', icon: markRaw(Package), key: 'recursos_admin',
+            children: [
+              { label: 'Salas', route: '/admin/salas' },
+              { label: 'Inventário', route: '/admin/estoque' },
+              { label: 'Aprovar Reservas', route: '/admin/reservas' }
+            ]
+          },
+          {
+            label: 'Parcerias', icon: markRaw(Handshake), key: 'parcerias_admin',
+            children: [
+              { label: 'Gestão de Parceiros', route: '/parcerias' },
+              { label: 'Novo Parceiro', route: '/cadastro/parceria' }
+            ]
+          },
+          {
+            label: 'Conta', icon: markRaw(User), key: 'conta_admin',
+            children: [
+              { label: 'Meu Perfil', route: '/perfil' }
+            ]
+          }
+        ];
+      }
+    } else {
+      // Sem dados no localstorage, volta pro login
+      router.push('/');
     }
-
-    // ==========================================================
-    // 2. MENU DO PROFISSIONAL
-    // ==========================================================
-    else if (tipo === 'profissional') {
-      menuItems.value = [
-        { label: 'Início', icon: markRaw(Home), route: '/profissional/dashboard' },
-        {
-          label: 'Atendimentos', icon: markRaw(Calendar), key: 'agenda_prof',
-          children: [
-            { label: 'Minha Agenda', route: '/profissional/agenda' },
-            { label: 'Histórico', route: '/profissional/historico' },
-            { label: 'Meus Pacientes', route: '#pacientes' }
-          ]
-        },
-        {
-          label: 'Prontuários', icon: markRaw(ClipboardList), key: 'pront_prof',
-          children: [
-            { label: 'Meus Prontuários', route: '#prontuarios' },
-            { label: 'Registrar Relatório', route: '#relatorios' }
-          ]
-        },
-        {
-          label: 'Disponibilidade', icon: markRaw(Clock), key: 'disp_prof',
-          children: [
-            { label: 'Meus Horários', route: '/profissional/disponibilidade' },
-            { label: 'Cadastrar', route: '/profissional/cadastro/disponibilidade' }
-          ]
-        },
-        {
-          label: 'Salas e Recursos', icon: markRaw(Building), key: 'infra_prof',
-          children: [
-            { label: 'Reservar Sala', route: '/profissional/pagamento-salas' },
-            { label: 'Minhas Reservas', route: '/profissional/reservas' },
-            { label: 'Consultar Estoque', route: '/profissional/solicitar-reposicao' }
-          ]
-        },
-        {
-          label: 'Financeiro', icon: markRaw(Coins), key: 'fin_prof',
-          children: [
-            { label: 'Pagar Aluguel', route: '#aluguel'},
-            { label: 'Meu Extrato', route: '/profissional/financeiro' }
-          ]
-        },
-        {
-          label: 'Conta', icon: markRaw(User), key: 'conta_prof',
-          children: [
-            { label: 'Meu Perfil', route: '/perfil' }
-          ]
-        }
-      ];
-    }
-
-    // ==========================================================
-    // 3. MENU DO ADMIN
-    // ==========================================================
-    else if (tipo === 'admin') {
-      menuItems.value = [
-        { label: 'Início', icon: markRaw(Home), route: '/admin/dashboard' },
-        {
-          label: 'Gestão', icon: markRaw(Briefcase), key: 'gestao_admin',
-          children: [
-            { label: 'Aprovar Profissionais', route: '/admin/aprovacoes' }
-          ]
-        },
-        {
-          label: 'Atendimentos', icon: markRaw(CalendarCheck), key: 'atend_admin',
-          children: [
-            { label: 'Aprovar Consultas', route: '/admin/solicitacoes' },
-          ]
-        },
-        {
-          label: 'Finanças', icon: markRaw(Coins), key: 'fin_admin',
-          children: [
-            { label: 'Transações', route: '#financeiro-admin' },
-            { label: 'Tabela de Preços', route: '#tabela-precos' }
-          ]
-        },
-        {
-          label: 'Recursos', icon: markRaw(Package), key: 'recursos_admin',
-          children: [
-            { label: 'Salas', route: '/admin/salas' },
-            { label: 'Inventário', route: '/admin/estoque' },
-            { label: 'Aprovar Reservas', route: '/admin/reservas' }
-          ]
-        },
-        {
-          label: 'Parcerias', icon: markRaw(Handshake), key: 'parcerias_admin',
-          children: [
-            { label: 'Gestão de Parceiros', route: '/parcerias' },
-            { label: 'Novo Parceiro', route: '/cadastro/parceria' }
-          ]
-        },
-        {
-          label: 'Conta', icon: markRaw(User), key: 'conta_admin',
-          children: [
-            { label: 'Meu Perfil', route: '/perfil' }
-          ]
-        }
-      ];
-    }
-  } else {
+  } catch (error) {
+    console.error('Erro ao carregar dados do usuário:', error);
     router.push('/');
   }
 });
@@ -213,8 +218,8 @@ onMounted(() => {
       <nav class="nav-content">
         <div v-for="(item, index) in menuItems" :key="index">
 
-          <div v-if="item.children" class="menu-group">
-            <button @click="toggleMenu(item.key!)" class="menu-item menu-button"
+          <div v-if="item.children && item.children.length > 0" class="menu-group">
+            <button @click="toggleMenu(item.key)" class="menu-item menu-button"
               :class="{ 'active-parent': openMenus[item.key!] }">
               <div class="left-content">
                 <component :is="item.icon" class="icon-svg" />
@@ -254,7 +259,7 @@ onMounted(() => {
       </nav>
 
       <button @click="logout" class="btn-logout">
-        <LogOut class="icon-svg" /> Sair
+        <LogOut class="icon-svg" /> <span>Sair</span>
       </button>
     </aside>
 
@@ -266,15 +271,17 @@ onMounted(() => {
 
 <style scoped>
 /* =========================================
-   RESET E ESTRUTURA
+   RESET E ESTRUTURA GERAL
    ========================================= */
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 .dashboard-container {
   display: flex;
   height: 100vh;
   width: 100vw;
-  background-color: #ffffff;
+  background-color: #f8f9fa; /* Fundo cinza claro para conteúdo */
   font-family: 'Montserrat', sans-serif;
   overflow: hidden;
 }
@@ -284,28 +291,58 @@ onMounted(() => {
    ========================================= */
 .sidebar {
   width: 260px;
-  min-width: 260px;
-  background-color: #117a8b; /* Teal */
+  min-width: 260px; /* Garante que não encolha */
+  background-color: #117a8b; /* Teal Base */
   color: white;
   display: flex;
   flex-direction: column;
   padding: 30px 20px;
-  overflow: hidden; /* Impede scroll global na sidebar */
+  z-index: 10;
+  box-shadow: 2px 0 10px rgba(0,0,0,0.1);
 }
 
 .nav-content {
   flex: 1;
-  overflow-y: auto; /* Scroll apenas nos itens de menu */
+  overflow-y: auto;
   overflow-x: hidden;
   margin-bottom: 20px;
-  /* Scrollbar fina para ficar bonito */
+  /* Scrollbar Firefox */
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }
 
-.logo { text-align: center; margin-bottom: 30px; flex-shrink: 0; }
-.logo-img { width: 80px; height: auto; display: block; margin: 0 auto 10px auto; }
-.titulo { color: white; font-weight: bold; font-size: 2rem; margin: 0; }
+/* Scrollbar Webkit (Chrome, Edge, Safari) */
+.nav-content::-webkit-scrollbar {
+  width: 6px;
+}
+.nav-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.nav-content::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.logo {
+  text-align: center;
+  margin-bottom: 30px;
+  flex-shrink: 0;
+}
+
+.logo-img {
+  width: 80px;
+  height: auto;
+  display: block;
+  margin: 0 auto 10px auto;
+}
+
+.titulo {
+  color: white;
+  font-weight: bold;
+  font-size: 1.8rem;
+  margin: 0;
+  letter-spacing: 1px;
+}
 
 /* =========================================
    ITENS DO MENU
@@ -319,106 +356,144 @@ onMounted(() => {
   text-decoration: none;
   border-radius: 8px;
   margin-bottom: 5px;
-  transition: 0.3s;
+  transition: all 0.3s ease;
   background: transparent;
   border: none;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-family: inherit;
   cursor: pointer;
   justify-content: flex-start;
+  text-align: left;
 }
 
-.menu-item .label-text { color: #ffffff !important; }
+.menu-item .label-text {
+  color: #ffffff;
+  font-weight: 500;
+}
 
 :deep(.icon-svg) {
-  width: 20px; height: 20px;
-  stroke: #ffffff !important;
+  width: 20px;
+  height: 20px;
+  stroke: #ffffff;
   stroke-width: 2px;
-  fill: none !important;
+  fill: none;
   transition: stroke 0.3s;
+  flex-shrink: 0;
 }
 
-.left-content { display: flex; align-items: center; gap: 12px; flex-grow: 1; }
+.left-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-grow: 1;
+}
 
-.menu-item:hover, .active, .active-parent {
+.menu-item:hover,
+.active,
+.active-parent {
   background-color: rgba(255, 255, 255, 0.15);
-  font-weight: bold;
+  font-weight: 600;
 }
 
 /* =========================================
    MODO PACIENTE (ESTILO ESPECIAL)
    ========================================= */
 .patient-mode-section {
-  margin-top: 20px;
+  margin-top: 25px;
   padding-top: 10px;
 }
 
 .divider-line {
   height: 1px;
-  background-color: rgba(255, 255, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.2);
   margin-bottom: 15px;
   width: 100%;
 }
 
 .section-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: rgba(255, 255, 255, 0.7);
   font-weight: 700;
-  letter-spacing: 1px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
   margin-bottom: 10px;
   padding-left: 10px;
 }
 
 .patient-btn {
-  background-color: rgba(0, 0, 0, 0.2); /* Fundo mais escuro para destacar */
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .patient-btn:hover {
-  background-color: #2dd4bf; /* Cor destaque ao passar o mouse */
+  background-color: #2dd4bf; /* Teal Claro */
   border-color: #2dd4bf;
 }
 
 .active-patient {
   background-color: #2dd4bf !important;
+  color: #0f766e !important; /* Texto escuro para contraste */
   font-weight: bold;
+}
+.active-patient :deep(.icon-svg) {
+   stroke: #0f766e !important;
+}
+.active-patient .label-text {
+   color: #0f766e !important;
 }
 
 /* =========================================
    SUBMENU
    ========================================= */
 .submenu {
-  margin-left: 12px;
-  border-left: 1px solid rgba(255, 255, 255, 0.3);
+  margin-left: 15px;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
   padding-left: 5px;
-  margin-bottom: 10px;
-  width: 100%;
+  margin-bottom: 8px;
+  /* Animação simples de fade */
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .submenu-item {
   display: block;
   padding: 8px 15px;
-  color: #b2dfdb !important;
+  color: #b2dfdb !important; /* Teal ultra claro */
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   transition: 0.2s;
   border-radius: 4px;
   white-space: nowrap;
+  margin-bottom: 2px;
 }
 
-.submenu-item:hover { color: #ffffff !important; background-color: rgba(255, 255, 255, 0.05); }
-.active-sub { color: #ffffff !important; font-weight: bold; background-color: rgba(255, 255, 255, 0.1); }
+.submenu-item:hover {
+  color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.active-sub {
+  color: #ffffff !important;
+  font-weight: bold;
+  background-color: rgba(255, 255, 255, 0.15);
+}
 
 /* =========================================
    SETA (CHEVRON)
    ========================================= */
 :deep(.arrow-icon) {
-  stroke: #ffffff !important;
-  transition: transform 0.3s;
-  opacity: 0.8;
+  stroke: #ffffff;
+  transition: transform 0.3s ease;
+  opacity: 0.7;
   margin-left: auto;
 }
-.rotated { transform: rotate(180deg); }
+.rotated {
+  transform: rotate(180deg);
+}
 
 /* =========================================
    BOTÃO SAIR
@@ -427,8 +502,8 @@ onMounted(() => {
   margin-top: auto;
   flex-shrink: 0;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
   padding: 10px;
   border-radius: 6px;
   cursor: pointer;
@@ -438,23 +513,28 @@ onMounted(() => {
   justify-content: center;
   gap: 10px;
   width: 100%;
+  font-weight: 500;
 }
 
-.btn-logout:hover { background-color: #ffffff; color: #117a8b !important; }
-.btn-logout:hover :deep(.icon-svg) { stroke: #117a8b !important; }
+.btn-logout:hover {
+  background-color: #ffffff;
+  color: #117a8b !important;
+  border-color: #ffffff;
+}
+
+.btn-logout:hover :deep(.icon-svg) {
+  stroke: #117a8b;
+}
 
 /* =========================================
-   CONTEÚDO PRINCIPAL
+   CONTEÚDO PRINCIPAL (MAIN)
    ========================================= */
 .content {
   flex: 1;
-  padding: 0;
+  padding: 0; /* O padding deve ser gerenciado pelas páginas internas ou adicionado aqui se preferir */
   overflow-y: auto;
   height: 100%;
+  position: relative;
+  min-width: 0; /* Previne overflow flex em conteúdos largos */
 }
-
-.top-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
-.top-header h2 { color: #117a8b; font-size: 1.8rem; margin: 0; }
-.badge { background-color: #2dd4bf; color: #0f766e; padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
-.divider { border: 0; border-top: 1px solid #e2e8f0; margin-bottom: 30px; }
 </style>
