@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
-import { useRouter } from 'vue-router'; // <--- 1. IMPORTANTE: Importar o roteador
+import { useRouter } from 'vue-router'; // <--- 1. Importando o roteador
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 import api from '@/services/api';
 
-const router = useRouter(); // <--- 2. IMPORTANTE: Iniciar o roteador
+const router = useRouter(); // <--- 2. Iniciando o roteador
 
 const form = reactive({
     nome: '',
@@ -48,11 +48,11 @@ const cadastrar = async () => {
         
         alert('Profissional cadastrado com sucesso!');
         
-        // --- A CORREÇÃO ESTÁ AQUI EMBAIXO ---
-        // ANTES ESTAVA: window.location.href = '/user'; (Isso levava pra tela branca)
+        // --- AQUI ESTAVA O ERRO ---
+        // ANTES: window.location.href = '/user'; (Isso levava para a tela branca)
         
-        // AGORA ESTÁ ASSIM: (Leva para a lista de médicos)
-        router.push('/admin/aprovacoes'); 
+        // AGORA (CORRIGIDO):
+        router.push('/admin/aprovacoes'); // Leva para a lista de aprovações
 
     } catch (error: any) {
         console.error(error);
