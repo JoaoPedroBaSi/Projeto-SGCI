@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
-import { useRouter } from 'vue-router'; // <--- 1. IMPORTAÇÃO NOVA
+import { useRouter } from 'vue-router'; // <--- 1. IMPORTANTE: Importar o roteador
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 import api from '@/services/api';
 
-const router = useRouter(); // <--- 2. INICIALIZAÇÃO DO ROUTER
+const router = useRouter(); // <--- 2. IMPORTANTE: Iniciar o roteador
 
 const form = reactive({
     nome: '',
@@ -19,12 +19,11 @@ const form = reactive({
     uf: '',
     especializacao: '',
     biografia: '',
-    comprovante: null as File | null // Para o arquivo
+    comprovante: null as File | null 
 });
 
 const isLoading = ref(false);
 
-// Função para lidar com o upload do arquivo
 const handleFileUpload = (event: Event) => {
     const target = event.target as HTMLInputElement;
     if (target.files && target.files[0]) {
@@ -39,11 +38,9 @@ const cadastrar = async () => {
 
     try {
         isLoading.value = true;
-        
-        // Vamos mandar o objeto padrão para garantir que funcione HOJE com seu controller atual
+
         const payload = {
             ...form,
-            // Removemos o arquivo do payload JSON para não quebrar se o back não esperar binário ainda
             comprovante: undefined 
         };
 
@@ -51,7 +48,10 @@ const cadastrar = async () => {
         
         alert('Profissional cadastrado com sucesso!');
         
-        // <--- 3. REDIRECIONAMENTO CORRETO (Para a lista de aprovações)
+        // --- A CORREÇÃO ESTÁ AQUI EMBAIXO ---
+        // ANTES ESTAVA: window.location.href = '/user'; (Isso levava pra tela branca)
+        
+        // AGORA ESTÁ ASSIM: (Leva para a lista de médicos)
         router.push('/admin/aprovacoes'); 
 
     } catch (error: any) {
