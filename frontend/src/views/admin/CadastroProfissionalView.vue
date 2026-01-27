@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
+import { useRouter } from 'vue-router'; // <--- 1. IMPORTAÇÃO NOVA
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 import api from '@/services/api';
+
+const router = useRouter(); // <--- 2. INICIALIZAÇÃO DO ROUTER
 
 const form = reactive({
     nome: '',
@@ -36,11 +39,6 @@ const cadastrar = async () => {
 
     try {
         isLoading.value = true;
-
-        // Como tem arquivo, usamos FormData em vez de JSON simples
-        // O Backend recebe isso através do request.all() ou request.file()
-        // NOTA: Para simplificar, vou mandar como JSON primeiro se você não configurou upload no back ainda.
-        // Se quiser mandar arquivo real, precisa mudar o content-type no api.ts para multipart.
         
         // Vamos mandar o objeto padrão para garantir que funcione HOJE com seu controller atual
         const payload = {
@@ -52,8 +50,9 @@ const cadastrar = async () => {
         await api.post('/profissionais', payload);
         
         alert('Profissional cadastrado com sucesso!');
-        // Limpar formulário ou redirecionar
-        window.location.href = '/user'; // Volta para a lista de usuários
+        
+        // <--- 3. REDIRECIONAMENTO CORRETO (Para a lista de aprovações)
+        router.push('/admin/aprovacoes'); 
 
     } catch (error: any) {
         console.error(error);
