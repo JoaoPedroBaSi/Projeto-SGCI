@@ -7,6 +7,7 @@ import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 import { updateProfissionalValidator } from '#validators/validator_profissional'
 import mail from '@adonisjs/mail/services/main'
+import hash from '@adonisjs/core/services/hash' // <--- 1. IMPORTAMOS O HASH
 
 export default class ProfissionaisController {
   
@@ -34,6 +35,7 @@ export default class ProfissionaisController {
       console.log("Tentando cadastrar profissional:", dados.email)
 
       // 2. Cria o Usuário de Acesso (Tabela users)
+      // O Model User já criptografa sozinho
       const newUser = await User.create({
         fullName: dados.nome,
         email: dados.email,
@@ -57,13 +59,15 @@ export default class ProfissionaisController {
         cpf: dados.cpf,
         telefone: dados.telefone,
         
-        // CORREÇÃO 1: Usamos 'as any' para aceitar OUTRO no cadastro
         genero: dados.genero as any,
         
         dataNascimento: dados.dataNascimento ? DateTime.fromISO(dados.dataNascimento) : undefined,
         
         email: dados.email,
-        senha: dados.senha, 
+        
+        // CORREÇÃO DE SEGURANÇA AQUI:
+        // Criptografamos a senha manualmente antes de salvar na tabela profissionais
+        senha: await hash.make(dados.senha), 
 
         registro_conselho: dados.registro_conselho,
         conselho_uf: dados.uf,
@@ -110,9 +114,7 @@ export default class ProfissionaisController {
 
       profissional.merge({
         ...payload,
-        // CORREÇÃO 2: Forçamos o tipo aqui também para o TypeScript não reclamar do "OUTRO"
         genero: payload.genero as any,
-        
         dataNascimento: payload.dataNascimento
             ? DateTime.fromJSDate(payload.dataNascimento)
             : profissional.dataNascimento,

@@ -24,7 +24,7 @@ interface Profissional {
 
 interface Atendimento {
     id: number;
-    data_hora: string;
+    data_hora_inicio: string; // <-- CORRIGIDO AQUI PARA O NOME DO BANCO
     status: string;
     cliente?: { nome: string }; // Suponto que o back traga o cliente
     tipo?: string;
@@ -210,7 +210,7 @@ onMounted(() => {
                                 </thead>
                                 <tbody>
                                     <tr v-for="consulta in historicoConsultas" :key="consulta.id">
-                                        <td>{{ formatarData(consulta.data_hora) }}</td>
+                                        <td>{{ formatarData(consulta.data_hora_inicio) }}</td>
                                         <td>{{ consulta.cliente?.nome || 'Cliente Removido' }}</td>
                                         <td>
                                             <span class="status-badge" :class="consulta.status.toLowerCase()">
