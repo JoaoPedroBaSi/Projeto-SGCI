@@ -45,8 +45,8 @@ const carregarPendentes = async () => {
     loading.value = true;
     try {
         const token = localStorage.getItem('auth_token');
-        // Busca TODOS os profissionais
-        const response = await axios.get('http://localhost:3333/profissionais', {
+        // URL CORRIGIDA: Aponta para o servidor de produção no Render
+        const response = await axios.get('https://sgci-api.onrender.com/profissionais', {
             headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -100,8 +100,8 @@ const enviarStatus = async (status: 'aprovado' | 'rejeitado') => {
     try {
         const token = localStorage.getItem('auth_token');
         
-        // Rota para atualizar status (PATCH é ideal para atualização parcial)
-        await axios.patch(`http://localhost:3333/profissionais/${profissionalSelecionado.value.id}/status`, {
+        // URL CORRIGIDA: Aponta para o servidor de produção no Render
+        await axios.patch(`https://sgci-api.onrender.com/profissionais/${profissionalSelecionado.value.id}/status`, {
             status: status,
             observacoes_admin: textoObservacao.value // Envia o texto (vazio ou preenchido)
         }, {
