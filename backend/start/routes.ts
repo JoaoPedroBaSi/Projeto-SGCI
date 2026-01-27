@@ -65,7 +65,9 @@ router.resource('/mov_inventario', '#controllers/mov_inventarios_controller').ex
 // 🚑 ATENDIMENTOS
 // =======================================================
 router.group(() => {
-    router.get('/atendimento', '#controllers/atendimentos_controller.index').use(middleware.auth()).use(middleware.clienteOrProfissionalOnly())
+    // ALTERAÇÃO IMPORTANTE: Liberado para Admin ver histórico (removido clienteOrProfissionalOnly)
+    router.get('/atendimento', '#controllers/atendimentos_controller.index').use(middleware.auth())
+    
     router.get('/atendimento/:id', '#controllers/atendimentos_controller.show').middleware(middleware.clienteOrProfissionalOnly())
     router.post('/atendimento', '#controllers/atendimentos_controller.store').middleware(middleware.clienteOnly())
     router.put('/atendimento/:id', '#controllers/atendimentos_controller.update').middleware(middleware.clienteOnly())
