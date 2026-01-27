@@ -1,9 +1,9 @@
 /* eslint-disable prettier/prettier */
 import type { HttpContext } from '@adonisjs/core/http'
 import Profissional from '#models/profissional'
-import User from '#models/user'           // <--- IMPORTANTE: Importar User
-import Funcao from '#models/funcao'       // <--- IMPORTANTE: Importar Funcao
-import db from '@adonisjs/lucid/services/db' // <--- IMPORTANTE: Para Transações
+import User from '#models/user'
+import Funcao from '#models/funcao'
+import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 import { updateProfissionalValidator } from '#validators/validator_profissional'
 import mail from '@adonisjs/mail/services/main'
@@ -25,15 +25,10 @@ export default class ProfissionaisController {
   }
 
   // --- CRIAR (MÉTODO DO ADMIN) ---
-  // Este método agora recebe os dados completos do formulário do Admin
-  // e cria tanto o Usuário (Login) quanto o Perfil Profissional.
   public async store({ request, response }: HttpContext) {
-    // Iniciamos uma transação: ou salva tudo (User + Profissional), ou não salva nada.
     const trx = await db.transaction()
 
     try {
-      // 1. Recebe todos os dados do formulário
-      // NOTA: Se você enviar arquivos (comprovante) no futuro, use request.file() aqui.
       const dados = request.all()
       
       console.log("Tentando cadastrar profissional:", dados.email)
@@ -42,13 +37,12 @@ export default class ProfissionaisController {
       const newUser = await User.create({
         fullName: dados.nome,
         email: dados.email,
-        password: dados.senha, // O Model do Adonis já deve fazer o hash da senha automaticamente
+        password: dados.senha,
         perfil_tipo: 'profissional',
-        status: 'ativo' // Já nasce ativo pois foi o Admin que criou
+        status: 'ativo'
       }, { client: trx })
 
       // 3. Busca ou Cria a Função "MEDICO"
-      // Garante que não vai dar erro de chave estrangeira
       const funcao = await Funcao.firstOrCreate(
         { nome: 'MEDICO' },
         { nome: 'MEDICO' },
@@ -56,34 +50,36 @@ export default class ProfissionaisController {
       )
 
       // 4. Cria o Perfil Profissional (Tabela profissionais)
-      // Usando o ID do usuário criado no passo 2
       const profissional = await Profissional.create({
-        id: newUser.id, // ID Partilhado (O segredo do nosso sistema)
+        id: newUser.id,
         funcaoId: funcao.id,
         nome: dados.nome,
         cpf: dados.cpf,
         telefone: dados.telefone,
-        genero: dados.genero,
-        // Converte string 'YYYY-MM-DD' para DateTime do Luxon
+        
+        // CORREÇÃO 1: Usamos 'as any' para aceitar OUTRO no cadastro
+        genero: dados.genero as any,
+        
         dataNascimento: dados.dataNascimento ? DateTime.fromISO(dados.dataNascimento) : undefined,
+        
         email: dados.email,
+        senha: dados.senha, 
+
         registro_conselho: dados.registro_conselho,
         conselho_uf: dados.uf,
         biografia: dados.biografia,
-        status: 'aprovado' // Admin criou, então já está aprovado
+        status: 'aprovado'
       }, { client: trx })
 
-      // 5. Confirma a transação (Salva no banco de verdade)
+      // 5. Confirma a transação
       await trx.commit()
 
       return response.created(profissional)
 
     } catch (error) {
-      // Se der qualquer erro, desfaz tudo (apaga o user se tiver criado)
       await trx.rollback()
       console.error("ERRO AO CRIAR PROFISSIONAL:", error)
       
-      // Retorna uma mensagem amigável
       return response.badRequest({ 
         message: 'Erro ao cadastrar profissional. Verifique se o e-mail ou CPF já existem.',
         error: error.message || error 
@@ -114,6 +110,9 @@ export default class ProfissionaisController {
 
       profissional.merge({
         ...payload,
+        // CORREÇÃO 2: Forçamos o tipo aqui também para o TypeScript não reclamar do "OUTRO"
+        genero: payload.genero as any,
+        
         dataNascimento: payload.dataNascimento
             ? DateTime.fromJSDate(payload.dataNascimento)
             : profissional.dataNascimento,
@@ -153,14 +152,12 @@ export default class ProfissionaisController {
     }
   }
 
-  // --- APROVAÇÃO/REJEIÇÃO (COM EMAIL E OBSERVAÇÃO) ---
+  // --- APROVAÇÃO/REJEIÇÃO ---
   public async atualizarStatus({ params, request, response }: HttpContext) {
     try {
       const profissional = await Profissional.findOrFail(params.id)
-      // Captura status e a observação (se houver)
       const { status, observacoes_admin } = request.only(['status', 'observacoes_admin'])
 
-      // 1. Atualiza no Banco
       profissional.status = status
       if (observacoes_admin) {
         profissional.observacoes_admin = observacoes_admin
@@ -168,7 +165,6 @@ export default class ProfissionaisController {
       
       await profissional.save()
 
-      // 2. Envia E-mail
       try {
         const user = await profissional.related('user').query().first()
         
@@ -198,7 +194,7 @@ export default class ProfissionaisController {
             console.log(`E-mail de ${status} enviado para ${user.email}`)
         }
       } catch (mailError) {
-        console.warn("ALERTA: Status salvo, mas e-mail falhou (Verifique SMTP).", mailError)
+        console.warn("ALERTA: Status salvo, mas e-mail falhou.", mailError)
       }
 
       return response.status(200).send({ message: `Status alterado para ${status}.`, profissional })
