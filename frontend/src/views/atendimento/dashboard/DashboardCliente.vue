@@ -74,8 +74,6 @@ const carregarDados = async () => {
         // Disponibilidades (Conforme sua regra de negócio)
         disponibilidades: a.profissional?.disponibilidades || []
       }));
-
-      console.log("Atendimentos e disponibilidades carregados:", atendimentos.value);
     } else {
       console.warn("Falha ao carregar atendimentos:", atendRes.reason);
     }
@@ -94,7 +92,7 @@ watch(() => route.params.id, () => {
 
 // Cálculos baseados nos atendimentos filtrados
 const contarAtendimentosConfirmados = computed(() =>
-  atendimentos.value.filter(a => a.status === 'CONFIRMADO').length
+  atendimentos.value.filter(a => a.status === 'CONFIRMADO').length + atendimentos.value.filter(a => a.status === 'PENDENTE').length
 );
 
 const contarAtendimentosAguardandoPagamento = computed(() =>
@@ -113,8 +111,12 @@ const infos = computed(() => [
 
 const saldoTotal = computed(() => {
   return atendimentos.value
-    .filter(a => a.statusPagamento === 'PAGO')
-    .reduce((acc, atual) => acc + Number(atual.valor || 0), 0);
+    .filter(a => a.status === 'CONCLUIDO' && a.statusPagamento === 'PAGO')
+    .reduce((acc, atual) => {
+      // Garantimos que o valor seja tratado como número, lidando com strings ou null
+      const valorNumerico = Number(atual.valor) || 0;
+      return acc + valorNumerico;
+    }, 0);
 });
 
 onMounted(carregarDados);

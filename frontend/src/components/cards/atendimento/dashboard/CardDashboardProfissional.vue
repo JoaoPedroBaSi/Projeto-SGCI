@@ -13,6 +13,7 @@ const props = defineProps<{
   qtdAgendadas?: number,
   qtdFinalizadas?: number,
   qtdPendentesPagamento?: number,
+  qtdAguardandoConfirmacao?: number,
   titulo?: string
 }>();
 </script>
@@ -60,6 +61,7 @@ const props = defineProps<{
     </div>
   </div>
 
+  <!--Sem uso por enquanto-->
   <div v-else-if="finalidade === 'agenda'" class="card">
     <div class="texto">
       <p>AGENDA</p>
@@ -70,6 +72,27 @@ const props = defineProps<{
       <p>Aguardando pagamento de <strong>{{ qtdPendentesPagamento || 0 }}</strong> consultas</p>
     </div>
   </div>
+
+  <!--Consultas aguardando confirmação-->
+  <div v-else-if="finalidade === 'aguardando-confirmacao'" class="card">
+  <div class="conteudo-interno">
+    <header class="status-header">
+      <span class="label-status">Aguardando confirmação</span>
+    </header>
+
+    <main class="status-foco">
+      <span class="numero-destaque">{{ qtdAguardandoConfirmacao }}</span>
+      <span class="subtexto">pendentes</span>
+    </main>
+
+    <footer class="status-footer">
+      <RouterLink to="/consulta/aprovacao" class="link-acao">
+        Ver detalhes
+        <span class="seta">→</span>
+      </RouterLink>
+    </footer>
+  </div>
+</div>
 </template>
 <style scoped lang="css">
   .card {
@@ -83,12 +106,72 @@ const props = defineProps<{
   }
   .chart-container {
     width: 100%;
-    height: 200px; /* IMPORTANTE: Precisa de uma altura fixa */
+    height: 200px;
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 10px;
     box-sizing: border-box;
+  }
+    .conteudo-interno {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 30px;
+  }
+  .status-header{
+    display: flex;
+    justify-content: center;
+  }
+
+  .label-status {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .status-foco {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 15px 0;
+  }
+
+  .numero-destaque {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--primary, #128093);
+    line-height: 1;
+  }
+
+  .subtexto {
+    font-size: 0.85rem;
+    color: #888;
+    margin-top: 4px;
+  }
+
+  .link-acao {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+    color: var(--primary, #128093);
+    font-weight: 700;
+    font-size: 0.95rem;
+    transition: transform 0.2s ease;
+  }
+
+  .link-acao:hover {
+    transform: translateX(5px);
+  }
+
+  .seta {
+    font-size: 1.2rem;
   }
   .card .texto {
     width: 100%;

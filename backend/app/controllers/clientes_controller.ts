@@ -5,14 +5,20 @@ import { storeClienteValidator, updateClienteValidator } from '#validators/valid
 
 export default class ClientesController {
   // Lista todos os clientes
-  public async index({ response }: HttpContext) {
-    try {
-      const clientes = await Cliente.all()
-      return response.status(200).send(clientes)
-    } catch {
-      return response.status(500).send({ message: 'Erro ao listar clientes' })
-    }
+  public async index({ auth, response }: HttpContext) {
+  const user = await auth.authenticate()
+
+  // Se o usuário logado for um CLIENTE, ele vê apenas o próprio perfil
+  if (user.perfil_tipo === 'cliente') {
+    const cliente = await Cliente.query().where('id', user.id).first()
+    if (!cliente) return response.notFound({ message: 'Perfil não encontrado' })
+    return response.ok(cliente)
   }
+
+  // Se for PROFISSIONAL ou ADMIN, ele pode ver a lista de clientes para o Dashboard
+  const clientes = await Cliente.all()
+  return response.ok(clientes)
+}
 
   // Retorna um cliente específico com os atendimentos associados
   public async show({ params, response }: HttpContext) {

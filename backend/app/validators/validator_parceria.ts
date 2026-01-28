@@ -13,7 +13,7 @@ vine.object({
         tipo_convenio: vine.string().trim().maxLength(50),
         tipo_relacionamento: vine.enum(['ENTRADA', 'SAIDA', 'MISTO', 'ESTRATEGICO']),
         status_parceria: vine.enum(['ATIVO', 'INATIVO', 'EM NEGOCIACAO']),
-        //Quando o status da parceria for diferente de 'EM NEGOCIACAO', é obrigatório 
+        //Quando o status da parceria for diferente de 'EM NEGOCIACAO', é obrigatório
         //que o data_inicio seja preenchido
         data_inicio: vine.date({ formats: ['iso8601'] }).nullable().optional()
         .requiredWhen('status_parceria', '!=', 'EM NEGOCIACAO')
@@ -32,20 +32,14 @@ export const updateParceriaValidator = vine.compile(
     vine.object({
     nome: vine.string().trim().maxLength(40).optional(),
     ramo: vine.string().trim().maxLength(40).optional(),
-    cep: vine.number().positive().range([10000000, 99999999]).optional(),
+    cep: vine.string().trim().fixedLength(8).optional(),
+    cidade: vine.string().trim().maxLength(40).optional(),
+    bairro: vine.string().trim().maxLength(40).optional(),
+    rua: vine.string().trim().maxLength(40).optional(),
+    numero: vine.string().trim().maxLength(3).optional(),
     site_url: vine.string().url().activeUrl().optional(),
     porcentagem_desconto: vine.number().optional(),
     tipo_convenio: vine.string().trim().maxLength(50).optional(),
     tipo_relacionamento: vine.enum(['ENTRADA', 'SAIDA', 'MISTO', 'ESTRATEGICO']).optional(),
-    status_parceria: vine.enum(['ATIVO', 'INATIVO', 'EM NEGOCIACAO']).optional(),
-    data_inicio: vine.date({ formats: ['iso8601'] }).nullable().optional()
-    .requiredWhen('status_parceria', '!=', 'EM NEGOCIACAO')
-    .transform((value) => {
-            //Se o valor existe e não é null, converta
-            if (value instanceof Date) {
-                return DateTime.fromJSDate(value)
-            }
-            return value //Retorna null ou undefined
-        }),
-    })
+    }),
 )

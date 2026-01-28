@@ -47,7 +47,7 @@ const fetchSalas = async () => {
     };
 
     const atendimentosDoCliente = atendimentoRes.data.filter(
-      atend => atend.clienteId === 3//clienteLogadoId
+      atend => atend.clienteId === clienteLogadoId
     );
 
     atendimentos.value = processarLista(atendimentosDoCliente);

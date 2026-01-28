@@ -16,7 +16,7 @@ export default class TransacoesController {
     public async show ({ params } : HttpContext) {
       return await Transacao.query().where('id', params.id)
     }
-    
+
     public async store ({ auth, request, response } : HttpContext) {
       try{
         const usuarioLogado = auth.user!;
@@ -34,10 +34,10 @@ export default class TransacoesController {
     public async realizarPagamento({ auth, request, response }: HttpContext) {
         // 1. Pega o usuário logado (que é o Cliente pagador)
         const cliente = auth.user!
-        
+
         // 2. Recebe os dados do formulário
         const dados = request.only(['profissionalId', 'valor', 'formaPagamento'])
-        
+
         // Validação básica
         if (!dados.profissionalId || !dados.valor || !dados.formaPagamento) {
             return response.badRequest({ message: 'Dados incompletos para pagamento.' })
@@ -65,4 +65,32 @@ export default class TransacoesController {
             return response.badRequest({ message: 'Erro ao processar pagamento.' })
         }
     }
+
+public async contarSaldo({ auth }: HttpContext) {
+  const user = await auth.authenticate()
+
+  let saldoTotal = 0
+
+  if (user.perfil_tipo === 'cliente') {
+    // Para o CLIENTE: Soma o que ele PAGOU (onde ele é a entidadeOrigem ou entidadeId)
+    const resultado = await Transacao.query()
+      .where('entidade_id', user.id)
+      .where('status', 'CONCLUIDA')
+      .sum('valor as total')
+      .first()
+
+    saldoTotal = resultado?.$extras.total || 0
+  } else {
+    // Para o PROFISSIONAL: Soma o que ele RECEBEU
+    const resultado = await Transacao.query()
+      .where('destinatario_id', user.id)
+      .where('status', 'CONCLUIDA')
+      .sum('valor as total')
+      .first()
+
+    saldoTotal = resultado?.$extras.total || 0
+  }
+
+  return { saldoTotal: Number(saldoTotal) }
+}
 }

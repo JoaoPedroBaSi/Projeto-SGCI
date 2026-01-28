@@ -10,14 +10,14 @@ import mail from '@adonisjs/mail/services/main'
 import hash from '@adonisjs/core/services/hash' // <--- 1. IMPORTAMOS O HASH
 
 export default class ProfissionaisController {
-  
+
   // --- LISTAR TODOS ---
   public async index({ response }: HttpContext) {
     try {
       const profissionais = await Profissional.query()
         .preload('user')
         .preload('funcao')
-      
+
       return response.status(200).send(profissionais)
     } catch (error) {
       console.error("ERRO AO LISTAR PROFISSIONAIS:", error)
@@ -31,7 +31,7 @@ export default class ProfissionaisController {
 
     try {
       const dados = request.all()
-      
+
       console.log("Tentando cadastrar profissional:", dados.email)
 
       // 2. Cria o Usuário de Acesso (Tabela users)
@@ -58,16 +58,16 @@ export default class ProfissionaisController {
         nome: dados.nome,
         cpf: dados.cpf,
         telefone: dados.telefone,
-        
+
         genero: dados.genero as any,
-        
+
         dataNascimento: dados.dataNascimento ? DateTime.fromISO(dados.dataNascimento) : undefined,
-        
+
         email: dados.email,
-        
+
         // CORREÇÃO DE SEGURANÇA AQUI:
         // Criptografamos a senha manualmente antes de salvar na tabela profissionais
-        senha: await hash.make(dados.senha), 
+        senha: await hash.make(dados.senha),
 
         registro_conselho: dados.registro_conselho,
         conselho_uf: dados.uf,
@@ -83,10 +83,10 @@ export default class ProfissionaisController {
     } catch (error) {
       await trx.rollback()
       console.error("ERRO AO CRIAR PROFISSIONAL:", error)
-      
-      return response.badRequest({ 
+
+      return response.badRequest({
         message: 'Erro ao cadastrar profissional. Verifique se o e-mail ou CPF já existem.',
-        error: error.message || error 
+        error: error.message || error
       })
     }
   }
@@ -164,12 +164,12 @@ export default class ProfissionaisController {
       if (observacoes_admin) {
         profissional.observacoes_admin = observacoes_admin
       }
-      
+
       await profissional.save()
 
       try {
         const user = await profissional.related('user').query().first()
-        
+
         if (user) {
             await mail.send((message) => {
             message
@@ -181,14 +181,14 @@ export default class ProfissionaisController {
                     <h2>Olá, ${profissional.nome}!</h2>
                     <p>Informamos que o status do seu cadastro no sistema SGCI foi atualizado para:</p>
                     <h3 style="color: ${status === 'aprovado' ? 'green' : 'red'};">${status.toUpperCase()}</h3>
-                    
+
                     ${observacoes_admin ? `
                       <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #ccc; margin: 20px 0;">
                         <strong>Observação do Administrador:</strong><br>
                         ${observacoes_admin}
                       </div>
                     ` : ''}
-                    
+
                     <p>Atenciosamente,<br>Equipe SGCI</p>
                   </div>
                 `)
@@ -200,7 +200,7 @@ export default class ProfissionaisController {
       }
 
       return response.status(200).send({ message: `Status alterado para ${status}.`, profissional })
-    
+
     } catch (error) {
       console.error("ERRO AO ATUALIZAR STATUS:", error)
       return response.status(400).send({ message: 'Erro ao atualizar status', error })

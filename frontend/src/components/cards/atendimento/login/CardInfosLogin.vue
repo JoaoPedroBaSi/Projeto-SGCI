@@ -1,30 +1,42 @@
 <script setup lang="ts">
 import api from '@/services/api';
-import type { Cliente } from '@/types';
 import { onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
-const clienteLogado = ref<Cliente | null>(null);
+// 1. Declaramos perfilAtivo como a única fonte de dados
+const perfilAtivo = ref<any>(null);
 const route = useRoute();
+
 const carregarDados = async () => {
   try {
-  const cliResponse = await api.get('/cliente');
-  const clienteEncontrado = cliResponse.data[0];
+    const userDataRaw = localStorage.getItem('user_data');
+    const token = localStorage.getItem('auth_token');
 
-  if (clienteEncontrado) {
-    console.log("ID do Cliente:", clienteEncontrado.id);
-    clienteLogado.value = clienteEncontrado;
+    if (!userDataRaw || !token) return;
+
+    const userData = JSON.parse(userDataRaw);
+
+    // CORREÇÃO 1: Ajustar para 'cliente' (singular) conforme seu log mostrou
+    const perfilTipo = userData.perfil_tipo;
+    const rota = (perfilTipo === 'cliente' || perfilTipo === 'clientes')
+                 ? '/cliente'
+                 : '/profissionais';
+
+    const response = await api.get(rota, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    const dados = Array.isArray(response.data) ? response.data[0] : response.data;
+
+    if (dados) {
+      perfilAtivo.value = dados;
+    }
+  } catch (err) {
+    console.error("Erro ao carregar dados do perfil:", err);
+  }
 }
 
-} catch (err) {
-  console.error("Erro:", err);
-}
-}
-// Observa mudanças na URL (ID) para recarregar os dados automaticamente
-watch(() => route.params.id, () => {
-  carregarDados();
-});
-
+watch(() => route.params.id, () => carregarDados());
 onMounted(carregarDados);
 </script>
 
@@ -34,8 +46,8 @@ onMounted(carregarDados);
       <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
     </div>
     <div class="texto">
-      <p class="nome">{{ clienteLogado?.nome }}</p>
-      <p class="email">{{ clienteLogado?.email || 'E-mail não informado' }}</p>
+      <p class="nome">{{ perfilAtivo?.nome || 'Carregando...' }}</p>
+      <p class="email">{{ perfilAtivo?.email || 'E-mail não informado' }}</p>
     </div>
   </div>
 </template>

@@ -12,6 +12,9 @@ export default class Transacao extends BaseModel {
   @column({ columnName: 'user_id' }) // Mapeamento explicito é bom
   declare userId: number
 
+  @column({columnName: 'atendimento_id'})
+  declare atendimentoId: number | null
+
   // Campos Opcionais Avançados
   @column()
   declare entidadeOrigem: string | null
@@ -33,11 +36,11 @@ export default class Transacao extends BaseModel {
 
   @column()
   declare finalidade: string
-  
+
   // === ADICIONE ESSES ===
   @column()
   declare descricao: string | null
-  
+
   @column({ columnName: 'forma_pagamento' })
   declare formaPagamento: string | null
 

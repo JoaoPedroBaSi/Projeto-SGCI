@@ -7,20 +7,11 @@ const props = defineProps<{
   listaProfissionais: Profissional[],
   mapaFuncoes: Record<number, string>
 }>();
+const token = localStorage.getItem('auth_token');
 
-const feedback = reactive({
-  mensagem: '',
-  tipo: '' // 'sucesso' ou 'erro'
-});
+const feedback = reactive({ mensagem: '', tipo: '' });
+const mostrarModal = ref(false);
 
-const exibirFeedback = (msg: string, tipo: 'sucesso' | 'erro') => {
-  feedback.mensagem = msg;
-  feedback.tipo = tipo;
-  // Esconde a mensagem após 5 segundos
-  setTimeout(() => { feedback.mensagem = ''; }, 10000);
-};
-
-// Estado do formulário
 const formulario = reactive({
   profissional_id: '',
   data: '',
@@ -29,411 +20,535 @@ const formulario = reactive({
   observacoes: ''
 });
 
-// Simulando o cliente logado (você pode pegar de um Store como Pinia/Vuex)
-const clienteLogadoId = 3;
+// --- LÓGICA DE FILTRAGEM ---
+
+const profissionalSelecionado = computed(() => {
+  if (!props.listaProfissionais) return null;
+  return props.listaProfissionais.find(p => p.id === Number(formulario.profissional_id));
+});
+
+const horariosDisponiveis = computed(() => {
+  if (!profissionalSelecionado.value?.disponibilidades || !formulario.data) {
+    return [];
+  }
+
+  return profissionalSelecionado.value.disponibilidades.filter((disp: any) => {
+    // No seu JSON vem 'dataHoraInicio'. Vamos extrair a data (YYYY-MM-DD)
+    const dataISO = disp.dataHoraInicio.split('T')[0];
+
+    // Filtra pela data selecionada e garante que está LIVRE
+    return dataISO === formulario.data && disp.status === 'LIVRE';
+  }).map((disp: any) => {
+    // Vamos formatar a exibição da hora para o select (HH:mm)
+    // Ex: "2026-01-21T10:30:00.000+00:00" -> "10:30"
+    const horaFormatada = disp.dataHoraInicio.split('T')[1].substring(0, 5);
+
+    return {
+      ...disp,
+      horaFormatada // Criamos este campo para facilitar o template
+    };
+  });
+});
+
+const obterIdCliente = () => {
+  const userDataRaw = localStorage.getItem('user_data');
+  if (!userDataRaw) return null;
+  try {
+    const userData = JSON.parse(userDataRaw);
+    return userData.id || userData.user?.id;
+  } catch (e) {
+    return null;
+  }
+};
+// --- ENVIO ---
 
 const lidarComEnvio = async () => {
+  const dispSelecionada = horariosDisponiveis.value.find(h => h.horaFormatada === formulario.hora);
+  const clienteId = obterIdCliente();
 
-  feedback.mensagem = '';
+  if (!clienteId) {
+    exibirFeedback("⚠️ Erro: Cliente não identificado. Faça login novamente.", "erro");
+    return;
+  }
 
-  // Validação básica
-  if (!formulario.data || !formulario.hora || !formulario.profissional_id) {
-    alert("Por favor, preencha todos os campos obrigatórios.");
+  if (!dispSelecionada) {
+    exibirFeedback("Erro: Horário não encontrado.", "erro");
     return;
   }
 
   try {
-    const payload = {
-      profissional_id: Number(formulario.profissional_id),
-      cliente_id: 3,
-      data_hora_inicio: `${formulario.data}T${formulario.hora}:00.000Z`,
-      observacoes: formulario.observacoes,
-      forma_pagamento: formulario.forma_pagamento
-    };
+    const config = { headers: { Authorization: `Bearer ${token}` } };
 
-    // Usando a instância 'api' (Axios) em vez de fetch
-    const response = await api.post('/atendimento', payload);
+    // Verifique se o seu backend espera profissional_id ou profissionalId
+    const payload = {
+    profissional_id: Number(formulario.profissional_id),
+    cliente_id: Number(clienteId),
+    disponibilidade_id: Number(dispSelecionada.id),
+    // .split('.')[0] remove os milissegundos se sobrarem, garantindo o formato YYYY-MM-DDTHH:mm:ss
+    data_hora_inicio: dispSelecionada.dataHoraInicio.includes('.')
+      ? dispSelecionada.dataHoraInicio.split('.')[0]
+      : dispSelecionada.dataHoraInicio,
+    observacoes: formulario.observacoes,
+    forma_pagamento: formulario.forma_pagamento,
+    status: 'PENDENTE'
+  };
+
+    const response = await api.post('/atendimento', payload, config);
 
     if (response.status === 201 || response.status === 200) {
-      alert("Agendamento realizado com sucesso!");
-      feedback.mensagem = "✅ Agendamento realizado com sucesso!";
-      feedback.tipo = "sucesso";
-      // Opcional: limpar o formulário após sucesso
-      Object.assign(formulario, { data: '', hora: '', profissional_id: '', observacoes: '' });
+      exibirFeedback("✅ Agendamento solicitado com sucesso!", "sucesso");
+      // Limpa o formulário
+      Object.assign(formulario, { profissional_id: '', data: '', hora: '', forma_pagamento: '', observacoes: '' });
     }
   } catch (error: any) {
-    const msgBackend = error.response?.data?.message || "";
-
-    feedback.tipo = "erro";
-    if (msgBackend.includes("horários")) {
-      feedback.mensagem = "Este horário já está ocupado. Escolha outro, por favor.";
-    } else {
-      feedback.mensagem = "Não conseguimos agendar. Verifique os dados e tente novamente.";
-    }
+  // Isso vai imprimir no console exatamente qual campo o Adonis não gostou
+  if (error.response?.data?.errors) {
+    console.error("ERRO DE VALIDAÇÃO:", error.response.data.errors);
   }
-};
-const mostrarModal = ref(false);
 
-// 1. Chamado quando clica no "Confirmar" do formulário
+  console.error("Erro 500 Detalhado:", error.response?.data);
+  exibirFeedback(error.response?.data?.message || "Erro interno no servidor.", "erro");
+}
+};
+
+// --- AUXILIARES ---
+
+const exibirFeedback = (msg: string, tipo: 'sucesso' | 'erro') => {
+  feedback.mensagem = msg;
+  feedback.tipo = tipo;
+  setTimeout(() => { feedback.mensagem = ''; }, 7000);
+};
+
 const pedirConfirmacao = () => {
-  // Se faltar algum campo, a gente avisa e NÃO abre o modal
   if (!formulario.data || !formulario.hora || !formulario.profissional_id || !formulario.forma_pagamento) {
-    exibirFeedback("⚠️ Por favor, preencha todos os campos antes de confirmar.", "erro");
+    exibirFeedback("⚠️ Por favor, preencha todos os campos obrigatórios.", "erro");
     return;
   }
   mostrarModal.value = true;
 };
 
-// 2. Chamado apenas quando clica no "Sim" dentro do Modal
 const confirmarEEnviar = async () => {
-  mostrarModal.value = false; // Fecha o pop-up
-  await lidarComEnvio();      // Chama sua função que já funciona
+  mostrarModal.value = false;
+  await lidarComEnvio();
 };
 
-// Função para formatar a data para o padrão brasileiro no Modal
 const dataFormatadaExibicao = computed(() => {
   if (!formulario.data) return '';
   const [ano, mes, dia] = formulario.data.split('-');
   return `${dia}/${mes}/${ano}`;
 });
 
-// Função para encontrar o nome do profissional selecionado
 const nomeProfissionalSelecionado = computed(() => {
-  const prof = props.listaProfissionais.find(p => p.id === Number(formulario.profissional_id));
-  return prof ? prof.nome : 'não selecionado';
+  return profissionalSelecionado.value?.nome || 'não selecionado';
 });
-watch(() => props.listaProfissionais, (novaLista) => {
-  console.log("A lista de profissionais mudou:", novaLista);
-}, { immediate: true });
+
+// Reseta a hora se o usuário mudar o profissional ou a data
+watch(() => [formulario.data, formulario.profissional_id], () => {
+  formulario.hora = '';
+});
 </script>
+
 <template>
-  <div class="card-novo-wrapper">
-  <form @submit.prevent="pedirConfirmacao" class="card">
-    <div class="cabecalho">
-      <p>Agendamento</p>
-    </div>
-
-    <div v-if="feedback.mensagem" :class="['alerta', feedback.tipo]">
-      {{ feedback.mensagem }}
-    </div>
-
-    <div class="corpo">
-      <div class="profissional">
-        <label>Profissional:</label>
-        <select v-model="formulario.profissional_id" id="profissional">
-          <option value="">Selecione</option>
-          <option
-            v-for="prof in listaProfissionais"
-            :key="prof.id"
-            :value="prof.id">
-            {{ prof.nome }} - {{ mapaFuncoes[prof.funcaoId] || 'Carregando função...' }}
-          </option>
-        </select>
-      </div>
-
-      <div class="info-datas">
-        <div class="data">
-          <label>Data:</label>
-          <input type="date" v-model="formulario.data" required>
+  <div class="booking-container">
+    <div class="feedback-container">
+      <transition name="fade">
+        <div v-if="feedback.mensagem" :class="['alert', feedback.tipo]" role="alert">
+          {{ feedback.mensagem }}
         </div>
-        <div class="hora">
-          <label>Hora:</label>
-          <input type="time" v-model="formulario.hora" required>
+      </transition>
+    </div>
+
+    <form @submit.prevent="pedirConfirmacao" class="booking-card">
+      <header class="booking-header">
+        <h2>Agendamento de Consulta</h2>
+        <div class="divider"></div>
+      </header>
+
+      <div class="booking-body">
+        <div class="field-group">
+          <label for="profissional">Profissional</label>
+          <select v-model="formulario.profissional_id" id="profissional" required>
+            <option value="">Selecione um especialista</option>
+            <option v-for="prof in listaProfissionais" :key="prof.id" :value="prof.id">
+              {{ prof.nome }} — {{ mapaFuncoes[prof.funcaoId] || 'Especialista' }}
+            </option>
+          </select>
+        </div>
+
+        <div class="grid-row">
+          <div class="field-group">
+            <label for="data">Data da Consulta</label>
+            <input type="date" id="data" v-model="formulario.data" required>
+          </div>
+
+          <div class="field-group">
+            <label for="hora">Horário Disponível</label>
+            <select v-model="formulario.hora" id="hora" :disabled="!horariosDisponiveis.length" required>
+              <option value="" disabled>
+                {{ !formulario.data ? 'Aguardando data...' : (horariosDisponiveis.length ? 'Horário' : 'Nenhum horário livre') }}
+              </option>
+              <option v-for="horario in horariosDisponiveis" :key="horario.id" :value="horario.horaFormatada">
+                {{ horario.horaFormatada }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="pagamento">Forma de Pagamento</label>
+          <select v-model="formulario.forma_pagamento" id="pagamento" required>
+            <option value="">Selecione o método</option>
+            <option v-for="metodo in ['PIX', 'CARTÃO DE CRÉDITO', 'DEBITO', 'DINHEIRO', 'BOLETO']" :key="metodo" :value="metodo">
+              {{ metodo }}
+            </option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label for="observacoes">Motivo da Consulta (Opcional)</label>
+          <textarea id="observacoes" v-model="formulario.observacoes" placeholder="Descreva brevemente..." rows="3"></textarea>
         </div>
       </div>
 
-      <div class="forma-pagamento">
-        <label>Forma de pagamento:</label>
-        <select v-model="formulario.forma_pagamento" required>
-          <option value="">Selecione</option>
-          <option value="DINHEIRO">DINHEIRO</option>
-          <option value="PIX">PIX</option>
-          <option value="CREDITO">CREDITO</option>
-          <option value="DEBITO">DEBITO</option>
-          <option value="BOLETO">BOLETO</option>
-        </select>
+      <footer class="booking-footer">
+        <button type="submit" class="btn-primary">Confirmar Agendamento</button>
+      </footer>
+    </form>
+
+    <transition name="modal">
+      <div v-if="mostrarModal" class="modal-overlay" @click.self="mostrarModal = false">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>Revisar Agendamento</h3>
+          </div>
+          <div class="modal-content">
+            <div class="summary-item">
+              <span class="label">Profissional</span>
+              <span class="value highlight">{{ nomeProfissionalSelecionado }}</span>
+            </div>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <span class="label">Data</span>
+                <span class="value">{{ dataFormatadaExibicao }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">Horário</span>
+                <span class="value">{{ formulario.hora }}</span>
+              </div>
+            </div>
+            <div class="summary-item">
+              <span class="label">Pagamento</span>
+              <span class="value">{{ formulario.forma_pagamento }}</span>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button @click="mostrarModal = false" class="btn-text">Corrigir</button>
+            <button @click="confirmarEEnviar" class="btn-confirm">Confirmar e Finalizar</button>
+          </div>
+        </div>
       </div>
-
-      <div class="descricao">
-        <label>Descrição:</label>
-        <textarea v-model="formulario.observacoes"></textarea>
-      </div>
-    </div>
-
-    <div class="rodape">
-      <button type="submit" class="confirmar">Confirmar</button>
-    </div>
-  </form>
-  <div v-if="mostrarModal" class="modal-overlay">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>Confirmar Agendamento?</h3>
-    </div>
-
-    <div class="modal-body">
-      <p>Você está agendando uma consulta com:</p>
-      <p class="destaque-prof">{{ nomeProfissionalSelecionado }}</p>
-
-      <div class="info-confirmacao">
-        <span><strong>{{ dataFormatadaExibicao }}</strong></span>
-        <span><strong>{{ formulario.hora }}</strong></span>
-      </div>
-
-      <p class="pagamento-info">Pagamento via: <strong>{{ formulario.forma_pagamento }}</strong></p>
-    </div>
-
-    <div class="modal-acoes">
-      <button @click="mostrarModal = false" class="btn-cancelar">Voltar</button>
-      <button @click="confirmarEEnviar" class="btn-confirmar-final">Sim, Confirmar</button>
-    </div>
+    </transition>
   </div>
-</div>
-</div>
 </template>
 
-<style lang="css" scoped>
-  .card-novo-wrapper {
-  width: 100%;
+<style scoped>
+.booking-container {
+  --primary: #128093;
+  --primary-dark: #0e6675;
+  --success: #366c00;
+  --error: #d32f2f;
+  --text-main: #333;
+  --text-muted: #666;
+  --border: #ddd;
+  --bg-light: #f8f9fa;
+
+  padding: 40px 20px;
   display: flex;
   justify-content: center;
-  }
-  .card {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    width: 850px;
-    height: 700px;
-    background-color: transparent;
-    border-radius: 50px;
-    box-shadow: 4px 4px 8px 8px rgba(0, 0, 0, 0.1);
-  }
-  .card .cabecalho p {
-    font-size: 24px;
-  }
-  .card .cabecalho {
-    border-bottom: 2px solid #128093;
-  }
-  .card .corpo div{
-    margin-top: 10px;
-  }
-  .card .corpo {
-    width: 80%;
-    margin-top: 20px;
-  }
-  .card .corpo .profissional {
-    width: 100%;
-    flex-direction: column;
-    display: flex;
-    align-items: center;
-  }
-  .card .corpo .info-datas {
-    width: 100%;
-  }
-  .card .corpo .info-datas .data, .card .corpo .info-datas .hora {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 50%;
-  }
-  .info-datas .data input, .info-datas .hora input {
-    width: 50%;
-    text-align: center;
-  }
-  .info-datas {
-    display: flex;
-    flex-direction: row;
-  }
-  .forma-pagamento {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-  }
-  .forma-pagamento select, .profissional select {
-    padding-left: 15px;
-    width: 80%;
-    height: 35px;
-    border-radius: 10px;
-    background-color: transparent;
-  }
-  .card .corpo div label {
-    font-size: 18px;
-    padding-bottom: 5px;
-  }
-  .card .corpo .profissional input {
-    width: 80%;
-  }
-  .card .corpo div input {
-    height: 35px;
-    border-radius: 10px;
-    border: 1px solid gray;
-  }
-  .descricao {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-  }
+  align-items: center; /* Centraliza verticalmente na tela */
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f0f2f5;
+  min-height: 100vh;
+}
 
-  /* Seu código original com um ajuste */
-  textarea {
-    width: 80%;
-    height: 100px; /* Aumentei um pouco para textos extensos */
-    border-radius: 10px;
-    background-color: transparent;
-    padding: 5px;
-  }
+.booking-card {
+  background: white;
+  /* LARGURA E ALTURA FIXAS */
+  width: 900px;
+  min-height: 750px;
 
-  .rodape {
-    margin-top: 30px;
-    display: flex;
-    justify-content: space-around;
-    width: 500px;
-  }
-  .rodape button {
-    width: 200px;
-    height: 40px;
-    border-radius: 10px;
-    font-size: 16px;
-    color: aliceblue;
-    border: 2px solid transparent;
-  }
-  .rodape .confirmar {
-    background-color: rgb(54, 108, 0);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: none;
-  }
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px; /* Cantos um pouco mais modernos */
+  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+  padding: 60px;
+  box-sizing: border-box; /* Garante que o padding não aumente o tamanho final */
+}
 
-  .rodape .confirmar:hover {
-    background-color: rgb(55, 109, 1);
-    filter: brightness(1.2);
-    transform: scale(1.02);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-  }
+.booking-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
 
-  /* Efeito de CLICK (quando você aperta) */
-  .rodape .confirmar:active {
-    transform: scale(0.98);            /* Efeito de 'afundar' ao clicar */
-  }
+.booking-header h2 {
+  color: var(--primary);
+  font-size: 2rem;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
 
-  .alerta {
-    padding: 10px;
-    border-radius: 8px;
-    margin-top: 15px;
-    width: 80%;
-    text-align: center;
-    font-size: 14px;
-    font-weight: bold;
-  }
-  .sucesso {
-    border: 2px solid #366c00;
-    color: #366c00;
-    background-color: rgba(54, 108, 0, 0.1);
-  }
-  .erro {
-    border: 2px solid #ff0000;
-    color: #ff0000;
-    background-color: rgba(255, 0, 0, 0.1);
-  }
+.divider {
+  height: 4px;
+  width: 80px;
+  background: var(--primary);
+  margin: 0 auto;
+  border-radius: 10px;
+}
 
-  /* Botão seguindo o padrão dos seus links <a> */
-  .btn-confirmar {
-    font-size: 15px;
-    background-color: #366c00; /* Verde sólido para o botão principal */
-    color: white;
-    width: 200px;
-    height: 40px;
-    border-radius: 8px; /* Combinando com os 8px das suas ações */
-    border: none;
-    cursor: pointer;
-    transition: opacity 0.2s;
-  }
+.booking-body {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  flex-grow: 1; /* Faz o corpo ocupar o espaço disponível e empurrar o footer */
+}
 
-  .btn-confirmar:hover {
-    opacity: 0.9;
-  }
+/* Container para Alertas - Ocupa espaço fixo para evitar saltos no layout */
+.feedback-wrapper {
+  min-height: 60px;
+}
 
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* Fundo semi-transparente */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000; /* Garante que fique acima de tudo */
-  }
+.grid-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px; /* Mais espaço horizontal */
+}
 
-  /* A Janela do Pop-up */
-  .modal-content {
-    background-color: white;
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.field-group label {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-main);
+}
+
+input, select, textarea {
+  padding: 16px 20px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  background-color: #fff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(18, 128, 147, 0.1);
+}
+
+textarea {
+  height: 120px;
+  resize: none; /* Evita que o usuário mude o tamanho manualmente */
+}
+
+/* Rodapé sempre na base do card */
+.booking-footer {
+  margin-top: 40px;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-primary {
+  width: 100%;
+  max-width: 450px;
+  padding: 20px;
+  background-color: var(--primary) !important;
+  color: white !important;
+  border: none;
+  border-radius: 14px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-dark) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(18, 128, 147, 0.2);
+}
+
+.feedback-container {
+  position: absolute; /* Fixa em relação ao booking-card */
+  top: 20px;          /* Distância do topo */
+  left: 50%;
+  transform: translateX(-50%); /* Centraliza horizontalmente */
+  width: 80%;         /* Largura do alerta */
+  z-index: 100;       /* Garante que fica acima de tudo */
+  pointer-events: none; /* Permite clicar no que estiver atrás do alerta */
+}
+
+.alert {
+  pointer-events: auto; /* Reativa cliques dentro do alerta se necessário */
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 1rem;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); /* Sombra para dar profundidade */
+  border: 1px solid;
+  animation: slideDown 0.3s ease-out; /* Animação de entrada */
+}
+
+/* Garante que o booking-card seja a referência para o position: absolute */
+.booking-card {
+  position: relative; /* ADICIONE ISSO */
+  background: white;
+  width: 900px;
+  min-height: 750px;
+  /* ... resto do seu código ... */
+}
+
+/* Animação suave para o alerta descer */
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Ajuste das cores */
+.sucesso {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border-color: #c8e6c9;
+}
+.erro {
+  background-color: #ffebee;
+  color: #c62828;
+  border-color: #ffcdd2;
+}
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* Fundo escurecido */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* Garante que fique acima de tudo */
+}
+
+.modal-card {
+  background: white;
+  padding: 30px;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  animation: scaleIn 0.3s ease-out;
+}
+
+.modal-header h3 {
+  color: var(--primary);
+  margin-top: 0;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+
+.summary-item .label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.summary-item .value {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text-main);
+}
+
+.summary-item .highlight {
+  color: var(--primary);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+/* Botões do Modal */
+.btn-confirm {
+  flex: 1;
+  padding: 12px;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-text {
+  padding: 12px 20px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+/* Animações do Modal */
+@keyframes scaleIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modal-enter-active, .modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-enter-from, .modal-leave-to {
+  opacity: 0;
+}
+/* Responsividade Básica */
+@media (max-width: 950px) {
+  .booking-card {
+    width: 95%;
     padding: 30px;
-    border-radius: 8px; /* Padrão que você definiu */
-    width: 400px;
-    text-align: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
   }
-
-  .modal-acoes {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 20px;
-  }
-
-  .btn-cancelar {
-    background: transparent;
-    border: 2px solid #ff0000;
-    color: #ff0000;
-    width: 120px;
-    height: 40px;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-
-  .btn-confirmar-final {
-    background: #366c00;
-    border: none;
-    color: white;
-    width: 150px;
-    height: 40px;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-  .modal-body {
-    margin: 20px 0;
-    color: #444;
-  }
-
-  .destaque-prof {
-    font-size: 1.2rem;
-    color: #128093;
-    font-weight: bold;
-    margin-bottom: 15px;
-  }
-
-  .info-confirmacao {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-    background: #f9f9f9;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-  }
-
-  .pagamento-info {
-    font-size: 0.9rem;
-    color: #666;
-  }
-
-  .modal-header h3 {
-    color: #333;
-    border-bottom: 2px solid #366c00;
-    padding-bottom: 10px;
-    margin-bottom: 15px;
-  }
+}
 </style>

@@ -6,25 +6,44 @@ const props = defineProps<{
   consulta: Atendimento
 }>();
 
-const emit = defineEmits(['cancelar']);
-
 // Formatações Reutilizáveis
 const dataHoraFormatada = computed(() => {
-  if (!props.consulta.dataHoraInicio) return 'Data não disponível';
-  const data = new Date(props.consulta.dataHoraInicio);
-  return data.toLocaleDateString('pt-BR');
+  const dataBruta = props.consulta?.dataHoraInicio;
+  if (!dataBruta) return 'Data não disponível';
+
+  // Divide e garante que temos a parte da data
+  const dataParte = dataBruta.split('T')[0];
+  if (!dataParte) return 'Data inválida';
+
+  const [ano, mes, dia] = dataParte.split('-');
+  return `${dia}/${mes}/${ano}`;
 });
 
 const horaFormatada = computed(() => {
-  if (!props.consulta.dataHoraInicio) return '--:--';
-  const data = new Date(props.consulta.dataHoraInicio);
-  return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const dataBruta = props.consulta?.dataHoraInicio;
+  if (!dataBruta) return '--:--';
+
+  // Divide a string e pega a segunda parte (após o T)
+  const partes = dataBruta.split('T');
+  const horaParte = partes[1]; // Aqui o TS ainda acha que pode ser undefined
+
+  // Verificação explícita para o TypeScript
+  if (!horaParte) return '--:--';
+
+  return horaParte.substring(0, 5);
 });
 
 const valorFormatado = computed(() => {
-  const v = props.consulta.valor;
-  if (!v || typeof v !== 'number') return null;
-  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  // Converte para Number, garantindo que mesmo se vier String, funcione
+  const v = Number(props.consulta.valor);
+
+  // Verifica se o resultado é um número válido e não zero/nulo
+  if (!v || isNaN(v)) return 'R$ 0,00'; // Ou return null se preferir esconder
+
+  return v.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  });
 });
 
 // Lógica de Cores para Badges
@@ -43,11 +62,6 @@ const getPagamentoClass = (status: string) => {
   return 'status-azul';
 };
 
-const confirmarCancelamento = () => {
-  if (confirm('Tem certeza que deseja cancelar este atendimento?')) {
-    emit('cancelar', props.consulta.id);
-  }
-};
 </script>
 
 <template>
@@ -99,12 +113,6 @@ const confirmarCancelamento = () => {
         </div>
       </div>
     </div>
-
-    <footer class="card-footer" v-if="props.consulta.status !== 'CONCLUIDO'">
-      <button class="btn-cancelar" @click="confirmarCancelamento">
-        Cancelar atendimento
-      </button>
-    </footer>
   </div>
 </template>
 

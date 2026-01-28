@@ -41,40 +41,31 @@ const formularioEdicao = reactive({
 });
 
 const cancelarAtendimento = async () => {
-  //console.log("1. Clique detectado");
   const confirmacao = confirm("Deseja realmente cancelar?");
   if (!confirmacao) {
-    //console.log("2. Cancelamento abortado pelo usuário");
     return;
   }
-
-  //console.log("3. Iniciando processo...");
   carregando.value = true;
 
   try {
     const token = localStorage.getItem('token');
-    //console.log("4. Token encontrado:", token ? "Sim" : "Não");
 
     if (!token) {
       exibirFeedback("❌ Erro: Token não encontrado", "erro");
       return;
     }
 
-    //console.log("5. Enviando PATCH para ID:", props.consulta.id);
     const response = await api.patch(`/atendimento/cancelar/${props.consulta.id}`, {}, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    //console.log("6. Resposta API:", response.status);
     exibirFeedback("✅ Cancelado com sucesso!", "sucesso");
     setTimeout(() => emit('atualizado'), 1500);
 
   } catch (error: any) {
-    //console.error("7. Erro capturado:", error.response?.data || error.message);
     const msg = error.response?.data?.message || "Erro desconhecido";
     exibirFeedback(`❌ ${msg}`, "erro");
   } finally {
-    //console.log("8. Finalizando carregamento");
     carregando.value = false;
   }
 };
@@ -116,10 +107,21 @@ const salvarEdicao = async () => {
 
 const formatarDataHora = (isoString: string | undefined, soHora = false) => {
   if (!isoString) return soHora ? '' : '---';
+
   const dataObjeto = new Date(isoString);
-  return soHora
-    ? dataObjeto.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-    : dataObjeto.toLocaleDateString('pt-BR');
+
+  if (soHora) {
+    // Pega as horas e minutos UTC diretamente
+    const horas = String(dataObjeto.getUTCHours()).padStart(2, '0');
+    const minutos = String(dataObjeto.getUTCMinutes()).padStart(2, '0');
+    return `${horas}:${minutos}`;
+  }
+
+  // Para a data, também usamos UTC para evitar que mude o dia em horários próximos à meia-noite
+  const dia = String(dataObjeto.getUTCDate()).padStart(2, '0');
+  const mes = String(dataObjeto.getUTCMonth() + 1).padStart(2, '0');
+  const ano = dataObjeto.getUTCFullYear();
+  return `${dia}/${mes}/${ano}`;
 };
 
 const dataInicio = computed(() => formatarDataHora(props.consulta.dataHoraInicio));
@@ -140,11 +142,14 @@ const formaPagamentoFormatada = computed(() => {
   <div class="card-atendimento-wrapper">
 
     <div
-      class="card"
-      v-if="(props.consulta.status === 'CONCLUIDO' && props.pagina === 'historico') || (props.consulta.status === 'CONFIRMADO' && props.pagina === 'agenda')"
-    >
+  class="card"
+  v-if="( ['CONCLUIDO'].includes(props.consulta.status) && props.pagina === 'historico') || (props.consulta.status === 'CONFIRMADO' && props.pagina === 'agenda')"
+>
       <div class="coluna-profissional">
-        <h3 class="nome">Dr(a). {{ props.consulta.nomeProfissional || 'Não informado' }}</h3>
+        <h3 class="nome">
+          {{ props.pagina === 'historico' && props.consulta.funcaoProfissional === 'Paciente' ? '' : 'Dr(a). ' }}
+          {{ props.consulta.nomeProfissional }}
+        </h3>
         <span class="funcao">{{ props.consulta.funcaoProfissional || 'Profissional' }}</span>
         <div :class="['badge-pagamento', props.consulta.statusPagamento?.toLowerCase()]">
           Pagamento: {{ props.consulta.statusPagamento }}

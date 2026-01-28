@@ -1,50 +1,78 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRoute } from 'vue-router'; // Para pegar o ID da URL se necessário
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import api from '@/services/api';
 
 const route = useRoute();
 
 const carregando = ref<Record<string, boolean>>({});
-const faltaData = ref('');
-const faltaInicio = ref('');
-const faltaFim = ref('');
-const carregandoFalta = ref(false);
+
+// Iniciamos como null para buscar no onMounted ou dentro da função de forma segura
+const usuarioLogado = ref<any>(null);
 
 const diasDaSemana = ref([
-  { nome: 'Segunda', inicio: '10:00', fim: '18:00', almocoInicio: '11:00', almocoFim: '12:00' },
-  { nome: 'Terça',   inicio: '10:00', fim: '18:00', almocoInicio: '11:00', almocoFim: '12:00' },
-  { nome: 'Quarta',  inicio: '10:00', fim: '18:00', almocoInicio: '11:00', almocoFim: '12:00' },
-  { nome: 'Quinta',  inicio: '10:00', fim: '18:00', almocoInicio: '11:00', almocoFim: '12:00' },
-  { nome: 'Sexta',   inicio: '10:00', fim: '18:00', almocoInicio: '11:00', almocoFim: '12:00' },
-  { nome: 'Sábado',  inicio: '10:00', fim: '14:00', almocoInicio: '00:00', almocoFim: '00:00' },
+  { nome: 'Segunda', inicio: '10:00', fim: '18:00' },
+  { nome: 'Terça',   inicio: '10:00', fim: '18:00' },
+  { nome: 'Quarta',  inicio: '10:00', fim: '18:00' },
+  { nome: 'Quinta',  inicio: '10:00', fim: '18:00' },
+  { nome: 'Sexta',   inicio: '10:00', fim: '18:00' },
+  { nome: 'Sábado',  inicio: '10:00', fim: '14:00' },
 ]);
+
+// Função para extrair o ID independente da estrutura do objeto salvo
+const extrairIdProfissional = () => {
+  const userRaw = localStorage.getItem('user_data');
+  if (!userRaw) return null;
+
+  try {
+    const user = JSON.parse(userRaw);
+    // Tenta pegar o ID direto, ou de dentro de uma propriedade 'user' (comum no Adonis)
+    return user.id || user.user?.id || user.id_usuario;
+  } catch (e) {
+    return null;
+  }
+};
 
 const getProximaData = (nomeDia: string, horarioStr: string) => {
   const diasSemanaMap: Record<string, number> = {
     'Domingo': 0, 'Segunda': 1, 'Terça': 2, 'Quarta': 3,
     'Quinta': 4, 'Sexta': 5, 'Sábado': 6
   };
+
   const hoje = new Date();
-  const diaSemanaAlvo = diasSemanaMap[nomeDia];
+  // Usamos o || 0 apenas para o TS não reclamar,
+  // mas como o seu array 'diasDaSemana' é controlado, ele sempre achará o valor.
+  const diaSemanaAlvo = diasSemanaMap[nomeDia] ?? 0;
   const diaSemanaAtual = hoje.getDay();
-  let diferenca = diaSemanaAlvo! - diaSemanaAtual;
-  if (diferenca <= 0) diferenca += 7;
+
+  let diferenca = diaSemanaAlvo - diaSemanaAtual;
+
+  // Se for hoje ou dia passado, pula para a próxima semana
+  if (diferenca <= 0) {
+    diferenca += 7;
+  }
 
   const dataResultado = new Date(hoje);
   dataResultado.setDate(hoje.getDate() + diferenca);
-  const [horas, minutos] = horarioStr.split(':');
 
-  return `${dataResultado.toISOString().split('T')[0]}T${horas}:${minutos}:00.000Z`;
+  const ano = dataResultado.getFullYear();
+  const mes = String(dataResultado.getMonth() + 1).padStart(2, '0');
+  const dia = String(dataResultado.getDate()).padStart(2, '0');
+
+  // Retorna a string formatada localmente
+  return `${ano}-${mes}-${dia}T${horarioStr}:00`;
 };
-
 const criarDisponibilidade = async (dia: any) => {
-  // Pega o token do localStorage ou do seu Store de autenticação
-  const token = localStorage.getItem('token');
-  const profissionalId = route.params.id; // Ou do store do usuário logado
+  const token = localStorage.getItem('auth_token');
+  const profissionalId = extrairIdProfissional();
 
   if (!token) {
     alert("Sessão expirada. Faça login novamente.");
+    return;
+  }
+
+  if (!profissionalId) {
+    alert("Erro: ID do profissional não identificado. Tente fazer login novamente.");
     return;
   }
 
@@ -57,382 +85,245 @@ const criarDisponibilidade = async (dia: any) => {
       data_hora_fim: getProximaData(dia.nome, dia.fim)
     };
 
-    // O Axios permite passar os headers como terceiro parâmetro
     await api.post('/disponibilidade', payload, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     });
 
-    alert(`Horário de ${dia.nome} salvo!`);
+    alert(`Horários para ${dia.nome} gerados com sucesso!`);
   } catch (error: any) {
     console.error("Erro na requisição:", error.response?.data);
-    alert(error.response?.data?.message || "Erro ao salvar");
+    alert(error.response?.data?.message || "Erro ao salvar horários");
   } finally {
     carregando.value[dia.nome] = false;
   }
 };
 
-const cadastrarFalta = async () => {
-  const token = localStorage.getItem('token');
-  const profissionalId = route.params.id;
-
-  console.log('Dados preenchidos:', {
-    data: faltaData.value,
-    inicio: faltaInicio.value,
-    fim: faltaFim.value
+const formatarHora = (dataIso: string) => {
+  return new Date(dataIso).toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit'
   });
-
-  // Validação simples
-  if (!faltaData.value || !faltaInicio.value || !faltaFim.value) {
-    alert("Por favor, preencha a data e os horários da falta.");
-    return;
-  }
-
-  if (!token) {
-    alert("Sessão expirada. Faça login novamente.");
-    return;
-  }
-
-  carregandoFalta.value = true;
-
-  try {
-    // Monta o ISO String combinando a data escolhida com os horários
-    const payload = {
-      profissional_id: Number(profissionalId),
-      data_hora_inicio: `${faltaData.value}T${faltaInicio.value}:00.000Z`,
-      data_hora_fim: `${faltaData.value}T${faltaFim.value}:00.000Z`,
-      status: 'BLOQUEADO' // Garante que o sistema trate como bloqueio
-    };
-
-    console.log(payload);
-
-    await api.post('/disponibilidade', payload, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    alert(`Falta cadastrada com sucesso para o dia ${faltaData.value}!`);
-
-    // Limpa o formulário após o sucesso
-    faltaData.value = '';
-    faltaInicio.value = '';
-    faltaFim.value = '';
-
-  } catch (error: any) {
-    console.error("Erro na requisição:", error.response?.data);
-    alert(error.response?.data?.message || "Erro ao salvar falta");
-  } finally {
-    carregandoFalta.value = false;
-  }
-};
+}
 </script>
 
 <template>
-  <div class="card">
-    <header>
-      <h3>Horário padrão</h3>
-      <small>Define seus horários da semana</small>
-    </header>
+  <div class="booking-container">
+    <div class="booking-card">
+      <header class="booking-header">
+        <h2>Configurações de Agenda</h2>
+        <div class="divider"></div>
+        <p class="subtitle">Gerencie sua disponibilidade semanal e informe ausências</p>
+      </header>
 
-    <main class="corpo">
-      <div v-for="dia in diasDaSemana" :key="dia.nome" class="config-dia">
+      <main class="booking-body">
+        <section class="config-section">
+          <h3 class="section-title">Horário Padrão Semanal</h3>
 
-        <div class="dia-status">
-          <span class="nome-dia">{{ dia.nome }}</span>
-        </div>
+          <div class="list-dias">
+            <div v-for="dia in diasDaSemana" :key="dia.nome" class="config-dia-row">
+              <div class="dia-info">
+                <span class="nome-dia">{{ dia.nome }}</span>
+              </div>
 
-        <div class="periodo">
-          <span class="label">De</span>
-          <input type="time" v-model="dia.inicio" class="horario-input">
-          <span class="separador">Até</span>
-          <input type="time" v-model="dia.fim" class="horario-input">
-        </div>
+              <div class="periodo-inputs">
+                <div class="input-field">
+                  <label>De</label>
+                  <input type="time" v-model="dia.inicio" class="time-input">
+                </div>
+                <span class="seta-intervalo"> até </span>
+                <div class="input-field">
+                  <label>Até</label>
+                  <input type="time" v-model="dia.fim" class="time-input">
+                </div>
+              </div>
 
-        <div class="divisor-vertical"></div>
-
-        <div class="periodo">
-          <span class="label">Almoço:</span>
-          <input type="time" v-model="dia.almocoInicio" class="horario-input">
-          <span class="separador">-</span>
-          <input type="time" v-model="dia.almocoFim" class="horario-input">
-        </div>
-
-        <div class="botao-adicionar">
-          <button @click="criarDisponibilidade(dia)">Adicionar</button>
-        </div>
-      </div>
-
-      <div class="informar-falta">
-        <h3 class="titulo">Informar falta</h3>
-        <div class="input-grupo">
-          <div class="campo">
-            <span class="label">Dia</span>
-            <input type="date" v-model="faltaData">
+              <div class="acao-dia">
+                <button
+  class="btn-add-small"
+  @click="criarDisponibilidade(dia)"
+  :disabled="carregando[dia.nome]"
+>
+  <template v-if="!carregando[dia.nome]">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7v14"/></svg>
+    Adicionar
+  </template>
+  <template v-else>
+    Gerando...
+  </template>
+</button>
+              </div>
+            </div>
           </div>
-          <div class="campo">
-            <span class="label">De</span>
-            <input type="time" v-model="faltaInicio">
-          </div>
-          <div class="campo">
-            <span class="label">Até</span>
-            <input type="time" v-model="faltaFim">
-          </div>
-        </div>
-        <div class="botao-falta">
-          <button @click="cadastrarFalta" :disabled="carregandoFalta">
-            {{ carregandoFalta ? 'Salvando...' : 'Cadastrar falta' }}
-          </button>
-        </div>
-      </div>
-    </main>
+        </section>
+      </main>
+    </div>
   </div>
 </template>
 
-<style lang="css" scoped>
-  .card{
-    border-radius: 15px;
-    background-color: white;
-    padding: 10px 30px;
-  }
-  header{
-    margin-bottom: 20px;
-  }
-  .switch {
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 26px;
-  }
+<style scoped>
+.booking-container {
+  --primary: #128093;
+  --primary-dark: #0e6675;
+  --danger: #be0000;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
 
-  .switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
+  padding: 40px 20px;
+  display: flex;
+  justify-content: center;
+  background-color: #f0f2f5;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Roboto, sans-serif;
+}
 
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
-    border-radius: 34px;
-  }
+.booking-card {
+  background: white;
+  width: 900px;
+  border-radius: 24px;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+  padding: 60px;
+  box-sizing: border-box;
+}
 
-  .slider:before {
-    position: absolute;
-    content: "";
-    height: 18px;
-    width: 18px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  }
+.booking-header {
+  text-align: center;
+  margin-bottom: 50px;
+}
 
-  input:checked + .slider {
-    background-color: #128093;
-  }
+.booking-header h2 {
+  color: var(--primary);
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
 
-  input:checked + .slider:before {
-    transform: translateX(24px);
-  }
-  .config-dia {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 15px;
-    padding: 12px 16px;
-    background-color: transparent;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    margin-bottom: 10px;
-    transition: all 0.3s ease;
-  }
+.divider {
+  height: 4px;
+  width: 60px;
+  background: var(--primary);
+  margin: 0 auto 15px;
+  border-radius: 10px;
+}
 
-  .dia-status {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 140px;
-  }
+.subtitle { color: var(--text-muted); font-size: 1rem; }
 
-  .nome-dia {
-    font-weight: 600;
-    color: #1e293b;
-  }
+.section-title {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--primary);
+  border-bottom: 2px solid #f1f5f9;
+  padding-bottom: 10px;
+  margin-bottom: 25px;
+  font-weight: 700;
+}
 
-  .periodo {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+.section-title.danger { color: var(--danger); border-color: #fee2e2; }
 
-  .label {
-    font-size: 0.85rem;
-    color: #64748b;
-    font-weight: 500;
-  }
+/* Lista de Dias */
+.list-dias { display: flex; flex-direction: column; gap: 12px; margin-bottom: 50px; }
 
-  .horario-box {
-    background: white;
-    border: 1px solid #cbd5e1;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-family: 'monospace';
-    font-size: 0.9rem;
-    color: black;
-    font-weight: bold;
-  }
+.config-dia-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 25px;
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
 
-  .separador {
-    color: #94a3b8;
-    font-size: 0.8rem;
-  }
+.config-dia-row:hover { border-color: var(--primary); background: #fff; }
 
-  .divisor-vertical {
-    width: 1px;
-    height: 24px;
-    background-color: #cbd5e1;
-  }
+.nome-dia { font-weight: 700; color: var(--text-main); min-width: 120px; }
 
-  .botao-adicionar button{
-    padding: 4px;
-    font-size: 15px;
-    background-color: rgb(19, 126, 0);
-    color: white;
-    border: none;
-    border-radius: 5px;
-  }
+.periodo-inputs {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
 
-  .botao-adicionar button:hover{
-    cursor: pointer;
-    background-color: rgb(13, 83, 0);
-  }
+.input-field { display: flex; flex-direction: column; gap: 4px; }
+.input-field label { font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; }
 
-  .horario-input {
-    background: white;
-    border: 1px solid #cbd5e1;
-    padding: 4px 6px;
-    border-radius: 6px;
-    font-family: 'monospace';
-    font-size: 0.9rem;
-    color: black;
-    font-weight: bold;
-    outline: none;
-    cursor: pointer;
-    min-height: 35px;
-    text-align: center;
-  }
+.time-input {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  font-weight: 600;
+  color: var(--text-main);
+  outline: none;
+}
 
-  .horario-input:focus {
-    border-color: #128093;
-  }
+.seta-intervalo { color: var(--text-muted); font-size: 0.8rem; font-weight: 500; }
 
-  /* Garante que o botão não mude de tamanho */
-  .botao-adicionar button {
-    min-width: 80px;
-    transition: background 0.3s;
-  }
-  .informar-falta {
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    font-family: sans-serif;
-  }
+.btn-add-small {
+  background: #137e00;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
 
-  .informar-falta .titulo {
-    font-weight: bold;
-    color: #333;
-  }
+.btn-add-small:hover { background: #0f6600; transform: scale(1.05); }
 
-  .informar-falta .input-grupo {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-  }
+/* Seção de Falta */
+.falta-section {
+  background: #fff5f5;
+  padding: 30px;
+  border-radius: 20px;
+  border: 1px dashed #fecaca;
+}
 
-  .informar-falta .campo {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
+.falta-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 25px;
+}
 
-  .informar-falta .label {
-    font-size: 13px;
-    color: #666;
-  }
+.field-group { display: flex; flex-direction: column; gap: 8px; }
+.field-group label { font-weight: 600; font-size: 0.9rem; color: var(--text-main); }
 
-  .informar-falta input[type="time"], .informar-falta input[type="date"]{
-    padding: 4px 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    outline: none;
-  }
+.main-input {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  font-size: 1rem;
+}
 
-  .informar-falta input[type="date"]:focus, .informar-falta input[type="time"]:focus {
-    border-color: #007bff;
-  }
+.btn-danger {
+  width: 100%;
+  padding: 18px;
+  background: var(--danger);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
 
-  .botao-falta{
-    display: flex;
-    justify-content: center;
-    margin-top: 10px;
-  }
-  .botao-falta button{
-    width: 80%;
-    padding: 10px;
-    font-size: 15px;
-    font-weight: bold;
-    color: white;
-    background-color: rgb(190, 0, 0);
-    border: none;
-    border-radius: 10px;
-  }
-  .botao-falta button:hover{
-    background-color: rgb(154, 0, 0);
-    cursor: pointer;
-  }
+.btn-danger:hover:not(:disabled) {
+  background: #9a0000;
+  box-shadow: 0 8px 20px rgba(190, 0, 0, 0.2);
+}
 
-  @media (max-width: 768px) {
-  .card {
-    padding: 15px;
-  }
-  .config-dia {
-    flex-direction: column;
-    height: auto;
-    align-items: stretch;
-    gap: 12px;
-    padding: 20px 15px;
-  }
-  .dia-status {
-    justify-content: center;
-    border-bottom: 1px solid #f1f5f9;
-    padding-bottom: 8px;
-    min-width: unset;
-  }
-  .periodo {
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  .divisor-vertical {
-    display: none;
-  }
-  .botao-adicionar {
-    display: flex;
-    justify-content: center;
-  }
-  .botao-adicionar button {
-    width: 100%;
-    padding: 10px;
-  }
-  .informar-falta .input-grupo {
-    flex-direction: column;
-  }
-  }
+.btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
+
+@media (max-width: 850px) {
+  .booking-card { padding: 30px; width: 95%; }
+  .config-dia-row { flex-direction: column; gap: 15px; text-align: center; }
+  .falta-grid { grid-template-columns: 1fr; }
+}
 </style>
