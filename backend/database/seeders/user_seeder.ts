@@ -6,14 +6,15 @@ import Funcao from '#models/funcao'
 import Disponibilidade from '#models/disponibilidade'
 import Atendimento from '#models/atendimento'
 import { DateTime } from 'luxon'
-import hash from '@adonisjs/core/services/hash'
+import hash from '@adonisjs/core/services/hash' 
 
 export default class extends BaseSeeder {
   public async run() {
     console.log('--- 🛠️ INICIANDO SEED TÉCNICO BLINDADO ---')
 
-    // Senha padrão para todos (Criptografada)
-    const passwordHash = await hash.make('senha123')
+    // DEFINIÇÃO DAS SENHAS
+    const senhaPura = 'senha123' // Para o User (que tem hook automático)
+    const senhaHash = await hash.make(senhaPura) // Para Profissional/Cliente (que não têm hook)
 
     // ---------------------------------------------------------
     // 1. SUPER ADMINISTRADOR
@@ -22,7 +23,7 @@ export default class extends BaseSeeder {
       { email: 'admin@teste.com' },
       { 
         fullName: 'Administrador Principal',
-        password: passwordHash, 
+        password: senhaPura, // <--- Manda pura, o Model User criptografa
         perfil_tipo: 'admin', 
         status: 'ativo' 
       }
@@ -35,7 +36,7 @@ export default class extends BaseSeeder {
       { email: 'cliente@teste.com' },
       { 
         fullName: 'Cliente Exemplo',
-        password: passwordHash, 
+        password: senhaPura, // <--- Manda pura
         perfil_tipo: 'cliente', 
         status: 'ativo' 
       }
@@ -45,7 +46,7 @@ export default class extends BaseSeeder {
       { email: 'medico@teste.com' },
       { 
         fullName: 'Doutor João',
-        password: passwordHash, 
+        password: senhaPura, // <--- Manda pura
         perfil_tipo: 'profissional', 
         status: 'ativo' 
       }
@@ -59,12 +60,11 @@ export default class extends BaseSeeder {
     const cliente = await Cliente.updateOrCreate(
       { id: userCliente.id },
       {
-        // CORREÇÃO AQUI: Adicionado "?? ''" para garantir que não seja null
         name: userCliente.fullName ?? 'Cliente Exemplo', 
         cpf: '111.111.111-11',
         telefone: '11999999999',
         email: userCliente.email,
-        senha: userCliente.password,
+        senha: senhaHash, // <--- Manda Hash, pois tabela Clientes não tem hook
         dataNascimento: DateTime.fromISO('1990-01-01'),
         genero: 'MASCULINO'
       }
@@ -81,14 +81,13 @@ export default class extends BaseSeeder {
       { id: userProfissional.id },
       {
         funcaoId: funcaoMedico.id,
-        // CORREÇÃO AQUI: Adicionado "?? ''" para garantir que não seja null
-        nome: userProfissional.fullName ?? 'Doutor João', 
+        nome: userProfissional.fullName ?? 'Doutor João',
         cpf: '222.222.222-22',
         telefone: '11888888888',
         genero: 'MASCULINO',
         dataNascimento: DateTime.fromISO('1985-05-20'),
         email: userProfissional.email,
-        senha: userProfissional.password,
+        senha: senhaHash, // <--- Manda Hash, pois tabela Profissionais não tem hook
         status: 'aprovado',
         registro_conselho: 'CRM-12345',
         conselho_uf: 'SP'
@@ -101,7 +100,6 @@ export default class extends BaseSeeder {
     
     const dataTeste = DateTime.fromISO('2026-01-25T14:00:00')
 
-    // Cria Disponibilidade
     const disponibilidade = await Disponibilidade.updateOrCreate(
       { 
         profissionalId: profissional.id, 
@@ -115,7 +113,6 @@ export default class extends BaseSeeder {
       }
     )
 
-    // Cria Atendimento (Consulta)
     await Atendimento.updateOrCreate(
       { 
         profissionalId: profissional.id,
@@ -133,8 +130,6 @@ export default class extends BaseSeeder {
     )
 
     console.log('--- ✅ SEEDERS CONCLUÍDOS ---')
-    console.log(`👑 Admin: ${userAdmin.email} | Senha: senha123`)
-    console.log(`👤 Cliente: ${cliente.email} | Senha: senha123`)
-    console.log(`🩺 Médico: ${profissional.email} | Senha: senha123`)
+    console.log(`👑 Admin: ${userAdmin.email} | Senha: ${senhaPura}`)
   }
 }
