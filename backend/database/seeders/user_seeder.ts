@@ -6,50 +6,83 @@ import Funcao from '#models/funcao'
 import Disponibilidade from '#models/disponibilidade'
 import Atendimento from '#models/atendimento'
 import { DateTime } from 'luxon'
+import hash from '@adonisjs/core/services/hash'
 
 export default class extends BaseSeeder {
   public async run() {
     console.log('--- 🛠️ INICIANDO SEED TÉCNICO BLINDADO ---')
 
+    // Senha padrão para todos (Criptografada)
+    const passwordHash = await hash.make('senha123')
+
     // ---------------------------------------------------------
-    // 1. UTILIZADORES (Idempotente)
+    // 1. SUPER ADMINISTRADOR
+    // ---------------------------------------------------------
+    const userAdmin = await User.updateOrCreate(
+      { email: 'admin@teste.com' },
+      { 
+        fullName: 'Administrador Principal',
+        password: passwordHash, 
+        perfil_tipo: 'admin', 
+        status: 'ativo' 
+      }
+    )
+
+    // ---------------------------------------------------------
+    // 2. UTILIZADORES PADRÃO
     // ---------------------------------------------------------
     const userCliente = await User.updateOrCreate(
       { email: 'cliente@teste.com' },
-      { password: 'senha123', perfil_tipo: 'cliente', status: 'ativo' }
+      { 
+        fullName: 'Cliente Exemplo',
+        password: passwordHash, 
+        perfil_tipo: 'cliente', 
+        status: 'ativo' 
+      }
     )
 
     const userProfissional = await User.updateOrCreate(
       { email: 'medico@teste.com' },
-      { password: 'senha123', perfil_tipo: 'profissional', status: 'ativo' }
+      { 
+        fullName: 'Doutor João',
+        password: passwordHash, 
+        perfil_tipo: 'profissional', 
+        status: 'ativo' 
+      }
     )
 
     // ---------------------------------------------------------
-    // 2. PERFIS (Usando ID Partilhado - Correção Principal)
+    // 3. VINCULAR PERFIS
     // ---------------------------------------------------------
+    
+    // Perfil Cliente
     const cliente = await Cliente.updateOrCreate(
-      { id: userCliente.id }, // Busca pelo ID do User
+      { id: userCliente.id },
       {
-        name: 'Cliente Exemplo',
+        // CORREÇÃO AQUI: Adicionado "?? ''" para garantir que não seja null
+        name: userCliente.fullName ?? 'Cliente Exemplo', 
         cpf: '111.111.111-11',
         telefone: '11999999999',
         email: userCliente.email,
-        senha: userCliente.password, // Opcional, já que auth é via User
+        senha: userCliente.password,
         dataNascimento: DateTime.fromISO('1990-01-01'),
         genero: 'MASCULINO'
       }
     )
 
+    // Função do Médico
     let funcaoMedico = await Funcao.firstOrCreate(
       { nome: 'MEDICO' },
       { nome: 'MEDICO' }
     )
 
+    // Perfil Profissional
     const profissional = await Profissional.updateOrCreate(
-      { id: userProfissional.id }, // Busca pelo ID do User
+      { id: userProfissional.id },
       {
         funcaoId: funcaoMedico.id,
-        nome: 'Doutor João',
+        // CORREÇÃO AQUI: Adicionado "?? ''" para garantir que não seja null
+        nome: userProfissional.fullName ?? 'Doutor João', 
         cpf: '222.222.222-22',
         telefone: '11888888888',
         genero: 'MASCULINO',
@@ -57,37 +90,36 @@ export default class extends BaseSeeder {
         email: userProfissional.email,
         senha: userProfissional.password,
         status: 'aprovado',
-        registro_conselho: 'CRM-12345', // Adicionado para evitar nulos na view
+        registro_conselho: 'CRM-12345',
         conselho_uf: 'SP'
       }
     )
 
     // ---------------------------------------------------------
-    // 3. AGENDA (Correção da Duplicação)
+    // 4. CRIAR DADOS DE AGENDA E CONSULTA
     // ---------------------------------------------------------
     
-    // Define uma data fixa no futuro para facilitar seus testes
-    // Assim você sempre sabe que dia 25/01/2026 às 14:00 tem algo.
     const dataTeste = DateTime.fromISO('2026-01-25T14:00:00')
 
+    // Cria Disponibilidade
     const disponibilidade = await Disponibilidade.updateOrCreate(
       { 
         profissionalId: profissional.id, 
-        dataHoraInicio: dataTeste // Busca pela data exata para não duplicar
+        dataHoraInicio: dataTeste 
       }, 
       {
         profissionalId: profissional.id, 
         dataHoraInicio: dataTeste, 
         dataHoraFim: dataTeste.plus({ minutes: 30 }),
-        status: 'OCUPADO' // Já nasce ocupada pois vamos criar o atendimento
+        status: 'OCUPADO'
       }
     )
 
-    // AQUI ESTAVA O ERRO: Mudamos de .create() para .updateOrCreate()
-    const atendimento = await Atendimento.updateOrCreate(
+    // Cria Atendimento (Consulta)
+    await Atendimento.updateOrCreate(
       { 
         profissionalId: profissional.id,
-        dataHoraInicio: dataTeste // Se já existir consulta neste horário, não cria outra
+        dataHoraInicio: dataTeste
       },
       {
         clienteId: cliente.id,
@@ -100,9 +132,9 @@ export default class extends BaseSeeder {
       }
     )
 
-    console.log('--- ✅ SEEDERS CONCLUÍDOS SEM DUPLICAÇÕES ---')
-    console.log(`Cliente: ${cliente.email} (ID: ${cliente.id})`)
-    console.log(`Médico: ${profissional.email} (ID: ${profissional.id})`)
-    console.log(`Consulta criada para: ${dataTeste.toFormat('dd/MM/yyyy HH:mm')}`)
+    console.log('--- ✅ SEEDERS CONCLUÍDOS ---')
+    console.log(`👑 Admin: ${userAdmin.email} | Senha: senha123`)
+    console.log(`👤 Cliente: ${cliente.email} | Senha: senha123`)
+    console.log(`🩺 Médico: ${profissional.email} | Senha: senha123`)
   }
 }
