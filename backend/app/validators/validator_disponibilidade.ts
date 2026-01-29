@@ -12,7 +12,7 @@ export const storeDisponibilidadeValidator = vine.compile(
         //Livre -> Disponível para atender
         //Ocupado -> Ocupado com algum atendimento
         //Bloqueado -> Período em que o profissional está indisponível por fatores internos
-        status: vine.enum(['LIVRE', 'OCUPADO', 'BLOQUEADO']).optional(), //Se o profissional não informar, será criado como 'LIVRE'
+        status: vine.enum(['DISPONIVEL', 'OCUPADO', 'BLOQUEADO']).optional(), //Se o profissional não informar, será criado como 'LIVRE'
     })
 )
 export const updateDisponibilidadeValidator = vine.compile(
@@ -20,6 +20,6 @@ export const updateDisponibilidadeValidator = vine.compile(
         profissional_id: vine.number().positive().optional(),
         data_hora_inicio: vine.string().trim().optional(),
         data_hora_fim: vine.string().trim().optional(),
-        status: vine.enum(['LIVRE', 'OCUPADO', 'BLOQUEADO']).optional(),
+        status: vine.enum(['DISPONIVEL', 'OCUPADO', 'BLOQUEADO']).optional(),
     })
 )
