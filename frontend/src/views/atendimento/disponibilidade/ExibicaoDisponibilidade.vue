@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import api from '@/services/api';
 import type { Profissional, Disponibilidade } from '@/types';
+import CardInfosLogin from '@/components/cards/atendimento/login/CardInfosLogin.vue';
 
 const usuarioLogado = JSON.parse(localStorage.getItem('user') || '{}');
 const busca = ref('');
@@ -98,18 +99,7 @@ const formatarHora = (iso: string) => {
 
 <template>
   <header class="cabecalho">
-    <div class="acoes">
-      <RouterLink class="consulta" to="/cliente/agendar">< Voltar</RouterLink>
-    </div>
-    <div class="infos-perfil">
-        <div class="foto">
-          <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
-        </div>
-        <div class="texto">
-          <p class="nome">{{ usuarioLogado.nome || 'Usuário' }}</p>
-          <p class="email">{{ usuarioLogado.email || 'E-mail não informado' }}</p>
-        </div>
-      </div>
+    <CardInfosLogin/>
   </header>
 
   <div class="barra-pesquisa">
@@ -149,7 +139,7 @@ const formatarHora = (iso: string) => {
   .cabecalho {
     padding: 0 50px;
     display: flex;
-    justify-content: space-between;
+    justify-content: end;
     height: 150px;
     align-items: center;
     background-color: white;
