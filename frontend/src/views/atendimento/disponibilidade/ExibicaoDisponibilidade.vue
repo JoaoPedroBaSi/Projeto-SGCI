@@ -2,20 +2,23 @@
 import { ref, computed, onMounted } from 'vue';
 import api from '@/services/api';
 import type { Profissional, Disponibilidade } from '@/types';
+import CardInfosLogin from '@/components/cards/atendimento/login/CardInfosLogin.vue';
 
-const usuarioLogado = JSON.parse(localStorage.getItem('user') || '{}');
+// Definição de Tipos Estrita
+type DiasValidos = 'Segunda' | 'Terça' | 'Quarta' | 'Quinta' | 'Sexta' | 'Sábado';
+const diasSemana: DiasValidos[] = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
 const busca = ref('');
 const profissionais = ref<Profissional[]>([]);
 const disponibilidades = ref<Disponibilidade[]>([]);
 const carregando = ref(false);
 
-// 1. Busca dados iniciais
 const carregarDados = async () => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('auth_token');
   carregando.value = true;
   try {
     const [profRes, dispRes] = await Promise.all([
-      api.get<Profissional[]>('/profissional'),
+      api.get<Profissional[]>('/profissionais'),
       api.get<Disponibilidade[]>('/disponibilidade', {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -30,9 +33,6 @@ const carregarDados = async () => {
 };
 
 onMounted(carregarDados);
-
-type DiasValidos = 'Segunda' | 'Terça' | 'Quarta' | 'Quinta' | 'Sexta' | 'Sábado';
-const diasSemana: DiasValidos[] = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
 const agendaFiltrada = computed(() => {
   if (!busca.value || busca.value.length < 3) return null;
@@ -51,20 +51,17 @@ const agendaFiltrada = computed(() => {
   const diferencaParaSegunda = diaDaSemanaAtual === 0 ? -6 : 1 - diaDaSemanaAtual;
   segundaDestaSemana.setDate(hoje.getDate() + diferencaParaSegunda);
 
-  // Mapeamento de datas para cada coluna
-  const datasDaSemana: Record<DiasValidos, string> = {
-    'Segunda': '', 'Terça': '', 'Quarta': '', 'Quinta': '', 'Sexta': '', 'Sábado': ''
-  };
+  // Solução do Erro: Tipagem explícita dos objetos de retorno
+  const datasDaSemana = {} as Record<DiasValidos, string>;
+  const agenda = {
+    'Segunda': [], 'Terça': [], 'Quarta': [], 'Quinta': [], 'Sexta': [], 'Sábado': []
+  } as Record<DiasValidos, Disponibilidade[]>;
 
   diasSemana.forEach((dia, index) => {
     const dataRef = new Date(segundaDestaSemana);
     dataRef.setDate(segundaDestaSemana.getDate() + index);
     datasDaSemana[dia] = dataRef.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   });
-
-  const agenda: Record<DiasValidos, Disponibilidade[]> = {
-    'Segunda': [], 'Terça': [], 'Quarta': [], 'Quinta': [], 'Sexta': [], 'Sábado': []
-  };
 
   const sabadoDestaSemana = new Date(segundaDestaSemana);
   sabadoDestaSemana.setDate(segundaDestaSemana.getDate() + 5);
@@ -81,10 +78,14 @@ const agendaFiltrada = computed(() => {
 
   livres.forEach(disp => {
     const data = new Date(disp.dataHoraInicio);
-    const diaIndex = data.getDay();
+    const diaIndex = data.getDay(); // 1 a 6
+
     if (diaIndex >= 1 && diaIndex <= 6) {
       const nomeDia = diasSemana[diaIndex - 1];
-      if (nomeDia) agenda[nomeDia].push(disp);
+
+      if (nomeDia) {
+        agenda[nomeDia].push(disp);
+      }
     }
   });
 
@@ -98,18 +99,7 @@ const formatarHora = (iso: string) => {
 
 <template>
   <header class="cabecalho">
-    <div class="acoes">
-      <RouterLink class="consulta" to="/cliente/agendar">< Voltar</RouterLink>
-    </div>
-    <div class="infos-perfil">
-        <div class="foto">
-          <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
-        </div>
-        <div class="texto">
-          <p class="nome">{{ usuarioLogado.nome || 'Usuário' }}</p>
-          <p class="email">{{ usuarioLogado.email || 'E-mail não informado' }}</p>
-        </div>
-      </div>
+    <CardInfosLogin/>
   </header>
 
   <div class="barra-pesquisa">
@@ -124,21 +114,24 @@ const formatarHora = (iso: string) => {
   <div v-if="carregando" class="aviso">Carregando dados...</div>
 
   <div v-if="agendaFiltrada" class="campo-exibicao">
-  <div v-for="dia in diasSemana" :key="dia" class="dia-coluna">
-    <div class="header-dia">
-      <h3>{{ dia }}</h3>
-      <span class="data-label">{{ agendaFiltrada.datasDaSemana[dia] }}</span>
-    </div>
-
-    <div class="lista-horarios">
-      <div
-        v-for="horario in agendaFiltrada.agenda[dia]" :key="horario.id" class="card-horario">
-        {{ formatarHora(horario.dataHoraInicio) }}
+    <div v-for="dia in diasSemana" :key="dia" class="dia-coluna">
+      <div class="header-dia">
+        <h3>{{ dia }}</h3>
+        <span class="data-label">{{ agendaFiltrada?.datasDaSemana[dia] }}</span>
       </div>
-      <p v-if="agendaFiltrada.agenda[dia].length === 0" class="vazio">Sem horários</p>
+
+      <div class="lista-horarios">
+        <div
+          v-for="horario in agendaFiltrada?.agenda[dia]"
+          :key="horario.id"
+          class="card-horario"
+        >
+          {{ formatarHora(horario.dataHoraInicio) }}
+        </div>
+        <p v-if="agendaFiltrada?.agenda[dia].length === 0" class="vazio">Sem horários</p>
+      </div>
     </div>
   </div>
-</div>
 
   <div v-else-if="busca.length >= 3" class="aviso">
     Nenhum profissional encontrado com esse nome.
@@ -149,7 +142,7 @@ const formatarHora = (iso: string) => {
   .cabecalho {
     padding: 0 50px;
     display: flex;
-    justify-content: space-between;
+    justify-content: end;
     height: 150px;
     align-items: center;
     background-color: white;
