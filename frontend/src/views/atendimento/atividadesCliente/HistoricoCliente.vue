@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CardBarraNavegacao from '@/components/barra/CardBarraNavegacao.vue';
 import CardHistorico from '@/components/cards/atendimento/horarios/CardHistorico.vue';
 import api from '@/services/api';
 import type { Atendimento, Profissional, Sala } from '@/types';
@@ -78,20 +79,7 @@ onMounted(fetchSalas);
 </script>
 
 <template>
-  <header class="cabecalho">
-    <div class="acoes">
-      <RouterLink class="consulta" to="/cliente/dashboard">< Voltar</RouterLink>
-    </div>
-    <div class="infos-perfil">
-        <div class="foto">
-          <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
-        </div>
-        <div class="texto">
-          <p class="nome">{{ usuarioLogado.nome || 'Usuário' }}</p>
-          <p class="email">{{ usuarioLogado.email || 'Email não disponível' }}</p>
-        </div>
-      </div>
-  </header>
+  <CardBarraNavegacao/>
 
   <h1>Histórico</h1>
 

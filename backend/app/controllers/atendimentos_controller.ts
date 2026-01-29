@@ -9,7 +9,6 @@ import { AtendimentoService } from '#services/atendimento_service'
 import { PagamentoService } from '#services/pagamento_service'
 import { TransacaoService } from '#services/transacao_service'
 import db from '@adonisjs/lucid/services/db'
-import { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import Disponibilidade from '#models/disponibilidade'
 import Reserva from '#models/reserva'
 import Transacao from '#models/transacao'
@@ -155,7 +154,7 @@ public async store({ request, response }: HttpContext) {
   // Log fundamental para você debugar no terminal do VS Code
   console.error("DEBUG ATENDIMENTO:", error.message || error)
 
-  // Trata erros de validação do VineJS (Status 422)
+  // 1. Trata erros de validação do VineJS (Status 422)
   if (error.status === 422) {
     return response.status(422).send({
       message: 'Dados inválidos',
@@ -163,7 +162,7 @@ public async store({ request, response }: HttpContext) {
     })
   }
 
-  // Mapeamento de mensagens amigáveis
+  // 2. Mapeamento de mensagens amigáveis
   const mensagens: Record<string, string> = {
     'A solicitação de atendimento tem uma data inválida.': 'Tente informar uma data válida.',
     'A solicitação de atendimento não está na disponibilidade do profissional.': 'Verifique os horários disponíveis do profissional.',
@@ -177,7 +176,7 @@ public async store({ request, response }: HttpContext) {
     return response.status(400).send({ message: mensagens[error.message] })
   }
 
-  // Erro de Banco de Dados ou Erro inesperado
+  // 3. Erro de Banco de Dados ou Erro inesperado
   return response.status(error.status || 500).send({
     message: error.message || 'Ocorreu um erro interno no servidor.'
   })

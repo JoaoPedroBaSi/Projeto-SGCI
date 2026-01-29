@@ -17,6 +17,7 @@ export default class ParceriasController {
     }
     try {
       const dados = await request.validateUsing(storeParceriaValidator)
+
       // Lógica de EM NEGOCIACAO (usando o objeto mapeado)
       if (dados.status_parceria === 'EM NEGOCIACAO') {
           dados.data_inicio = null // Correto, pois o Model aceita | null
@@ -38,6 +39,7 @@ export default class ParceriasController {
 
     // Merge manual convertendo snake_case para camelCase
     parceria.merge(dados)
+
     await parceria.save()
     return response.status(200).json({ message: 'Atualizado com sucesso' })
   } catch (error) {

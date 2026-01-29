@@ -4,6 +4,7 @@ import { ref, onMounted, computed } from 'vue';
 import api from '@/services/api';
 import type { Atendimento } from '@/types';
 import CardPagamentoAtendimento from '@/components/cards/atendimento/pagamento/CardPagamentoAtendimento.vue';
+import CardBarraNavegacao from '@/components/barra/CardBarraNavegacao.vue';
 
 const atendimentos = ref<Atendimento[]>([]);
 const carregando = ref(true);
@@ -34,8 +35,9 @@ onMounted(buscarAtendimentos);
 </script>
 
 <template>
+  <CardBarraNavegacao/>
   <main>
-    <h1>Pagamentos pendentes (Em construção...)</h1>
+    <h1>Pagamentos pendentes</h1>
     <div v-if="carregando">Carregando consultas...</div>
 
     <div v-else-if="atendimentosAtivos.length > 0">

@@ -49,8 +49,4 @@ import CardInfosLogin from '../cards/atendimento/login/CardInfosLogin.vue';
   .consulta {
     border: 2px solid #128093; color: #128093;
   }
-  /*
-  .historico-link {
-    border: 2px solid blue; color: blue;
-  }*/
 </style>

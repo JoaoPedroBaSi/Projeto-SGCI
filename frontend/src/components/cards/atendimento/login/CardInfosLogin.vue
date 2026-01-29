@@ -12,6 +12,8 @@ const carregarDados = async () => {
     const userDataRaw = localStorage.getItem('user_data');
     const token = localStorage.getItem('auth_token');
 
+    console.log(userDataRaw)
+
     if (!userDataRaw || !token) return;
 
     const userData = JSON.parse(userDataRaw);
@@ -46,7 +48,7 @@ onMounted(carregarDados);
       <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
     </div>
     <div class="texto">
-      <p class="nome">{{ perfilAtivo?.nome || 'Carregando...' }}</p>
+      <p class="nome">{{ perfilAtivo?.name || 'Carregando...' }}</p>
       <p class="email">{{ perfilAtivo?.email || 'E-mail não informado' }}</p>
     </div>
   </div>

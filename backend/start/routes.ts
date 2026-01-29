@@ -88,6 +88,8 @@ router.group(() => {
 // =======================================================
 router.post('/pagamento/processar', '#controllers/transacoes_controller.realizarPagamento').middleware(middleware.auth())
 
+router.get('/transacoes/saldo', 'TransacoesController.contarSaldo').use(middleware.auth())
+
 router.group(() => {
     // --- Rotas do Profissional ---
     router.get('/minhas-financas', '#controllers/transacoes_controller.minhasDividas')

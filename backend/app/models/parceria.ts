@@ -12,7 +12,10 @@ export default class Parceria extends BaseModel {
   declare ramo: string
 
   @column()
-  declare cep: number
+  declare cep: string
+
+  @column()
+  declare cnpj: string
 
   @column()
   declare siteUrl: string | null

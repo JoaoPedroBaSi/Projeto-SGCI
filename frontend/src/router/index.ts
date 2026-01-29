@@ -57,7 +57,7 @@ const router = createRouter({
       name: 'esqueci-senha',
       component: EsqueciSenha
     },
-    
+
     // --- ROTAS DO ADMINISTRADOR ---
     {
       path: '/admin/dashboard',
@@ -70,7 +70,7 @@ const router = createRouter({
       component: AprovacaoProfissional
     },
     {
-      path: '/admin/cadastrar-profissional', 
+      path: '/admin/cadastrar-profissional',
       name: 'admin-cadastrar-profissional',
       // Importação dinâmica: O arquivo TEM que existir na pasta views/admin/
       component: () => import('../views/admin/CadastroProfissionalView.vue'),
@@ -126,6 +126,16 @@ const router = createRouter({
     {
        path: '/dashboard',
        redirect: '/dashboard/cliente'
+    },
+    {
+      path: '/cliente/consultas/pagar',
+      name: 'pagarConsulta',
+      component: () => import('../views/atendimento/pagamento/RealizarPagamento.vue'),
+    },
+    {
+      path: '/cliente/consultas',
+      name: 'minhasConsultas',
+      component: () => import('../views/atendimento/consulta/MinhasConsultas.vue'),
     },
     {
       path: '/about',

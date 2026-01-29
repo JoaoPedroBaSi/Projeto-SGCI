@@ -36,7 +36,7 @@ const carregarDados = async () => {
   isLoading.value = true;
   error.value = null;
 
-  // 0. Recuperação e Configuração do Token
+  // Recuperação e Configuração do Token
   const token = localStorage.getItem('auth_token');
 
   if (!token) {
@@ -176,7 +176,7 @@ onMounted(carregarDados);
       <CardDashboardCalc
         v-for="info in infos"
         :key="info.id"
-        :finalidade="info.finalidade"
+        :finalidade="(info.finalidade as 'CONFIRMADO' | 'AGUARDANDO' | 'CONCLUIDO')"
         :qtdAtendimentosConfirmados="contarAtendimentosConfirmados"
         :qtdAtendimentosAguardandoPagamento="contarAtendimentosAguardandoPagamento"
         :qtdAtendimentosNoHistorico="contarAtendimentosNoHistorico"

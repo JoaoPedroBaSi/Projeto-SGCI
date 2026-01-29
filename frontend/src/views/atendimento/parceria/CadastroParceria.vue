@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import CardCadastroParceria from '@/components/cards/atendimento/parceria/CardCadastroParceria.vue';
-
 import api from '@/services/api';
 import { ref } from 'vue';
 
@@ -59,63 +57,252 @@ const cadastrar = async () => {
 </script>
 
 <template>
-  <div class="page-container">
-    <header class="page-header">
-      <h3>Gestão de Parcerias</h3>
-      <div class="opcoes">
-        <RouterLink to="/cadastro/parceria" class="botao-opcao">Cadastrar parceria</RouterLink>
-        <RouterLink to="/parcerias" class="botao-opcao">Lista de parcerias</RouterLink>
-      </div>
-    </header>
+  <div class="booking-container">
+    <form @submit.prevent="cadastrar" class="booking-card">
+      <header class="booking-header">
+        <h2>Nova Parceria</h2>
+        <div class="divider"></div>
+        <p class="subtitle">Preencha os dados abaixo para registrar o novo convênio</p>
+      </header>
 
-    <main class="content">
-      <section class="section-card">
-        <CardCadastroParceria />
-      </section>
-    </main>
+      <div class="booking-body">
+        <div class="grid-row">
+          <div class="field-group flex-2">
+            <label>Nome da Empresa</label>
+            <input v-model="form.nome" type="text" placeholder="Ex: Tech Solutions" required>
+          </div>
+          <div class="field-group flex-1">
+            <label>Ramo de Atuação</label>
+            <input v-model="form.ramo" type="text" placeholder="Ex: Tecnologia">
+          </div>
+        </div>
+
+        <div class="grid-row">
+          <div class="field-group">
+            <label>CNPJ</label>
+            <input v-model="form.cnpj" type="text" placeholder="00.000.000/0000-00">
+          </div>
+          <div class="field-group">
+            <label>CEP</label>
+            <input v-model="form.cep" type="text" placeholder="00000-000">
+          </div>
+        </div>
+
+        <div class="grid-row-triple">
+          <div class="field-group">
+            <label>Cidade</label>
+            <input v-model="form.cidade" type="text">
+          </div>
+          <div class="field-group">
+            <label>Bairro</label>
+            <input v-model="form.bairro" type="text">
+          </div>
+          <div class="field-group flex-small">
+            <label>Nº</label>
+            <input v-model="form.numero" type="text">
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>Endereço (Rua/Avenida)</label>
+          <input v-model="form.rua" type="text">
+        </div>
+
+        <div class="grid-row">
+          <div class="field-group">
+            <label>Tipo de Convênio</label>
+            <select v-model="form.tipo_convenio">
+              <option value="">Selecione...</option>
+              <option value="desconto">Desconto</option>
+              <option value="servico">Serviço</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label>Data de Início</label>
+            <input v-model="form.data_inicio" type="date">
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>Website ou URL</label>
+          <input v-model="form.site_url" type="url" placeholder="https://...">
+        </div>
+      </div>
+
+      <div class="grid-row">
+    <div class="field-group">
+      <label>Status da Parceria</label>
+      <select v-model="form.status_parceria">
+        <option value="ATIVO">Ativo</option>
+        <option value="INATIVO">Inativo</option>
+        <option value="EM NEGOCIACAO">Em Negociação</option>
+      </select>
+    </div>
+    <div class="grid-row">
+  <div class="field-group">
+    <label>Tipo de Relacionamento</label>
+    <select v-model="form.tipo_relacionamento" required>
+      <option value="ENTRADA">Entrada</option>
+      <option value="SAIDA">Saída</option>
+      <option value="MISTO">Misto</option>
+      <option value="ESTRATEGICO">Estratégico</option>
+    </select>
+  </div>
+</div>
+    <div class="field-group">
+      <label>% Desconto</label>
+      <input v-model="form.porcentagem_desconto" type="number">
+    </div>
+  </div>
+
+      <footer class="booking-footer">
+        <button type="submit" class="btn-primary">
+          Cadastrar Parceria
+        </button>
+      </footer>
+    </form>
   </div>
 </template>
 
 <style scoped>
-  h3{
-    padding-bottom: 10px;
-  }
-  .botao-opcao {
-    margin-right: 10px;
-    text-decoration: none;
-    padding: 6px 12px;
-    border: 1px solid #a0a0a0;
-    color: #a0a0a0;
-    border-radius: 5px;
-    font-size: 14px;
-    transition: all 0.2s;
-  }
-  .botao-opcao:hover {
-    cursor: pointer;
-    border-color: #128093;
-    background-color: rgb(217, 255, 242);
-    color: #128093;
-  }
-  .page-container {
-    background-color: #e0e0e0; /* Cinza de fundo que você usou na Agenda */
-    min-height: 100vh;
-  }
+.booking-container {
+  --primary: #128093;
+  --primary-dark: #0e6675;
+  --text-main: #333;
+  --border: #ddd;
 
-  .page-header {
-    background: white;
-    padding: 50px;
-    margin-bottom: 30px;
-  }
+  padding: 40px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f0f2f5;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Roboto, sans-serif;
+}
 
-  .page-header h3 {
-    margin: 0;
-    color: #333;
-    font-size: 1.5rem;
-  }
+.booking-card {
+  background: white;
+  width: 900px; /* Largura idêntica ao exemplo */
+  min-height: 850px; /* Ajustado para caber todos os campos */
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+  padding: 60px;
+  box-sizing: border-box;
+}
 
-  .section-card {
-    display: flex;
-    justify-content: center;
-    padding: 0 20px 40px;
+.booking-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.booking-header h2 {
+  color: var(--primary);
+  font-size: 2rem;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+.subtitle {
+  color: #666;
+  margin-top: 15px;
+  font-size: 1rem;
+}
+
+.divider {
+  height: 4px;
+  width: 80px;
+  background: var(--primary);
+  margin: 0 auto;
+  border-radius: 10px;
+}
+
+.booking-body {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  flex-grow: 1;
+}
+
+/* Grids de layout */
+.grid-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+
+.grid-row-triple {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 0.5fr;
+  gap: 20px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.flex-2 { grid-column: span 1; } /* Ajustado pelo grid nativo */
+
+.field-group label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+input, select {
+  padding: 16px 20px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  background-color: #fff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(18, 128, 147, 0.1);
+}
+
+.booking-footer {
+  margin-top: 50px;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-primary {
+  width: 100%;
+  max-width: 450px;
+  padding: 20px;
+  background-color: var(--primary) !important;
+  color: white !important;
+  border: none;
+  border-radius: 14px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-dark) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(18, 128, 147, 0.2);
+}
+
+@media (max-width: 950px) {
+  .booking-card {
+    width: 95%;
+    padding: 30px;
+    min-height: auto;
   }
+  .grid-row, .grid-row-triple {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

@@ -150,7 +150,7 @@ const datasFormatadas = computed(() => {
               placeholder="Ex: Emergência médica, imprevisto com equipamento..."
               rows="4"
             ></textarea>
-            <small class="aviso-cliente">Esta mensagem será enviada ao paciente.</small>
+            <small class="aviso-cliente">Esta mensagem será enviada ao cliente.</small>
           </div>
 
           <div class="modal-acoes">

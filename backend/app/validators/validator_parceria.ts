@@ -5,10 +5,15 @@ export const storeParceriaValidator = vine.compile(
 vine.object({
         nome: vine.string().trim().maxLength(40),
         ramo: vine.string().trim().maxLength(40),
+        cnpj: vine.string().trim().fixedLength(14),
+        cidade: vine.string().trim().maxLength(40),
+        bairro: vine.string().trim().maxLength(40),
+        rua: vine.string().trim().maxLength(40),
+        numero: vine.string().trim().maxLength(3),
         //Garante que sejam apenas 8 digítos no cep
-        cep: vine.number().positive().range([10000000, 99999999]),
+        cep: vine.string().trim().fixedLength(8),
         //.url() verifica se o formato da url é válido, já o activeUrl() verifica se o link existe na web
-        site_url: vine.string().url().activeUrl().nullable().optional(),
+        site_url: vine.string().url().nullable().optional(),
         porcentagem_desconto: vine.number(),
         tipo_convenio: vine.string().trim().maxLength(50),
         tipo_relacionamento: vine.enum(['ENTRADA', 'SAIDA', 'MISTO', 'ESTRATEGICO']),

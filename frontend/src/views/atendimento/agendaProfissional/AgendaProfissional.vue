@@ -71,7 +71,7 @@ const atendimentosFiltrados = computed(() => {
       const cliente = todosClientes.value.find(c => c.id === atend.clienteId);
       return {
         ...atend,
-        nomeCliente: cliente ? cliente.nome : 'Paciente não encontrado'
+        nomeCliente: cliente ? cliente.nome : 'Cliente não encontrado'
       };
     });
 });

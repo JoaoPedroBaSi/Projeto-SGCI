@@ -68,7 +68,7 @@ public async store({ request, response }: HttpContext) {
         profissionalId: dados.profissional_id,
         dataHoraInicio: ponteiroSlot.toSQL({ includeOffset: false })!,
         dataHoraFim: fimSlot.toSQL({ includeOffset: false })!,
-        status: 'DISPONIVEL' as const,
+        status: 'LIVRE' as const,
       })
       ponteiroSlot = fimSlot
     }
@@ -121,7 +121,7 @@ public async update({ request, response }: HttpContext) { // Incluindo os argume
           profissionalId: number,
           dataHoraInicio: DateTime,
           dataHoraFim: DateTime,
-          status: 'DISPONIVEL' | 'OCUPADO' | 'BLOQUEADO'
+          status: 'LIVRE' | 'OCUPADO' | 'BLOQUEADO'
       }[]
 
       //Horário de almoço, no qual não é possível ter disponibilidade
@@ -155,7 +155,7 @@ public async update({ request, response }: HttpContext) { // Incluindo os argume
               profissionalId: profissionalId,
               dataHoraInicio: inicioSlot,
               dataHoraFim: fimSlot,
-              status: 'DISPONIVEL',
+              status: 'LIVRE',
           })
 
           //Avança para o próximo slot

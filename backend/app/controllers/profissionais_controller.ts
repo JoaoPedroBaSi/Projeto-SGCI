@@ -12,18 +12,27 @@ import hash from '@adonisjs/core/services/hash' // <--- 1. IMPORTAMOS O HASH
 export default class ProfissionaisController {
 
   // --- LISTAR TODOS ---
-  public async index({ response }: HttpContext) {
-    try {
-      const profissionais = await Profissional.query()
-        .preload('user')
-        .preload('funcao')
+  public async index({ auth, response }: HttpContext) {
+  try {
+    const userLogado = auth.user!
 
-      return response.status(200).send(profissionais)
-    } catch (error) {
-      console.error("ERRO AO LISTAR PROFISSIONAIS:", error)
-      return response.status(500).send({ message: 'Erro ao listar profissionais', originalError: error })
-    }
+    const profissionais = await Profissional.query()
+      .preload('user')
+      .preload('funcao')
+      .preload('disponibilidades', (query) => {
+        // Se o usuário logado for um profissional,
+        // filtramos as disponibilidades pelo ID dele (que é o mesmo do user)
+        if (userLogado.perfil_tipo === 'profissional') {
+          query.where('profissional_id', userLogado.id)
+        }
+      })
+
+    return response.ok(profissionais)
+  } catch (error) {
+    console.error("ERRO AO LISTAR PROFISSIONAIS:", error.message)
+    return response.status(500).send({ message: 'Erro ao carregar dados' })
   }
+}
 
   // --- CRIAR (MÉTODO DO ADMIN) ---
   public async store({ request, response }: HttpContext) {
