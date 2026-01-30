@@ -127,7 +127,7 @@ onMounted(() => {
           {
             label: 'Salas e Recursos', icon: markRaw(Building), key: 'infra_prof',
             children: [
-              { label: 'Reservar Sala', route: '/profissional/pagamento-salas' },
+              { label: 'Reservar Sala', route: '/profissional/reservas' },
               { label: 'Minhas Reservas', route: '/profissional/reservas' },
               { label: 'Consultar Estoque', route: '/profissional/solicitar-reposicao' }
             ]
@@ -135,7 +135,7 @@ onMounted(() => {
           {
             label: 'Financeiro', icon: markRaw(Coins), key: 'fin_prof',
             children: [
-              { label: 'Pagar Aluguel', route: '#aluguel' },
+              { label: 'Pagar Aluguel', route: '/profissional/pagamento-salas' },
               { label: 'Meu Extrato', route: '/profissional/financeiro' }
             ]
           },
