@@ -9,32 +9,19 @@ const route = useRoute();
 
 const carregarDados = async () => {
   try {
-    const userDataRaw = localStorage.getItem('user_data');
     const token = localStorage.getItem('auth_token');
+    if (!token) return;
 
-    console.log(userDataRaw)
-
-    if (!userDataRaw || !token) return;
-
-    const userData = JSON.parse(userDataRaw);
-
-    // CORREÇÃO 1: Ajustar para 'cliente' (singular) conforme seu log mostrou
-    const perfilTipo = userData.perfil_tipo;
-    const rota = (perfilTipo === 'cliente' || perfilTipo === 'clientes')
-                 ? '/cliente'
-                 : '/profissionais';
-
-    const response = await api.get(rota, {
+    const response = await api.get('/me', {
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    const dados = Array.isArray(response.data) ? response.data[0] : response.data;
-
-    if (dados) {
-      perfilAtivo.value = dados;
+    if (response.data) {
+      perfilAtivo.value = response.data;
     }
   } catch (err) {
-    console.error("Erro ao carregar dados do perfil:", err);
+    console.error("Erro ao carregar perfil /me:", err);
+    // Se der erro 401, pode ser token expirado
   }
 }
 
@@ -48,7 +35,7 @@ onMounted(carregarDados);
       <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
     </div>
     <div class="texto">
-      <p class="nome">{{ perfilAtivo?.name || 'Carregando...' }}</p>
+      <p class="nome">{{ perfilAtivo?.nome || 'Carregando...' }}</p>
       <p class="email">{{ perfilAtivo?.email || 'E-mail não informado' }}</p>
     </div>
   </div>
