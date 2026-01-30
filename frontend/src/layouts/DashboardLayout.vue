@@ -113,7 +113,7 @@ onMounted(() => {
         {
           label: 'Prontuários', icon: markRaw(ClipboardList), key: 'pront_prof',
           children: [
-            { label: 'Meus Prontuários', route: '#prontuarios' },
+            { label: 'Meus Prontuários', route: '/profissional/prontuarios' },
             { label: 'Registrar Relatório', route: '#relatorios' }
           ]
         },

@@ -1,10 +1,11 @@
 /* eslint-disable prettier/prettier */
 import { DateTime } from 'luxon'
-import { BaseModel, column, belongsTo } from '@adonisjs/lucid/orm'
-import type { BelongsTo } from '@adonisjs/lucid/types/relations'
+import { BaseModel, column, belongsTo, hasOne } from '@adonisjs/lucid/orm'
+import type { BelongsTo, HasOne } from '@adonisjs/lucid/types/relations'
 import Profissional from '#models/profissional'
 import Cliente from '#models/cliente'
 import Sala from '#models/sala'
+import Prontuario from '#models/prontuario'
 
 export default class Atendimento extends BaseModel {
   //atributos
@@ -50,6 +51,11 @@ export default class Atendimento extends BaseModel {
 
   @belongsTo(() => Cliente)
   declare cliente: BelongsTo<typeof Cliente>
+  
+  @hasOne(() => Prontuario, {
+    foreignKey: 'atendimentoId'
+  })
+  declare prontuario: HasOne<typeof Prontuario>
 
   @belongsTo(() => Sala)
   declare sala: BelongsTo<typeof Sala>

@@ -2,8 +2,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import { DateTime } from 'luxon'
 import Atendimento from '#models/atendimento'
-import { storeAtendimentoValidator } from '#validators/validator_atendimento'
-import { updateAtendimentoValidator } from '#validators/validator_atendimento'
+import { storeAtendimentoValidator, updateAtendimentoValidator } from '#validators/validator_atendimento'
 import { inject } from '@adonisjs/core'
 import { AtendimentoService } from '#services/atendimento_service'
 import { PagamentoService } from '#services/pagamento_service'
@@ -20,23 +19,18 @@ export default class AtendimentosController {
     protected pagamentoService: PagamentoService,
     protected transacaoService: TransacaoService
   ) {}
-  //Mostra todos os atendimentos
 
   public async index({ auth, request }: HttpContext) {
-  const user = await auth.authenticate()
+    const user = await auth.authenticate()
+    const statusFiltrado = request.input('status')
 
-  // Pega o status da URL (ex: /atendimento?status=PENDENTE)
-  const statusFiltrado = request.input('status')
+    const query = Atendimento.query()
+      .preload('cliente') // <--- CORRIGIDO: Removi o select
+      .preload('profissional', (q) => {
+        // <--- CORRIGIDO: Removi o select
+        q.preload('disponibilidades')
+      })
 
-  const query = Atendimento.query()
-    .preload('cliente', (q) => q.select('id', 'nome'))
-    .preload('profissional', (q) => {
-      q.select('id', 'nome')
-      q.preload('disponibilidades') // Mantendo sua regra de disponibilidade
-    })
-
-    // Aplicamos filtros baseados no perfil
-    // Assumindo que seu Model User tem um campo 'tipo' ou 'role'
     if (user.perfil_tipo === 'cliente') {
       query.where('cliente_id', user.id)
     } else if (user.perfil_tipo === 'profissional') {
@@ -45,38 +39,31 @@ export default class AtendimentosController {
     if (statusFiltrado) {
       query.where('status', statusFiltrado)
     }
-    // Se for 'admin', não entra em nenhum IF e traz todos os registros (.all)
+    
     return await query.orderBy('id', 'desc')
   }
 
-  //Mostra atendimentos individualmente
-  //Usa o select para traz apenas os dados importantes, e oculta dados sensíveis
   public async show({ params }: HttpContext) {
     return await Atendimento.query()
       .where('id', params.id)
-      .preload('cliente', (query) => query.select('id', 'nome'))
-      .preload('profissional', (query) => query.select('id', 'nome'))
-      // removi email dos preloads porque eles só exixsrtem na tabela User
+      .preload('cliente')      // <--- CORRIGIDO: Removi o select
+      .preload('profissional') // <--- CORRIGIDO: Removi o select
+      .preload('prontuario')
+      .first()
   }
 
-  // Função para a tela de aprovação de agendamentos
-  //Busca solicitações de atendimento (status PENDENTE)
   public async buscarSolicitacoes({ request, response }: HttpContext) {
     try {
-      // Pega o status da URL (ex: ?status=PENDENTE)
       const { status } = request.qs()
 
       const query = Atendimento.query()
-        // Traz apenas ID e Nome, nada de fotos ou dados pesados
-        .preload('cliente', (q) => q.select('id', 'nome'))
-        .preload('profissional', (q) => q.select('id', 'nome'))
+        .preload('cliente')      // <--- CORRIGIDO: Removi o select
+        .preload('profissional') // <--- CORRIGIDO: Removi o select
         .orderBy('data_hora_inicio', 'asc')
 
-      // Se foi passado um status, filtra. Se não, traz tudo.
       if (status) {
         query.where('status', status)
       } else {
-        // Se não mandar nada, assume que quer os PENDENTES por padrão
         query.where('status', 'PENDENTE')
       }
 
@@ -89,7 +76,7 @@ export default class AtendimentosController {
       })
     }
   }
-
+  
   //Finalizado
   public async store({ request, response }: HttpContext) {
     try {
