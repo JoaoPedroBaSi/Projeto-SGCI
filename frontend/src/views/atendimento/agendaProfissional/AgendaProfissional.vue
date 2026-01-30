@@ -4,18 +4,39 @@ import CardAgenda from '@/components/cards/atendimento/horarios/CardAgenda.vue';
 import { Settings } from 'lucide-vue-next';
 import type { Atendimento, Cliente } from '@/types';
 import api from '@/services/api';
+import CardInfosLogin from '@/components/cards/atendimento/login/CardInfosLogin.vue';
 
 // Estado para armazenar todos os atendimentos vindos da API
 const todosAtendimentos = ref<Atendimento[]>([]);
 const todosClientes = ref<Cliente[]>([]);
 const carregando = ref(true);
 
-const usuarioLogado = JSON.parse(localStorage.getItem('user') || '{}');
-const profissionalIdLogado = usuarioLogado.id;
+const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
+
+// Tenta pegar o ID de todas as formas que o seu sistema costuma salvar
+const profissionalIdLogado = ref(
+  userData.id ||
+  userData.user?.id ||
+  userData.perfil?.id ||
+  null
+);
 
 const buscarAtendimentos = async () => {
   try {
     carregando.value = true;
+
+    // 1. Recupera o token (verifique se o nome é 'auth_token' ou 'token')
+    const token = localStorage.getItem('auth_token');
+
+    if (!token) {
+      console.error("Token não encontrado. Redirecionando para login...");
+      return;
+    }
+
+    // 2. Configura o cabeçalho de autorização para esta instância da API
+    // Isso resolve o erro 401
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
     const [atendRes, cliRes] = await Promise.all([
       api.get<Atendimento[]>('/atendimento'),
       api.get<Cliente[]>('/cliente')
@@ -39,14 +60,14 @@ const atendimentosFiltrados = computed(() => {
   return todosAtendimentos.value
     .filter(atend => {
       const dataAtendimento = atend.dataHoraInicio.split('T')[0];
+
       return (
         dataAtendimento === dataFormatada &&
-        atend.profissionalId === 1 && // Usando o ID dinâmico que você já tem
-        atend.status !== 'CONCLUIDO'
+        Number(atend.profissionalId) === Number(profissionalIdLogado.value) && // Adicionado .value
+        atend.status === 'CONFIRMADO'
       );
     })
     .map(atend => {
-      // Cruzamento de dados: Encontra o cliente dono do atendimento
       const cliente = todosClientes.value.find(c => c.id === atend.clienteId);
       return {
         ...atend,
@@ -92,23 +113,7 @@ const dataExibida = computed(() => {
       </div>
     </div>
 
-    <div class="config-perfil">
-      <div class="config">
-        <RouterLink class="botao-disponibilidade" to="/profissional/disponibilidade">
-          <Settings :size="18" color="white" class="icon-gear" />
-          <span>Disponibilidade</span>
-        </RouterLink>
-      </div>
-      <div class="infos-perfil">
-        <div class="foto">
-          <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
-        </div>
-        <div class="texto">
-          <p class="nome">{{ usuarioLogado.nome || 'Usuário' }}</p>
-          <p class="email">{{ usuarioLogado.email || 'E-mail não informado' }}</p>
-        </div>
-      </div>
-    </div>
+    <CardInfosLogin/>
   </header>
 
   <main>
@@ -122,7 +127,6 @@ const dataExibida = computed(() => {
           :atendimento="atendimento"
           :nome-cliente="atendimento.nomeCliente"
           @atualizado="buscarAtendimentos"
-          class="card"
         />
       </div>
       <div v-else class="vazio">
@@ -197,16 +201,20 @@ const dataExibida = computed(() => {
 
   .card-agenda h2 {
     width: 100%;
-    max-width: 850px; /* Define o limite, mas permite diminuir */
+    max-width: 1200px; /* Aumentado para dar mais amplitude */
     text-align: left;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
     color: #333;
+    font-size: 1.8rem; /* Um pouco maior para acompanhar o card */
   }
 
   .lista-cards {
-    width: 100%;
-    max-width: 850px; /* Ocupa até 850px, mas reduz conforme a tela */
-  }
+  width: 100%;
+  max-width: 1200px; /* Aumentado para acompanhar o título */
+  display: flex;
+  flex-direction: column;
+  gap: 15px; /* Espaçamento entre um card e outro */
+}
 
   /* REGRAS DE RESPONSIVIDADE (Ajustes sem mudar estilo) */
   @media (max-width: 1000px) {

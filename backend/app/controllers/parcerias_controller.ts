@@ -9,73 +9,58 @@ export default class ParceriasController {
     public async show ({ params } : HttpContext) {
         return await Parceria.query().where('id', params.id).first()
     }
-    public async store ({ request, response } : HttpContext) {
+    public async store ({ auth, request, response } : HttpContext) {
+      const usuarioLogado = auth.user
+
+    if (usuarioLogado?.perfil_tipo !== 'admin') {
+        return response.status(401).send('Apenas administradores podem cadastrar parcerias.')
+    }
     try {
-        const dados = await request.validateUsing(storeParceriaValidator)
-        console.log('dados passou')
+      const dados = await request.validateUsing(storeParceriaValidator)
 
-        // 1. MAPEAMENTO DE SNAKE_CASE (dados) PARA CAMELCASE (parceriaData)
-        const parceriaData = {
-            nome: dados.nome,
-            ramo: dados.ramo,
-            cep: dados.cep,
-            // Mapeamento obrigatório para que o Lucid encontre as propriedades
-            siteUrl: dados.site_url, 
-            porcentagemDesconto: dados.porcentagem_desconto,
-            tipoConvenio: dados.tipo_convenio,
-            tipoRelacionamento: dados.tipo_relacionamento,
-            dataInicio: dados.data_inicio, // Será Luxon DateTime ou null
-            statusParceria: dados.status_parceria,
-        }
+      // Lógica de EM NEGOCIACAO (usando o objeto mapeado)
+      if (dados.status_parceria === 'EM NEGOCIACAO') {
+          dados.data_inicio = null // Correto, pois o Model aceita | null
+      }
 
-        // 2. Lógica de EM NEGOCIACAO (usando o objeto mapeado)
-        if (parceriaData.statusParceria === 'EM NEGOCIACAO') {
-            parceriaData.dataInicio = null // Correto, pois o Model aceita | null
-        }
-        console.log('if passou')
+      // Criação com o objeto mapeado
+      await Parceria.create(dados)
+      console.log('create passou')
 
-        // 3. Criação com o objeto mapeado
-        await Parceria.create(parceriaData) // <-- Usar 'parceriaData'
-        console.log('create passou')
-
-        return response.status(201).send('Cadastro de parceria feito com sucesso.')
-    } catch (error) {
-        // ESSENCIAL: Logar o erro real para debug
-        console.error('ERRO REAL AO CADASTRAR PARCERIA:', error) 
-        
-        return response.status(500).send('Erro ao cadastrar a parceria. Tente novamente.')
-    }
+      return response.status(201).send('Cadastro de parceria feito com sucesso.')
+  } catch (error) {
+      return response.status(500).send('Erro ao cadastrar a parceria. Tente novamente.')
+  }
 }
-    public async update ({ params, request, response } : HttpContext) {
-        try{
-            const dados = await request.validateUsing(updateParceriaValidator)
+    public async update({ params, request, response }: HttpContext) {
+  try {
+    const dados = await request.validateUsing(updateParceriaValidator)
+    const parceria = await Parceria.findOrFail(params.id)
 
-            const parceria = await Parceria.findOrFail(params.id)
+    // Merge manual convertendo snake_case para camelCase
+    parceria.merge(dados)
 
-            //Se estiver em negociação, força a colocar a data de inicio da parceria como null
-            if (dados.status_parceria === 'EM NEGOCIACAO') {
-                dados.data_inicio = null
-            }
-
-            parceria.merge(dados)
-
-            await parceria.save()
-
-            return response.status(201).send('Atualização de parceria feito com sucesso.')
-    
-        } catch (error) {
-            return response.status(500).send('Erro ao atualizar a parceria. Tente novamente.')
-        }
-    }
+    await parceria.save()
+    return response.status(200).json({ message: 'Atualizado com sucesso' })
+  } catch (error) {
+    console.error(error)
+    return response.status(error.status || 500).send(error.messages || 'Erro na atualização')
+  }
+}
     public async destroy ({ params, response } : HttpContext) {
-        try{
-            const parceria = await Parceria.findOrFail(params.id)
+      try{
+          const parceria = await Parceria.findOrFail(params.id)
 
-            await parceria.delete()
+          if(parceria.statusParceria !== 'ATIVO') {
+            return response.forbidden({ message: 'Somente parcerias ativas podem ser desativadas.' })
+          }
 
-            return response.status(201).send('Exclusão de parceria feito com sucesso.')
-        } catch (error) {
-            return response.status(500).send('Erro ao atualizar a parceria. Tente novamente.')
-        }
+          parceria.statusParceria = 'INATIVO'
+          await parceria.save()
+
+          return response.status(201).send('Parceria desativada com sucesso.')
+      } catch (error) {
+          return response.status(500).send('Erro ao atualizar a parceria. Tente novamente.')
+      }
     }
 }

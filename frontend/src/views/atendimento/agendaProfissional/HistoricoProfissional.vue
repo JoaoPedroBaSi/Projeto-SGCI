@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import CardBarraNavegacao from '@/components/barra/CardBarraNavegacao.vue';
 import CardHistorico from '@/components/cards/atendimento/horarios/CardHistorico.vue';
 import api from '@/services/api';
-import type { Atendimento, Profissional, Sala } from '@/types';
+import type { Atendimento, Sala } from '@/types';
 import { computed, onMounted, ref } from 'vue';
 
 const atendimentos = ref<any[]>([]);
@@ -10,58 +11,45 @@ const error = ref<string | null>(null);
 const paginaAtual = ref(1);
 const itensPorPagina = 10;
 
-// Captura o ID do profissional logado
-const usuarioLogado = JSON.parse(localStorage.getItem('user') || '{}');
-const profissionalLogadoId = usuarioLogado.id;
-
-const fetchSalas = async () => {
+const fetchHistoricoParaProfissional = async () => {
   isLoading.value = true;
   error.value = null;
 
   try {
-    const [atendimentoRes, salaRes, profRes, funcaoRes] = await Promise.all([
-      api.get<Atendimento[]>('/atendimento'),
-      api.get<Sala[]>('/sala'),
-      api.get<Profissional[]>('/profissional'),
-      api.get<{ id: number; nome: string }[]>('/funcao')
+    const token = localStorage.getItem('auth_token');
+    const config = { headers: { Authorization: `Bearer ${token}` } };
+
+    // Buscamos os dados necessários
+    const [atendimentoRes, salaRes, clienteRes] = await Promise.all([
+      api.get<Atendimento[]>('/atendimento', config), // O back já filtra pelo profissional logado
+      api.get<Sala[]>('/sala', config),
+      api.get<any[]>('/cliente', config) // Precisamos da lista de clientes para pegar os nomes
     ]);
 
-    const mapaFuncoes: Record<number, string> = {};
-    funcaoRes.data.forEach(f => mapaFuncoes[f.id] = f.nome);
+    atendimentos.value = atendimentoRes.data.map(atend => {
+      const sala = salaRes.data.find(s => s.id === atend.salaId);
+      const cliente = clienteRes.data.find(c => c.id === atend.clienteId);
 
-    // Lógica Recursiva para processar a lista
-    const processarLista = (lista: Atendimento[]): any[] => {
-      if (lista.length === 0) return [];
-
-      const [primeiro, ...resto] = lista;
-      const sala = salaRes.data.find(s => s.id === primeiro?.salaId);
-      const prof = profRes.data.find(p => p.id === primeiro?.profissionalId);
-
-      const itemFormatado = {
-        ...primeiro,
+      return {
+        ...atend,
         nomeSala: sala ? sala.nome : 'Sala Indefinida',
-        nomeProfissional: prof ? prof.nome : 'Profissional indefinido',
-        funcaoProfissional: prof ? (mapaFuncoes[prof.funcaoId] || 'Especialidade') : 'Indefinida'
+        // TRATAMENTO DIFERENCIADO:
+        // No card, o campo "nomeProfissional" é o título principal.
+        // Para o profissional, o título principal deve ser o nome do PACIENTE.
+        nomeProfissional: cliente ? cliente.nome : 'Paciente indefinido',
+        funcaoProfissional: 'Paciente' // Subtítulo do card
       };
+    });
 
-      return [itemFormatado, ...processarLista(resto)];
-    };
-
-    // FILTRO: Filtra a lista para conter apenas atendimentos do profissional logado antes de formatar
-    const atendimentosDoProfissional = atendimentoRes.data.filter(
-      atend => atend.profissionalId === profissionalLogadoId
-    );
-
-    atendimentos.value = processarLista(atendimentosDoProfissional);
-
-  } catch (err) {
+  } catch (err: any) {
     console.error("Erro:", err);
-    error.value = "Falha ao carregar dados.";
+    error.value = "Falha ao carregar histórico.";
   } finally {
     isLoading.value = false;
   }
 };
 
+// --- Lógica de Paginação (Idêntica à original) ---
 const atendimentosPaginados = computed(() => {
   const inicio = (paginaAtual.value - 1) * itensPorPagina;
   return atendimentos.value.slice(inicio, inicio + itensPorPagina);
@@ -78,26 +66,13 @@ const irParaPagina = (pagina: number) => {
   }
 };
 
-onMounted(fetchSalas);
+onMounted(fetchHistoricoParaProfissional);
 </script>
 
 <template>
-  <header class="cabecalho">
-    <div class="acoes">
-      <RouterLink class="consulta" to="/profissional/dashboard">< Voltar</RouterLink>
-    </div>
-    <div class="infos-perfil">
-        <div class="foto">
-          <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
-        </div>
-        <div class="texto">
-          <p class="nome">{{ usuarioLogado.nome || 'Usuário' }}</p>
-          <p class="email">{{ usuarioLogado.email || 'Email não disponível' }}</p>
-        </div>
-      </div>
-  </header>
+  <CardBarraNavegacao/>
 
-  <h1>Histórico</h1>
+  <h1>Histórico de Consultas</h1>
 
   <main>
     <div class="container-cards" v-if="!isLoading">
@@ -105,7 +80,7 @@ onMounted(fetchSalas);
         <CardHistorico class="historico-card" :consulta="atendimento" pagina="historico"/>
       </div>
 
-      <p v-if="atendimentos.length === 0">Nenhum registro encontrado.</p>
+      <p v-if="atendimentos.length === 0">Nenhum registro encontrado no histórico.</p>
     </div>
     <div v-else class="loader">Carregando...</div>
 
@@ -119,7 +94,7 @@ onMounted(fetchSalas);
       </button>
 
       <button
-        v-for="n in Math.max(totalPaginas, 1)"
+        v-for="n in totalPaginas"
         :key="n"
         :class="['btn-pag', { 'ativo': n === paginaAtual }]"
         :disabled="isLoading"
@@ -140,72 +115,12 @@ onMounted(fetchSalas);
 </template>
 
 <style scoped lang="css">
-  .cabecalho {
-    padding: 0 50px;
-    display: flex;
-    justify-content: space-between;
-    height: 150px;
-    align-items: center;
-    background-color: white;
-  }
-  .acoes {
-    margin: 30px;
-    display: flex;
-    gap: 20px;
-  }
-  .acoes a {
-    padding: 10px 20px;
-    text-align: center;
-    text-decoration: none;
-    font-size: 16px;
-    border-radius: 8px;
-  }
-  .consulta {
-    border: 2px solid #128093; color: #128093;
-  }
-  .infos-perfil img {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-  .infos-perfil {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border-left: 1px solid #eee;
-    padding-left: 20px;
-  }
-  .texto{
-    gap: 2px;
-  }
-  .texto p {
-    margin: 0;
-    line-height: 1.2;
-  }
-  .texto .email {
-    color: #666;
-    font-size: 0.85rem;
-  }
-  h1 { text-align: center; font-family: 'Montserrat', sans-serif; margin-top: 20px;}
-
-  main {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    min-height: 80vh;
-  }
-
-  .container-cards {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-  }
-
-  .historico-card { margin-bottom: 20px; }
+  /* Estilos copiados integralmente para manter a paridade visual */
+  h1 { text-align: center; font-family: 'Montserrat', sans-serif; margin-top: 20px; color: #128093; }
+  main { display: flex; flex-direction: column; align-items: center; width: 100%; min-height: 80vh; }
+  .container-cards { flex-grow: 1; display: flex; flex-direction: column; align-items: center; width: 100%; }
+  .historico-card { margin-bottom: 20px; width: 100%; max-width: 1000px; }
+  .loader { text-align: center; padding: 50px; color: #128093; font-weight: bold; }
 
   .paginacao {
     display: flex;
@@ -219,23 +134,10 @@ onMounted(fetchSalas);
   }
 
   .btn-pag {
-    width: 35px;
-    height: 35px;
-    border-radius: 6px;
-    border: 1px solid #ddd;
-    background: white;
-    cursor: pointer;
-    transition: 0.2s;
+    width: 35px; height: 35px; border-radius: 6px; border: 1px solid #ddd;
+    background: white; cursor: pointer; transition: 0.2s;
   }
 
-  .btn-pag.ativo {
-    background-color: #128093;
-    color: white;
-    border-color: #128093;
-  }
-
-  .btn-pag:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-  }
+  .btn-pag.ativo { background-color: #128093; color: white; border-color: #128093; }
+  .btn-pag:disabled { opacity: 0.3; cursor: not-allowed; }
 </style>

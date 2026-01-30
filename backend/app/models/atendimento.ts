@@ -22,7 +22,7 @@ export default class Atendimento extends BaseModel {
   declare disponibilidadeId: number
 
   @column()
-  declare salaId: number
+  declare salaId: number | null
 
   @column.dateTime()
   declare dataHoraInicio: DateTime
@@ -44,6 +44,9 @@ export default class Atendimento extends BaseModel {
 
   @column()
   declare statusPagamento: 'PENDENTE' | 'EM_ANALISE' | 'PAGO' | 'NEGADO' | 'CANCELADO' | 'ESTORNADO' | 'CONTESTADO'
+
+  @column()
+  declare justificativaFalta: string | null
 
   //relacionamentos
   @belongsTo(() => Profissional)

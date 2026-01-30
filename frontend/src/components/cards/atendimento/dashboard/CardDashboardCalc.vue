@@ -1,69 +1,135 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+
 const props = defineProps<{
   qtdAtendimentosConfirmados: number
   qtdAtendimentosAguardandoPagamento: number
   qtdAtendimentosNoHistorico: number
-  finalidade: string
+  finalidade: 'CONFIRMADO' | 'AGUARDANDO' | 'CONCLUIDO'
 }>();
+
+const config = computed(() => {
+  const map = {
+    CONFIRMADO: {
+      label: 'Atendimentos Agendados',
+      valor: props.qtdAtendimentosConfirmados,
+      link: '/cliente/consultas',
+      linkText: 'Ver consultas',
+      cor: '#2ecc71'
+    },
+    AGUARDANDO: {
+      label: 'Pagamentos Pendentes',
+      valor: props.qtdAtendimentosAguardandoPagamento,
+      link: '/cliente/consultas/pagar',
+      linkText: 'Realizar Pagamento',
+      cor: '#f1c40f'
+    },
+    CONCLUIDO: {
+      label: 'Histórico de Atendimentos',
+      valor: props.qtdAtendimentosNoHistorico,
+      link: '/cliente/historico',
+      linkText: 'Ver histórico',
+      cor: '#128093'
+    }
+  };
+  return map[props.finalidade];
+});
 </script>
+
 <template>
-  <div class="card">
-    <div class="texto confirmado" v-if="props.finalidade === 'CONFIRMADO'">
-      <p>VOCÊ TEM {{ props.qtdAtendimentosConfirmados }} ATENDIMENTOS AGENDADOS</p>
-      <div class="botao-link">
-        <RouterLink to="/cliente/agenda" class="link">Visualizar agenda -></RouterLink>
-      </div>
+  <div class="card-moderno">
+    <div class="header-card">
+      <span class="label">{{ config.label }}</span>
     </div>
-    <div class="texto aguardando" v-else-if="props.finalidade === 'AGUARDANDO'">
-      <p>VOCÊ TEM {{ props.qtdAtendimentosAguardandoPagamento }} PAGAMENTOS PENDENTES</p>
+
+    <div class="body-card">
+      <h2 class="valor">{{ config.valor }}</h2>
     </div>
-    <div class="texto historico" v-else-if="props.finalidade === 'CONCLUIDO'">
-      <p>VOCÊ TEM {{ props.qtdAtendimentosNoHistorico }} ATENDIMENTOS NO HISTÓRICO</p>
-      <div class="botao-link">
-        <RouterLink to="/cliente/historico" class="link">Visualizar histórico -></RouterLink>
-      </div>
+
+    <div class="footer-card" v-if="config.link">
+      <RouterLink :to="config.link" class="link">
+        {{ config.linkText }} <span class="seta">→</span>
+      </RouterLink>
     </div>
   </div>
 </template>
-<style scoped lang="css">
-.card {
+
+<style scoped>
+.card-moderno {
+  --primary-color: #128093;
+  --border-color: #eef2f3;
+
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
-  height: 230px;
-  background-color: transparent;
-  border-radius: 20px;
-  box-shadow: 4px 4px 8px 4px rgba(0, 0, 0, 0.1);
-  justify-content: center;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  min-height: 200px;
 }
-.card .texto {
-  width: 100%;
-  align-items: center;
+
+.card-moderno:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
-.card .texto p {
+
+/* Estilização do Header com a Borda */
+.header-card {
+  padding: 16px 20px;
+  border-bottom: 2px solid var(--border-color); /* A borda solicitada */
+  background-color: #fafbfc;
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #64748b;
+  display: block;
   text-align: center;
-  font-weight: bold;
-  color: #128093;
 }
-.texto.aguardando {
-  padding-top: 40px;
-  padding-bottom: 40px;
-}
-.texto.confirmado {
-  padding-top: 40px;
-  padding-bottom: 40px;
-}
-.texto.historico {
-  padding-top: 40px;
-  padding-bottom: 40px;
-}
-.botao-link{
+
+/* Corpo do Card */
+.body-card {
+  flex-grow: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: end;
+  justify-content: center;
+  padding: 20px;
 }
-.link{
+
+.valor {
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: var(--primary-color);
+  margin: 0;
+}
+
+/* Rodapé */
+.footer-card {
+  padding: 12px;
+  background-color: #ffffff;
+  text-align: center;
+}
+
+.link {
   text-decoration: none;
-  color: #128093;
+  color: var(--primary-color);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.link:hover {
+  background-color: #f0f9fa;
+}
+
+.seta {
+  margin-left: 4px;
 }
 </style>

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
+import { useRouter } from 'vue-router'; // <--- 1. Importando o roteador
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 import api from '@/services/api';
+
+const router = useRouter(); // <--- 2. Iniciando o roteador
 
 const form = reactive({
     nome: '',
@@ -16,12 +19,11 @@ const form = reactive({
     uf: '',
     especializacao: '',
     biografia: '',
-    comprovante: null as File | null // Para o arquivo
+    comprovante: null as File | null 
 });
 
 const isLoading = ref(false);
 
-// Função para lidar com o upload do arquivo
 const handleFileUpload = (event: Event) => {
     const target = event.target as HTMLInputElement;
     if (target.files && target.files[0]) {
@@ -37,23 +39,20 @@ const cadastrar = async () => {
     try {
         isLoading.value = true;
 
-        // Como tem arquivo, usamos FormData em vez de JSON simples
-        // O Backend recebe isso através do request.all() ou request.file()
-        // NOTA: Para simplificar, vou mandar como JSON primeiro se você não configurou upload no back ainda.
-        // Se quiser mandar arquivo real, precisa mudar o content-type no api.ts para multipart.
-        
-        // Vamos mandar o objeto padrão para garantir que funcione HOJE com seu controller atual
         const payload = {
             ...form,
-            // Removemos o arquivo do payload JSON para não quebrar se o back não esperar binário ainda
             comprovante: undefined 
         };
 
         await api.post('/profissionais', payload);
         
         alert('Profissional cadastrado com sucesso!');
-        // Limpar formulário ou redirecionar
-        window.location.href = '/user'; // Volta para a lista de usuários
+        
+        // --- AQUI ESTAVA O ERRO ---
+        // ANTES: window.location.href = '/user'; (Isso levava para a tela branca)
+        
+        // AGORA (CORRIGIDO):
+        router.push('/admin/aprovacoes'); // Leva para a lista de aprovações
 
     } catch (error: any) {
         console.error(error);

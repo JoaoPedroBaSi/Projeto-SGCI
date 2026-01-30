@@ -19,7 +19,8 @@ export class PagamentoService {
     profissionalId: number,
     clienteId: number,
     valor: number,
-    formaPagamento: string
+    formaPagamento: string,
+    atendimentoId?: number
   ) {
     const chave = env.get('ASAAS_API_KEY')
     console.log('--- DEBUG ---')
@@ -33,10 +34,24 @@ export class PagamentoService {
     try {
       console.log(`[ASAAS] Processando R$ ${valor} via ${formaPagamento}...`)
 
-      // 1. COBRA NO ASAAS
+      const mapaPagamento: Record<string, string> = {
+        'PIX': 'PIX',
+        'BOLETO': 'BOLETO',
+        'CARTAO': 'CREDIT_CARD',
+        'CARTAO_CREDITO': 'CREDIT_CARD',
+        'CREDITO': 'CREDIT_CARD'
+      }
+
+      const tipoAsaas = mapaPagamento[formaPagamento.toUpperCase()] || 'UNDEFINED'
+
+      if (tipoAsaas === 'UNDEFINED') {
+        throw new Error(`Forma de pagamento ${formaPagamento} não suportada pelo gateway.`)
+      }
+
+      // Na chamada da API:
       const resposta = await this.api.post('/payments', {
         customer: clienteAsaasId,
-        billingType: formaPagamento.toUpperCase(),
+        billingType: tipoAsaas, // <--- Usamos o tipo traduzido
         dueDate: DateTime.now().plus({ days: 1 }).toFormat('yyyy-MM-dd'),
         value: valor,
         description: `Consulta Profissional #${profissionalId}`,
@@ -52,6 +67,7 @@ export class PagamentoService {
       // 2. REGISTRA NO BANCO
       const transacao = await Transacao.create({
         userId: clienteId,
+        atendimentoId: atendimentoId,
         entidadeOrigem: 'clientes',
         entidadeId: clienteId,
         destinatarioTipo: 'profissionais',
@@ -133,6 +149,50 @@ export class PagamentoService {
     } catch (error) {
       console.error('[ERRO ASAAS]', error.response?.data || error.message)
       throw new Error('Erro ao comunicar com o Gateway de Pagamento')
+    }
+  }
+  public async estornarCobranca(atendimentoId: number) {
+    try {
+      // 1. Busca a transação original no seu banco para pegar o ID do Asaas
+      const transacaoOriginal = await Transacao.query()
+        .where('atendimento_id', atendimentoId) // Certifique-se que o campo existe ou use a lógica de busca correta
+        .where('status', 'CONCLUIDA')
+        .firstOrFail()
+
+      console.log(`[ASAAS] Solicitando estorno para a transação: ${transacaoOriginal.referenciaExterna}`)
+
+      // 2. Chama a API do Asaas para estornar
+      // O Asaas permite passar um 'value' se o estorno for parcial,
+      // mas aqui faremos o estorno TOTAL.
+      const resposta = await this.api.post(`/payments/${transacaoOriginal.referenciaExterna}/refund`, {
+        description: `Estorno de atendimento #${atendimentoId} - Cancelado pelo profissional.`
+      })
+
+      const dadosAsaas = resposta.data
+
+      // 3. Registra uma transação de SAÍDA no seu banco para auditoria
+      await Transacao.create({
+        userId: transacaoOriginal.userId,
+        entidadeOrigem: 'sistema',
+        entidadeId: 1, // ID do sistema/administrador
+        destinatarioTipo: 'clientes',
+        destinatarioId: transacaoOriginal.userId,
+        valor: transacaoOriginal.valor,
+        tipo: 'SAIDA', // Agora é uma saída (estorno)
+        finalidade: `Estorno Atendimento #${atendimentoId}`,
+        status: 'CONCLUIDA',
+        referenciaExterna: dadosAsaas.id
+      })
+
+      // 4. Atualiza a transação original para 'ESTORNADA' (opcional, mas recomendado)
+      transacaoOriginal.status = 'ESTORNADA'
+      await transacaoOriginal.save()
+
+      return { success: true, statusAsaas: dadosAsaas.status }
+
+    } catch (error) {
+      console.error('[ERRO ESTORNO ASAAS]', error.response?.data || error.message)
+      throw new Error('Falha ao processar estorno no gateway')
     }
   }
 }

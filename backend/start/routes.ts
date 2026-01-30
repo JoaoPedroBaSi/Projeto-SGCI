@@ -11,6 +11,8 @@ router.get('/', async () => {
   return { hello: 'world' }
 })
 
+router.patch('/user/:id/admin', '#controllers/users_controller.criarAdmin')
+
 // =======================================================
 // 🔐 AUTENTICAÇÃO E REGISTRO (PÚBLICAS)
 // =======================================================
@@ -77,13 +79,17 @@ router.resource('/mov_inventario', '#controllers/mov_inventarios_controller').ex
 // 🚑 ATENDIMENTOS
 // =======================================================
 router.group(() => {
-    router.get('/atendimento', '#controllers/atendimentos_controller.index').use(middleware.auth()).use(middleware.clienteOrProfissionalOnly())
+    // ALTERAÇÃO IMPORTANTE: Liberado para Admin ver histórico (removido clienteOrProfissionalOnly)
+    router.get('/atendimento', '#controllers/atendimentos_controller.index').use(middleware.auth())
+
     router.get('/atendimento/:id', '#controllers/atendimentos_controller.show').middleware(middleware.clienteOrProfissionalOnly())
     router.post('/atendimento', '#controllers/atendimentos_controller.store').middleware(middleware.clienteOnly())
-    router.put('/atendimento/:id', '#controllers/atendimentos_controller.update').middleware(middleware.clienteOnly())
+    router.patch('/atendimento/:id', '#controllers/atendimentos_controller.update')
     router.delete('/atendimento/:id', '#controllers/atendimentos_controller.destroy').middleware(middleware.clienteOrProfissionalOnly())
-    router.patch('/atendimento/:id/recusar', 'AtendimentosController.recusar').use(middleware.auth())
-    router.patch('/atendimento/:id/aprovar', 'AtendimentosController.aprovar').use(middleware.auth())
+    router.patch('/atendimento/:id/recusar', '#controllers/atendimentos_controller.recusar')
+    router.patch('/atendimento/:id/aprovar', '#controllers/atendimentos_controller.aprovar')
+    router.patch('/atendimento/:id/cancelar', '#controllers/atendimentos_controller.cancelar')
+    router.patch('/atendimento/:id/concluir', '#controllers/atendimentos_controller.concluir')
 
     // Prontuário
     router.post('/atendimentos/:id/prontuario', '#controllers/prontuarios_controller.store')
@@ -93,6 +99,8 @@ router.group(() => {
 // 💰 FINANCEIRO E ESTOQUE
 // =======================================================
 router.post('/pagamento/processar', '#controllers/transacoes_controller.realizarPagamento').middleware(middleware.auth())
+
+router.get('/transacoes/saldo', 'TransacoesController.contarSaldo').use(middleware.auth())
 
 router.group(() => {
     // --- Rotas do Profissional ---
@@ -116,7 +124,8 @@ router.group(() => {
     router.get('/parceria', '#controllers/parcerias_controller.index')
     router.get('/parceria/:id', '#controllers/parcerias_controller.show')
     router.post('/parceria', '#controllers/parcerias_controller.store')
-}).use([middleware.auth(), middleware.adminOnly()])
+    router.patch('/parceria/:id', '#controllers/parcerias_controller.destroy')
+}).use([middleware.auth()])
 
 // =======================================================
 // ⚙️ ADMINISTRAÇÃO DE USUÁRIOS

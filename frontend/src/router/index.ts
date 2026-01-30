@@ -131,6 +131,16 @@ const router = createRouter({
       redirect: '/dashboard/cliente'
     },
     {
+      path: '/cliente/consultas/pagar',
+      name: 'pagarConsulta',
+      component: () => import('../views/atendimento/pagamento/RealizarPagamento.vue'),
+    },
+    {
+      path: '/cliente/consultas',
+      name: 'minhasConsultas',
+      component: () => import('../views/atendimento/consulta/MinhasConsultas.vue'),
+    },
+    {
       path: '/about',
       name: 'about',
       component: () => import('../views/AboutView.vue'),

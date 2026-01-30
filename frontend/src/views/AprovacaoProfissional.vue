@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 
@@ -22,187 +22,219 @@ interface Profissional {
     funcao: Funcao;
 }
 
+interface Atendimento {
+    id: number;
+    data_hora_inicio: string;
+    status: string;
+    cliente?: { nome: string };
+    tipo?: string;
+    profissional_id?: number;
+}
+
 // Estados
 const profissionais = ref<Profissional[]>([]);
+const historicoConsultas = ref<Atendimento[]>([]);
 const loading = ref(true);
+const loadingHistorico = ref(false);
+const termoBusca = ref('');
 
 // Controle de Modais
 const modalDetalhesAberto = ref(false);
-const modalRejeicaoAberto = ref(false);
 const profissionalSelecionado = ref<Profissional | null>(null);
-
-// Texto da observação
-const textoObservacao = ref('');
 
 // Formatador de Data
 const formatarData = (dataIso: string) => {
-    if (!dataIso) return 'Data não disponível';
-    return new Date(dataIso).toLocaleDateString('pt-BR');
+    if (!dataIso) return '--/--/----';
+    return new Date(dataIso).toLocaleDateString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
 }
 
-// Buscar API
-const carregarPendentes = async () => {
+// Computada: Filtro de Busca
+const profissionaisFiltrados = computed(() => {
+    if (!termoBusca.value) return profissionais.value;
+    const termo = termoBusca.value.toLowerCase();
+    return profissionais.value.filter(p => 
+        p.nome.toLowerCase().includes(termo) || 
+        p.user?.email.toLowerCase().includes(termo)
+    );
+});
+
+// Buscar Profissionais (TODOS: ATIVOS E REJEITADOS)
+const carregarProfissionais = async () => {
     loading.value = true;
     try {
         const token = localStorage.getItem('auth_token');
-        // Busca TODOS os profissionais
-        const response = await axios.get('http://localhost:3333/profissionais', {
+        const response = await axios.get('https://sgci-api.onrender.com/profissionais', {
             headers: { Authorization: `Bearer ${token}` }
         });
-        
-        // Filtra apenas os pendentes no front (ou no back se tiver filtro)
-        profissionais.value = response.data.filter((p: Profissional) => p.status === 'pendente');
-        
+        // CORREÇÃO: Removemos o .filter para mostrar TODOS
+        profissionais.value = response.data;
     } catch (error) {
-        console.error("Erro ao carregar:", error);
+        console.error("Erro ao carregar profissionais:", error);
     } finally {
         loading.value = false;
     }
 }
 
-// === LÓGICA DE MODAIS ===
+// Buscar Histórico do Profissional
+const carregarHistorico = async (profId: number) => {
+    loadingHistorico.value = true;
+    historicoConsultas.value = [];
+    try {
+        const token = localStorage.getItem('auth_token');
+        const response = await axios.get('https://sgci-api.onrender.com/atendimento', {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (Array.isArray(response.data)) {
+            historicoConsultas.value = response.data.filter((a: any) => a.profissionalId === profId || a.profissional_id === profId);
+        }
+    } catch (error) {
+        console.error("Erro ao carregar histórico:", error);
+    } finally {
+        loadingHistorico.value = false;
+    }
+}
 
-const abrirDetalhes = (prof: Profissional) => {
+// === AÇÕES ===
+
+const abrirHistorico = (prof: Profissional) => {
     profissionalSelecionado.value = prof;
     modalDetalhesAberto.value = true;
+    carregarHistorico(prof.id);
 }
 
-const fecharTudo = () => {
-    modalDetalhesAberto.value = false;
-    modalRejeicaoAberto.value = false;
-    profissionalSelecionado.value = null;
-    textoObservacao.value = '';
-}
-
-// === LÓGICA DE APROVAÇÃO/REJEIÇÃO ===
-
-const confirmarAprovacao = async () => {
-    await enviarStatus('aprovado');
-}
-
-const iniciarRejeicao = () => {
-    // Troca de modal: Fecha Detalhes -> Abre Observação
-    modalDetalhesAberto.value = false;
-    modalRejeicaoAberto.value = true;
-}
-
-const enviarRejeicao = async (comJustificativa: boolean) => {
-    // Se o user clicou em "Não justificar", limpamos o texto
-    if (!comJustificativa) {
-        textoObservacao.value = '';
-    }
-    await enviarStatus('rejeitado');
-}
-
-const enviarStatus = async (status: 'aprovado' | 'rejeitado') => {
-    if (!profissionalSelecionado.value) return;
+// Ação Inteligente: Desativar ou Reativar
+const alternarStatusProfissional = async (prof: Profissional) => {
+    // Lógica para alternar
+    const novoStatus = prof.status === 'aprovado' ? 'rejeitado' : 'aprovado';
+    const verbo = novoStatus === 'aprovado' ? 'REATIVAR' : 'DESATIVAR';
+    
+    if (!confirm(`Deseja realmente ${verbo} o acesso de ${prof.nome}?`)) return;
 
     try {
         const token = localStorage.getItem('auth_token');
-        
-        // Rota para atualizar status (PATCH é ideal para atualização parcial)
-        await axios.patch(`http://localhost:3333/profissionais/${profissionalSelecionado.value.id}/status`, {
-            status: status,
-            observacoes_admin: textoObservacao.value // Envia o texto (vazio ou preenchido)
+        await axios.patch(`https://sgci-api.onrender.com/profissionais/${prof.id}/status`, {
+            status: novoStatus, 
+            observacoes_admin: `Status alterado para ${novoStatus} via Painel Admin.`
         }, {
             headers: { Authorization: `Bearer ${token}` }
         });
         
-        const msg = status === 'aprovado' ? 'Profissional Aprovado! ✅' : 'Profissional Rejeitado. ⛔';
-        alert(msg);
-        
-        fecharTudo();
-        carregarPendentes(); 
+        alert(`Profissional ${novoStatus === 'aprovado' ? 'reativado' : 'desativado'} com sucesso!`);
+        carregarProfissionais(); // Recarrega a lista para atualizar a cor
     } catch (error) {
         console.error(error);
-        alert("Erro ao atualizar status. Verifique se você é Admin.");
+        alert("Erro ao alterar status.");
     }
 }
 
+const fecharModal = () => {
+    modalDetalhesAberto.value = false;
+    profissionalSelecionado.value = null;
+    historicoConsultas.value = [];
+}
+
 onMounted(() => {
-    carregarPendentes();
+    carregarProfissionais();
 });
 </script>
 
 <template>
     <DashboardLayout>
         <div class="page-container">
-            <h2 class="page-title">Solicitações Pendentes</h2>
+            <h2 class="page-title">Gerenciar Usuários</h2>
 
-            <div v-if="loading" class="loading">Carregando solicitações...</div>
+            <div class="search-area">
+                <input 
+                    type="text" 
+                    v-model="termoBusca" 
+                    placeholder="Digite o nome do usuário..." 
+                    class="search-input"
+                />
+            </div>
 
-            <div v-else-if="profissionais.length === 0" class="empty-state">
-                <p>Nenhuma solicitação pendente no momento. Tudo limpo! ✅</p>
+            <div v-if="loading" class="loading">Carregando usuários...</div>
+
+            <div v-else-if="profissionaisFiltrados.length === 0" class="empty-state">
+                <p>Nenhum profissional encontrado.</p>
             </div>
 
             <div v-else class="cards-grid">
-                <div v-for="prof in profissionais" :key="prof.id" class="card-profissional">
-                    <h3 class="card-header">Aprovar Profissional</h3>
-                    <div class="card-body">
-                        <div class="info-row"><span class="label">Nome Completo:</span><span class="value">{{ prof.nome }}</span></div>
-                        <div class="info-row"><span class="label">Email:</span><span class="value">{{ prof.user?.email }}</span></div>
-                        <div class="info-row"><span class="label">Especialidade:</span><span class="value">{{ prof.funcao?.nome }}</span></div>
-                        <div class="info-row"><span class="label">Data da Solicitação:</span><span class="value">{{ formatarData(prof.created_at) }}</span></div>
-                    </div>
-                    <div class="card-footer">
-                        <button @click="abrirDetalhes(prof)" class="btn-detalhes">Ver detalhes <span class="arrow">→</span></button>
-                    </div>
-                </div>
-            </div>
-
-            <div v-if="modalDetalhesAberto && profissionalSelecionado" class="modal-overlay" @click.self="fecharTudo">
-                <div class="modal-content">
-                    <button class="btn-close" @click="fecharTudo">×</button>
-                    <h2 class="modal-title">Aprovar Profissional</h2>
-
-                    <div class="modal-grid">
-                        <div class="modal-left">
-                            <div class="foto-circle">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <div v-for="prof in profissionaisFiltrados" 
+                     :key="prof.id" 
+                     class="card-user"
+                     :class="{'card-inativo': prof.status === 'rejeitado'}">
+                    
+                    <div class="card-content">
+                        <div class="user-avatar">
+                            <div class="avatar-circle">
+                                <span class="avatar-initial">{{ prof.nome.charAt(0) }}</span>
                             </div>
                         </div>
-                        <div class="modal-right">
-                            <div class="data-group"><p><strong>Nome Completo:</strong> {{ profissionalSelecionado.nome }}</p><p><strong>CPF:</strong> {{ profissionalSelecionado.cpf || '---' }}</p></div>
-                            <div class="data-group"><p><strong>E-mail:</strong> {{ profissionalSelecionado.user?.email }}</p><p><strong>Tel:</strong> {{ profissionalSelecionado.telefone || '---' }}</p></div>
-                            <div class="data-group"><p><strong>Data de Nascimento:</strong> {{ formatarData(profissionalSelecionado.dataNascimento || '') }}</p><p><strong>Sexo:</strong> {{ profissionalSelecionado.genero || '---' }}</p></div>
+                        <div class="user-info">
+                            <h3 class="user-name">{{ prof.nome }}</h3>
+                            
+                            <div class="badges-container">
+                                <span class="status-badge" :class="prof.status">{{ prof.status }}</span>
+                            </div>
+
+                            <span class="user-role">Função: {{ prof.funcao?.nome || 'MÉDICO' }}</span>
+                            <span class="user-detail">E-Mail: {{ prof.user?.email }}</span>
+                            <span class="user-detail">Telefone: {{ prof.telefone || '---' }}</span>
                         </div>
                     </div>
-
-                    <div class="modal-bottom-info">
-                        <div class="info-line">
-                            <strong>Registro do Conselho:</strong> {{ profissionalSelecionado.registro_conselho }} 
-                            <span class="separator">|</span> <strong>UF:</strong> {{ profissionalSelecionado.conselho_uf }}
-                            <span class="separator">|</span> <strong>Especialização:</strong> {{ profissionalSelecionado.funcao?.nome }}
-                        </div>
-                        <div class="bio-box"><strong>Biografia:</strong><p>{{ profissionalSelecionado.biografia || 'Nenhuma biografia informada.' }}</p></div>
-                        <div class="comprovante-link"><strong>Comprovante de Credenciamento: </strong><a href="#" class="link-teal" @click.prevent>comprovante_credenciamento.pdf</a></div>
-                    </div>
-
-                    <div class="modal-actions">
-                        <button @click="iniciarRejeicao" class="btn-action btn-rejeitar">Rejeitar</button>
-                        <button @click="confirmarAprovacao" class="btn-action btn-aprovar">Aprovar</button>
+                    
+                    <div class="card-actions">
+                        <button @click="alternarStatusProfissional(prof)" 
+                                class="btn"
+                                :class="prof.status === 'aprovado' ? 'btn-desativar' : 'btn-reativar'">
+                            {{ prof.status === 'aprovado' ? 'Desativar Profissional' : 'Reativar Profissional' }}
+                        </button>
+                        
+                        <button @click="abrirHistorico(prof)" class="btn btn-historico">
+                            Visualizar Histórico
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <div v-if="modalRejeicaoAberto" class="modal-overlay" @click.self="fecharTudo">
-                <div class="modal-content modal-pequeno">
-                    <button class="btn-close" @click="fecharTudo">×</button>
+            <div v-if="modalDetalhesAberto && profissionalSelecionado" class="modal-overlay" @click.self="fecharModal">
+                <div class="modal-content modal-largo">
+                    <button class="btn-close" @click="fecharModal">×</button>
+                    <h2 class="modal-title">Histórico: {{ profissionalSelecionado.nome.split(' ')[0] }}</h2>
                     
-                    <h2 class="modal-title">Adicionar Observação?</h2>
-                    
-                    <div class="input-container">
-                        <textarea 
-                            v-model="textoObservacao" 
-                            placeholder="Ex: Documentação incompleta ou inválida..." 
-                            rows="4"
-                            class="textarea-obs"
-                        ></textarea>
-                    </div>
+                    <div class="modal-body-historico">
+                        <div v-if="loadingHistorico" class="loading-small">Buscando consultas...</div>
+                        
+                        <div v-else-if="historicoConsultas.length === 0" class="empty-history">
+                            <p>Nenhuma consulta encontrada para este profissional.</p>
+                        </div>
 
-                    <div class="modal-actions">
-                        <button @click="enviarRejeicao(false)" class="btn-action btn-rejeitar">Não justificar</button>
-                        <button @click="enviarRejeicao(true)" class="btn-action btn-enviar">Enviar</button>
+                        <div v-else class="table-container">
+                            <table class="history-table">
+                                <thead>
+                                    <tr>
+                                        <th>Data/Hora</th>
+                                        <th>Paciente</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="consulta in historicoConsultas" :key="consulta.id">
+                                        <td>{{ formatarData(consulta.data_hora_inicio) }}</td>
+                                        <td>{{ consulta.cliente?.nome || 'Cliente Removido' }}</td>
+                                        <td>
+                                            <span class="status-badge-table" :class="consulta.status.toLowerCase()">
+                                                {{ consulta.status }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -213,67 +245,81 @@ onMounted(() => {
 
 <style scoped>
 .page-container { padding: 40px; font-family: 'Montserrat', sans-serif; color: #4b5563; }
-.page-title { color: #2dd4bf; font-weight: 800; font-size: 1.8rem; margin-bottom: 30px; }
+.page-title { color: #117a8b; font-weight: 800; font-size: 1.8rem; margin-bottom: 20px; }
 
-/* Cards */
-.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 25px; }
-.card-profissional { background: white; border-radius: 12px; border: 1px solid #e5e7eb; display: flex; flex-direction: column; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-.card-profissional:hover { transform: translateY(-3px); }
-.card-header { text-align: center; color: #2dd4bf; font-weight: 700; padding: 20px 0 10px 0; margin: 0 20px; border-bottom: 1px solid #f0f0f0; font-size: 1.1rem; }
-.card-body { padding: 20px; font-size: 0.9rem; flex: 1; }
-.info-row { margin-bottom: 8px; display: flex; gap: 5px; }
-.label { font-weight: 700; color: #6b7280; }
-.value { color: #374151; }
-.card-footer { padding: 15px; text-align: center; }
-.btn-detalhes { background: none; border: none; color: #2dd4bf; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
-.btn-detalhes:hover { text-decoration: underline; }
-
-/* Modais Comuns */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.modal-content { background: white; width: 650px; max-width: 90%; border-radius: 16px; padding: 40px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.2); text-align: left; }
-.modal-pequeno { width: 450px; } /* Estilo específico para o modal de obs */
-
-.btn-close { position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 2rem; color: #9ca3af; cursor: pointer; }
-.modal-title { color: #2dd4bf; text-align: center; font-weight: 800; margin-bottom: 30px; font-size: 1.5rem; }
-
-/* Layout Detalhes */
-.modal-grid { display: grid; grid-template-columns: 100px 1fr; gap: 20px; margin-bottom: 20px; align-items: start; }
-.foto-circle { width: 90px; height: 90px; border-radius: 50%; border: 2px solid #2dd4bf; display: flex; align-items: center; justify-content: center; background-color: #f0fdfa; }
-.modal-right { display: flex; flex-direction: column; gap: 8px; }
-.data-group { display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; border-bottom: 1px solid #f3f4f6; padding-bottom: 8px; }
-.data-group p { margin: 0; font-size: 0.9rem; color: #4b5563; }
-.data-group strong { color: #6b7280; font-weight: 700; margin-right: 5px; }
-
-.modal-bottom-info { margin-top: 15px; font-size: 0.9rem; color: #4b5563; }
-.info-line { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #f3f4f6; }
-.separator { margin: 0 10px; color: #d1d5db; }
-.bio-box { margin-bottom: 15px; }
-.bio-box p { font-size: 0.85rem; margin-top: 5px; line-height: 1.4; }
-.link-teal { color: #2dd4bf; text-decoration: underline; cursor: pointer; font-weight: 600; }
-
-/* Botoes */
-.modal-actions { display: flex; justify-content: center; gap: 20px; margin-top: 30px; }
-.btn-action { padding: 10px 40px; border-radius: 50px; font-weight: 700; font-size: 1rem; cursor: pointer; background: white; transition: all 0.2s; }
-.btn-rejeitar { border: 2px solid #f87171; color: #f87171; }
-.btn-rejeitar:hover { background-color: #fef2f2; }
-.btn-aprovar, .btn-enviar { border: 2px solid #2dd4bf; color: #2dd4bf; }
-.btn-aprovar:hover, .btn-enviar:hover { background-color: #f0fdfa; }
-
-/* Input Textarea */
-.input-container { width: 100%; }
-.textarea-obs { 
-    width: 100%; 
-    padding: 15px; 
-    border-radius: 12px; 
-    border: 1px solid #d1d5db; 
-    font-family: 'Montserrat', sans-serif;
-    font-size: 0.95rem;
-    resize: none;
+/* SEARCH */
+.search-area { margin-bottom: 30px; }
+.search-input {
+    width: 100%;
+    padding: 15px 20px;
+    border: 1px solid #2dd4bf;
+    border-radius: 8px;
+    font-size: 1rem;
     outline: none;
-    box-sizing: border-box;
+    transition: box-shadow 0.3s;
 }
-.textarea-obs:focus { border-color: #2dd4bf; }
+.search-input:focus { box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2); }
 
-.empty-state { text-align: center; color: #9ca3af; font-size: 1.2rem; margin-top: 50px; }
-.loading { text-align: center; color: #2dd4bf; font-weight: bold; }
+/* GRID */
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(450px, 1fr)); gap: 25px; }
+.card-user { background: white; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); transition: transform 0.2s; }
+.card-user:hover { transform: translateY(-2px); box-shadow: 0 10px 15px rgba(0,0,0,0.05); }
+.card-content { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; }
+
+/* ESTILO PARA USUÁRIO INATIVO */
+.card-inativo { 
+    background-color: #f8fafc; 
+    border-color: #cbd5e1; 
+    opacity: 0.85; 
+}
+.card-inativo .user-name { color: #64748b; } /* Nome cinza */
+
+/* AVATAR */
+.avatar-circle { width: 70px; height: 70px; background-color: #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; font-weight: bold; }
+.user-info { display: flex; flex-direction: column; }
+.user-name { color: #117a8b; margin: 0 0 5px 0; font-size: 1.1rem; }
+.user-role { font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 700; margin-bottom: 5px; }
+.user-detail { font-size: 0.85rem; color: #94a3b8; margin-bottom: 2px; }
+
+/* STATUS BADGES NO CARD */
+.badges-container { margin-bottom: 5px; }
+.status-badge { 
+    padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; 
+}
+.status-badge.aprovado { background: #dcfce7; color: #166534; }
+.status-badge.rejeitado { background: #fee2e2; color: #991b1b; }
+.status-badge.pendente { background: #fef9c3; color: #854d0e; }
+
+
+/* ACTIONS */
+.card-actions { display: flex; gap: 15px; margin-top: auto; }
+.btn { flex: 1; padding: 10px; border: none; border-radius: 20px; font-weight: 600; font-size: 0.85rem; cursor: pointer; color: white; transition: opacity 0.2s; }
+.btn:hover { opacity: 0.9; }
+
+.btn-desativar { background-color: #ff5722; }
+.btn-reativar { background-color: #22c55e; } /* Verde para Reativar */
+.btn-historico { background-color: #007bff; }
+
+/* MODAL */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 999; }
+.modal-content { background: white; padding: 30px; border-radius: 12px; width: 500px; position: relative; max-height: 80vh; display: flex; flex-direction: column; }
+.modal-largo { width: 700px; }
+.btn-close { position: absolute; top: 10px; right: 15px; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+.modal-title { color: #117a8b; margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+
+/* TABELA DE HISTÓRICO */
+.modal-body-historico { flex: 1; overflow-y: auto; }
+.table-container { width: 100%; overflow-x: auto; }
+.history-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.history-table th { text-align: left; padding: 10px; background-color: #f8fafc; color: #64748b; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+.history-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+
+/* STATUS BADGES NA TABELA */
+.status-badge-table { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+.status-badge-table.pendente { background-color: #fef9c3; color: #854d0e; }
+.status-badge-table.aprovado, .status-badge-table.confirmado { background-color: #dcfce7; color: #166534; }
+.status-badge-table.concluido { background-color: #dbeafe; color: #1e40af; }
+.status-badge-table.cancelado, .status-badge-table.recusado { background-color: #fee2e2; color: #991b1b; }
+
+.loading, .loading-small, .empty-state, .empty-history { text-align: center; color: #94a3b8; margin-top: 20px; font-size: 1rem; }
 </style>

@@ -4,75 +4,78 @@ import { ref, onMounted, computed } from 'vue';
 import api from '@/services/api';
 import type { Profissional, Atendimento, Sala, Cliente } from '@/types/index';
 import CardDashboardProfissional from '@/components/cards/atendimento/dashboard/CardDashboardProfissional.vue';
+import CardInfosLogin from '@/components/cards/atendimento/login/CardInfosLogin.vue';
 const atendimentos = ref<Atendimento[]>([]);
 const isLoading = ref(true);
 const error = ref<string | null>(null);
   const disponibilidades = ref<any[]>([]);
 //clienteLogadoId é o que determina quais dados X cliente irá visualizar.
-//const profissionalLogadoId = ref(1);
 const usuarioLogado = JSON.parse(localStorage.getItem('user') || '{}');
-const profissionalLogadoId = ref(usuarioLogado.id);
+const profissionalLogadoId = ref(
+  usuarioLogado.id ||
+  usuarioLogado.user?.id ||
+  usuarioLogado.perfil?.id
+);
 
 const fetchSalas = async () => {
   isLoading.value = true;
   error.value = null;
 
-  const combinarDados = (
-  listaAtendimentos: Atendimento[],
-  listaSalas: Sala[],
-  listaProfissionais: Profissional[],
-  listaClientes: Cliente[] // Adicione este parâmetro
-) => {
-  const token = localStorage.getItem('token');
-  return listaAtendimentos.map(atendimento => {
-    const sala = listaSalas.find(s => s.id === atendimento.salaId);
-    const profissional = listaProfissionais.find(s => s.id === atendimento.profissionalId);
-    const cliente = listaClientes.find(c => c.id === atendimento.clienteId); // <--- Encontra o cliente
+  const token = localStorage.getItem('auth_token');
 
-    return {
-      ...atendimento,
-      nomeSala: sala ? sala.nome : 'Sala Indefinida',
-      nomeProfissional: profissional ? profissional.nome : 'Profissional indefinido',
-      // Anexa os dados do cliente que precisamos para os gráficos
-      generoCliente: cliente ? cliente.genero : 'Não informado',
-      nascimentoCliente: cliente ? cliente.dataNascimento : null
-    };
-  });
-};
-
-  try {
-  const [atendimentoResponse, salaResponse, profissionalResponse, clienteResponse] = await Promise.all([
-    api.get<Atendimento[]>('/atendimento'),
-    api.get<Sala[]>('/sala'),
-    api.get<Profissional[]>('/profissional'),
-    api.get<Cliente[]>('/cliente')
-  ]);
-
-  const listaAtendimentos = atendimentoResponse.data;
-  const listaSalas = salaResponse.data;
-  const listaProfissionais = profissionalResponse.data;
-  const listaClientes = clienteResponse.data;
-
-  // Assumindo que a função combinarDados agora aceita apenas atendimentos e salas
-  const atendimentosCombinados = combinarDados(listaAtendimentos, listaSalas, listaProfissionais, listaClientes);
-
-  atendimentos.value = atendimentosCombinados.filter(atendimento => {
-      // Usamos a propriedade 'clienteId' do atendimento para comparar com o ID logado
-      return atendimento.profissionalId === profissionalLogadoId.value;
-    });
-
-  } catch (error) {
-    console.error("Erro ao buscar salas:", error);
-  } finally {
+  if (!token) {
+    error.value = "Sessão expirada. Faça login novamente.";
     isLoading.value = false;
+    return;
   }
 
-  type DadosAnexadosSala = {
-    nomeSala: string;
-}
+  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-  type DadosAnexadosProfissional = {
-    nomeProfissional: string;
+  try {
+    const [atendRes, salaRes, profRes, cliRes] = await Promise.allSettled([
+      api.get<Atendimento[]>('/atendimento'),
+      api.get<Sala[]>('/sala'),
+      api.get<Profissional[]>('/profissionais'),
+      api.get<Cliente[]>('/cliente') // singular conforme seu router.resource
+    ]);
+
+    // Extração segura dos dados
+    const listaAtendimentos = atendRes.status === 'fulfilled' ? atendRes.value.data : [];
+    const listaSalas = salaRes.status === 'fulfilled' ? salaRes.value.data : [];
+    const listaProfissionais = profRes.status === 'fulfilled' ? profRes.value.data : [];
+    const listaClientes = cliRes.status === 'fulfilled' ? cliRes.value.data : [];
+
+    if (atendRes.status === 'rejected') console.error("Erro atendimentos:", atendRes.reason);
+    if (cliRes.status === 'rejected') console.warn("Aviso: Rota de clientes falhou (404 ou permissão).");
+
+    // Mapeamento dos dados (Combinar)
+    const atendimentosCombinados = listaAtendimentos.map(atendimento => {
+      const sala = listaSalas.find(s => s.id === atendimento.salaId);
+      const profissional = listaProfissionais.find(p => p.id === atendimento.profissionalId);
+      const cliente = listaClientes.find(c => c.id === atendimento.clienteId);
+
+      return {
+        ...atendimento,
+        nomeSala: sala?.nome || 'Sala Indefinida',
+        nomeProfissional: profissional?.nome || 'Profissional Indefinido',
+        generoCliente: cliente?.genero || 'Não informado',
+        nascimentoCliente: cliente?.dataNascimento || null
+      };
+    });
+
+    // Filtro final pelo Profissional Logado
+    atendimentos.value = atendimentosCombinados.filter(a => {
+      const idAtendimento = String(a.profissionalId || (a as any).profissional_id);
+      const idLogado = String(profissionalLogadoId.value);
+      return idAtendimento === idLogado;
+    });
+
+
+  } catch (err) {
+    console.error("Erro crítico ao buscar dados:", err);
+    error.value = "Erro interno ao processar o painel.";
+  } finally {
+    isLoading.value = false;
   }
 };
 
@@ -96,6 +99,13 @@ const contarAtendimentosAguardandoPagamento = computed(() => {
     });
 
     return aguardando.length;
+});
+
+const contarAtendimentosAguardandoConfirmacao = computed(() => {
+    return atendimentos.value.filter(atendimento => {
+        // O ?. garante que não quebre se o status for nulo
+        return atendimento.status?.toUpperCase() === 'PENDENTE';
+    }).length;
 });
 
 const contarAtendimentosNoHistorico = computed(() => {
@@ -218,8 +228,56 @@ const dataIdadePizza = computed(() => {
   };
 });
 
-const apenasBloqueados = computed(() => {
-  return disponibilidades.value.filter(d => d.status === 'BLOQUEADO');
+const apenasLivres = computed(() => {
+  // Filtra as disponibilidades do profissional logado com status LIVRE
+  return disponibilidades.value.filter(d => d.status === 'LIVRE');
+});
+
+const agendaSemanal = computed(() => {
+  const diasNome = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+  // Usamos um Map para garantir a ordem de inserção ou organizar depois
+  const agrupado: Record<string, { inicio: string, fim: string }> = {};
+
+  // 1. Filtrar apenas os horários LIVRES
+  const livres = disponibilidades.value.filter(d => d.status === 'LIVRE');
+
+  livres.forEach(disp => {
+    // Criamos a data tratando-a como UTC para evitar o desvio de -3h do Brasil
+    const dataInicio = new Date(disp.dataHoraInicio);
+    const dataFim = new Date(disp.dataHoraFim);
+
+    // Pegamos o dia e as horas em formato UTC
+    const diaIndex = dataInicio.getUTCDay();
+    const nomeDia = diasNome[diaIndex];
+
+    const horaInicio = dataInicio.getUTCHours().toString().padStart(2, '0') + ':' +
+                       dataInicio.getUTCMinutes().toString().padStart(2, '0');
+
+    const horaFim = dataFim.getUTCHours().toString().padStart(2, '0') + ':' +
+                    dataFim.getUTCMinutes().toString().padStart(2, '0');
+
+    if (nomeDia) {
+      if (!agrupado[nomeDia]) {
+        agrupado[nomeDia] = { inicio: horaInicio, fim: horaFim };
+      } else {
+        // Lógica para pegar o extremo do dia (Primeiro e Último horário)
+        if (horaInicio < agrupado[nomeDia].inicio) agrupado[nomeDia].inicio = horaInicio;
+        if (horaFim > agrupado[nomeDia].fim) agrupado[nomeDia].fim = horaFim;
+      }
+    }
+  });
+
+  // Ordenar para garantir que Segunda venha antes de Terça, etc.
+  const ordemDias = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+  const resultadoOrdenado: Record<string, any> = {};
+
+  ordemDias.forEach(dia => {
+    if (agrupado[dia]) {
+      resultadoOrdenado[dia] = agrupado[dia];
+    }
+  });
+
+  return resultadoOrdenado;
 });
 const formatarData = (iso: string) => {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
@@ -231,7 +289,7 @@ const formatarHora = (iso: string) => {
 
 const fetchDisponibilidade = async () => {
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('auth_token');
     const agora = new Date(); // Pega a data e hora exata de agora
 
     const response = await api.get('/disponibilidade', {
@@ -260,14 +318,21 @@ const fetchDisponibilidade = async () => {
 };
 
 onMounted(() => {
-  fetchSalas();
-  fetchDisponibilidade();
+  // Recalcula caso o localStorage tenha sido preenchido após a inicialização do script
+  if (!profissionalLogadoId.value) {
+    const freshUser = JSON.parse(localStorage.getItem('user_data') || '{}');
+    profissionalLogadoId.value = freshUser.id || freshUser.user?.id;
+  }
+
+  if (profissionalLogadoId.value) {
+    fetchSalas();
+    fetchDisponibilidade();
+  } else {
+    error.value = "Não foi possível identificar o profissional logado.";
+    isLoading.value = false;
+  }
 });
-
-
 </script>
-
-<!--TELA DO PROFISSIONAL-->
 
 <template>
   <DashboardLayout>
@@ -275,27 +340,14 @@ onMounted(() => {
       <div class="titulo">
         <h1>Seus dashboards</h1>
       </div>
-      <div class="infos-perfil">
-        <div class="foto">
-          <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
-        </div>
-        <div class="texto">
-          <p class="nome">{{ usuarioLogado.nome || 'Usuário' }}</p>
-          <p class="email">{{ usuarioLogado.email || 'E-mail não informado' }}</p>
-        </div>
-      </div>
+      <CardInfosLogin/>
     </header>
 
     <main class="dashboard-layout">
       <section class="coluna-dashboards">
         <div class="grid-cards-principais">
           <CardDashboardProfissional finalidade="rendimento" :chartData="saldoTotal" titulo="Saldo"/>
-          <CardDashboardProfissional
-            finalidade="agenda"
-            :qtdAgendadas="contarAtendimentosConfirmados"
-            :qtdFinalizadas="contarAtendimentosNoHistorico"
-            :qtdPendentesPagamento="contarAtendimentosAguardandoPagamento"
-          />
+          <CardDashboardProfissional finalidade="aguardando-confirmacao" :qtdAguardandoConfirmacao="contarAtendimentosAguardandoConfirmacao"/>
         </div>
 
         <div class="grid-graficos">
@@ -308,22 +360,28 @@ onMounted(() => {
 
       <aside class="coluna-calendario">
         <div class="card-calendario-fixo">
-          <h3>Dias Bloqueados</h3>
-          <p class="legenda">Datas em que você marcou como "Bloqueado".</p>
+          <h3>Minha Disponibilidade</h3>
+          <p class="legenda">Horários livres configurados para esta semana.</p>
 
-          <div class="lista-bloqueios">
-            <div v-for="bloqueio in apenasBloqueados" :key="bloqueio.id" class="item-bloqueio">
-              <span class="ponto-vermelho"></span>
-              <div class="info-bloqueio">
-                <strong>{{ formatarData(bloqueio.dataHoraInicio) }}</strong>
-                <span>{{ formatarHora(bloqueio.dataHoraInicio) }} - {{ formatarHora(bloqueio.dataHoraFim) }}</span>
+          <div class="lista-disponibilidade">
+            <div v-for="(horario, dia) in agendaSemanal" :key="dia" class="item-agenda">
+              <div class="dia-semana">
+                <span class="ponto-verde"></span>
+                <strong>{{ dia }}</strong>
+              </div>
+              <div class="info-horario">
+                <span>{{ horario.inicio }} às {{ horario.fim }}</span>
               </div>
             </div>
-            <div v-if="apenasBloqueados.length === 0" class="sem-bloqueios">
-              Nenhum bloqueio registrado.
+
+            <div v-if="Object.keys(agendaSemanal).length === 0" class="sem-dados">
+              Nenhum horário livre configurado.
             </div>
-            <div class="link">
-              <RouterLink to="/profissional/disponibilidade" class="router-link">Informar faltas -></RouterLink>
+
+            <div class="link-container">
+              <RouterLink to="/profissional/cadastro/disponibilidade" class="router-link">
+                Gerenciar Agenda ->
+              </RouterLink>
             </div>
           </div>
         </div>
@@ -384,12 +442,53 @@ onMounted(() => {
     border: 1px solid #eee;
   }
   .card-calendario-fixo h3 { color: #128093; margin-top: 0; }
-  .lista-bloqueios { max-height: 500px; overflow-y: auto; }
-  .item-bloqueio { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f9f9f9; }
-  .ponto-vermelho { width: 10px; height: 10px; background-color: #ff4d4d; border-radius: 50%; }
-  .info-bloqueio { display: flex; flex-direction: column; }
-  .info-bloqueio strong { font-size: 0.95rem; }
-  .info-bloqueio span { font-size: 0.85rem; }
+
+  .item-agenda {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+  }
+
+  .dia-semana {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ponto-verde {
+    width: 8px;
+    height: 8px;
+    background-color: #28a745;
+    border-radius: 50%;
+    box-shadow: 0 0 5px rgba(40, 167, 69, 0.4);
+  }
+
+  .info-horario span {
+    font-size: 0.9rem;
+    color: #555;
+    background: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .link-container {
+    margin-top: 20px;
+    text-align: center;
+  }
+
+  .router-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 0.85rem;
+  }
+
+  .router-link:hover {
+    text-decoration: underline;
+  }
 
   .link{
     margin-top: 10px;

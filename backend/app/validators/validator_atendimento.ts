@@ -2,23 +2,21 @@
 import vine from '@vinejs/vine'
 
 export const storeAtendimentoValidator = vine.compile(
-    vine.object({
-      profissional_id: vine.number().positive(),
-      cliente_id: vine.number().positive(),
-      observacoes: vine.string().minLength(10).maxLength(200),
-      data_hora_inicio: vine.string().trim(),
-      forma_pagamento: vine.enum(['DINHEIRO', 'PIX', 'CREDITO', 'DEBITO']),
-    })
+  vine.object({
+    profissional_id: vine.number().positive(),
+    cliente_id: vine.number().positive(),
+    disponibilidade_id: vine.number().positive(), // ADICIONADO
+    data_hora_inicio: vine.string().trim(),
+    // Ajustado para aceitar exatamente o que vem do Vue
+    forma_pagamento: vine.enum(['DINHEIRO', 'PIX', 'CARTÃO DE CRÉDITO', 'DEBITO', 'BOLETO']),
+    // Opcional para evitar erro se o usuário escrever pouco
+    observacoes: vine.string().trim().maxLength(200).optional(),
+    status: vine.enum(['PENDENTE', 'CONFIRMADO', 'CONCLUIDO', 'CANCELADO']).optional()
+  })
 )
 export const updateAtendimentoValidator = vine.compile(
     vine.object({
-      profissional_id: vine.number().positive().optional(),
-      cliente_id: vine.number().positive().optional(),
       observacoes: vine.string().minLength(10).maxLength(200).optional(),
-      data_hora_inicio: vine.string().trim(),
-      //data_hora_inicio: vine.date({formats: ['iso8601'], }).optional(),
-      valor: vine.number().decimal([0, 2]).positive().min(0).optional().optional(),
-      forma_pagamento: vine.enum(['DINHEIRO', 'PIX', 'CREDITO', 'DEBITO']).optional(),
-      status: vine.enum(['PENDENTE', 'CONFIRMADO', 'CONCLUIDO', 'CANCELADO']).optional(),
+      data_hora_inicio: vine.string().trim().optional(),
   })
 )

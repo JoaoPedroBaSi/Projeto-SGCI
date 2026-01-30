@@ -13,7 +13,6 @@ export class AtendimentoService {
   constructor(protected transacaoService: TransacaoService) {}
   public async criarAtendimento(
     dados: any,
-    salaReservadaId: number,
     dataHoraInicioLuxon: DateTime,
     disponibilidade: Disponibilidade
   ) {
@@ -22,7 +21,6 @@ export class AtendimentoService {
       const atendimentoData = {
         profissionalId: dados.profissional_id,
         clienteId: dados.cliente_id,
-        salaId: salaReservadaId,
         disponibilidadeId: disponibilidade.id,
         observacoes: dados.observacoes,
         formaPagamento: dados.forma_pagamento,
@@ -32,11 +30,12 @@ export class AtendimentoService {
         dataHoraFim: disponibilidade.dataHoraFim,
       }
 
-      await Atendimento.create(atendimentoData, { client: trx })
+      // O status da disponibilidade muda para RESERVADO para evitar que outras solicitações sejam feitas para o mesmo horário
+      disponibilidade.status = 'RESERVADO'
+      disponibilidade.useTransaction(trx)
+      await disponibilidade.save()
 
-      // LOGICA ALTERADA:
-      // Removida a atualização da disponibilidade para 'OCUPADO' aqui.
-      // O horário deve permanecer 'LIVRE' até que o administrador aprove.
+      await Atendimento.create(atendimentoData, { client: trx })
     })
   }
 
@@ -50,9 +49,6 @@ export class AtendimentoService {
     let disponibilidadeSlotNovo = null
     let dadosParaUpdate = { ...dados } as any
 
-    //Verifica se o profissional mudou
-    const profissionalMudou =
-      dados.profissional_id && dados.profissional_id !== atendimento.profissionalId
     //Verifica se o usuário informou uma nova data hora para começar o atendimento
     const horarioMudou =
       dados.data_hora_inicio &&
@@ -60,14 +56,13 @@ export class AtendimentoService {
         atendimento.dataHoraInicio.toSeconds()
 
     // Se o horário ou profissional mudou, precisamos validar o novo slot
-    if (horarioMudou || profissionalMudou) {
+    if (horarioMudou) {
       const dataHoraInicioLuxon = DateTime.fromJSDate(
         dados.data_hora_inicio || atendimento.dataHoraInicio.toJSDate()
       )
-      const profissionalIdNovo = dados.profissional_id || atendimento.profissionalId
 
       disponibilidadeSlotNovo = await this.temDisponibilidade(
-        profissionalIdNovo,
+        atendimento.id,
         dataHoraInicioLuxon
       )
 
@@ -77,10 +72,8 @@ export class AtendimentoService {
         throw new Error('O horário solicitado já está marcado para outro atendimento.')
       if (disponibilidadeSlotNovo.status === 'BLOQUEADO')
         throw new Error('O profissional se encontra indisponível para este horário.')
-      if (disponibilidadeSlotNovo.status === 'FINALIZADO')
-        throw new Error('O profissional já finalizou seus trabalhos nesse horário.')
 
-      const salaReservada = await Sala.query().where('profissional_id', profissionalIdNovo).first()
+      const salaReservada = await Sala.query().where('profissional_id', atendimento.profissionalId).first()
       if (!salaReservada) throw new Error('Este profissional não tem nenhum sala reservada.')
 
       //Adiciona informações do novo slot ao update
@@ -90,50 +83,9 @@ export class AtendimentoService {
       dadosParaUpdate.disponibilidadeId = disponibilidadeSlotNovo.id
     }
 
-    const usuarioValido =
-      usuarioLogado.perfil_tipo === 'profissional' || usuarioLogado.perfil_tipo === 'admin'
-    if (!usuarioValido) {
-      //Se for cliente, remove campos restritos
-      const camposRestritos = ['valor', 'status_pagamento', 'status']
-      for (const campo of camposRestritos) {
-        delete dadosParaUpdate[campo]
-      }
-    }
-    const statusFinal = dadosParaUpdate.status ?? atendimento.status
-    const statusConcluido = statusFinal === 'CONCLUIDO'
-    dadosParaUpdate.status = statusFinal // Garante que o status correto será salvo no final
-
-    const valorPagamento = dadosParaUpdate.valor ?? atendimento.valor
-    dadosParaUpdate.valor = valorPagamento // Garante que o valor correto será salvo no final
-
-    //Processa se estiver 'CONCLUIDO' E o valor for > 0.
-    const valorPositivo = typeof valorPagamento === 'number' && valorPagamento > 0
-    const deveProcessarPagamento = statusConcluido && valorPositivo
-
-    if (deveProcessarPagamento) {
-      dadosParaUpdate.status_pagamento = 'PENDENTE'
-      try {
-        // CHAMA O SERVICE e obtém o status final do pagamento
-        const novoStatusPagamento = await this.transacaoService.processarConclusaoAtendimento(
-          atendimento,
-          usuarioLogado, // Passa o usuário logado para o Service
-          valorPagamento
-        )
-        // O Service deu sucesso: usa o status retornado (CONCLUIDO)
-        dadosParaUpdate.status_pagamento = novoStatusPagamento
-      } catch (error) {
-        // O Service lançou uma exceção (Falha na transação, erro de lógica, etc.)
-        console.error('Falha no processamento financeiro:', error)
-        // O Controller define o status de falha e lança o erro para o usuário
-        dadosParaUpdate.status_pagamento = 'NEGADO'
-        // Relança o erro para a transação do DB ser cancelada e retornar 400
-        throw new Error('A transação falhou. Tente novamente mais tarde.')
-      }
-    }
-
     await db.transaction(async (trx: TransactionClientContract) => {
-      const precisaManipularSlots = horarioMudou || profissionalMudou
-      //Libera o Slot Antigo (Se houve mudança de tempo ou profissional)
+      const precisaManipularSlots = horarioMudou
+      //Libera o Slot Antigo (Se houve mudança de tempo)
       if (slotAntigo && precisaManipularSlots) {
         //Apenas liberamos se ele estava ocupado
         if (slotAntigo?.status === 'OCUPADO') {
@@ -142,23 +94,18 @@ export class AtendimentoService {
             .update({ status: 'LIVRE' })
         }
       }
-      //Ocupa o Slot Novo (Se houve mudança de tempo ou profissional)
+      //Ocupa o Slot Novo (Se houve mudança de tempo)
       if (disponibilidadeSlotNovo && precisaManipularSlots) {
         await Disponibilidade.query({ client: trx })
           .where('id', disponibilidadeSlotNovo.id)
-          .update({ status: 'OCUPADO' })
+          .update({ status: 'RESERVADO' })
       }
 
+      atendimento.status = 'PENDENTE'
       //Salvando o atendimento
       atendimento.merge(dadosParaUpdate)
       atendimento.useTransaction(trx)
       await atendimento.save()
-
-      if (atendimento.status === 'CONCLUIDO') {
-        await Disponibilidade.query({ client: trx })
-          .where('id', atendimento.disponibilidadeId)
-          .update({ status: 'FINALIZADO' })
-      }
     })
   }
   public async temDisponibilidade(

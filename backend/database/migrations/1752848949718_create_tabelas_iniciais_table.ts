@@ -42,7 +42,7 @@ export default class extends BaseSchema {
       table.string('email').notNullable().unique()
       table.string('senha').notNullable()
       table.string('telefone').notNullable()
-      
+
       // === CAMPOS ADICIONADOS PARA CORRIGIR O SEEDER ===
       table.enum('status', ['pendente', 'aprovado', 'rejeitado']).defaultTo('pendente')
       table.string('registro_conselho').nullable()
@@ -70,7 +70,7 @@ export default class extends BaseSchema {
       table.integer('profissional_id').unsigned().notNullable().references('profissionais.id').onDelete('CASCADE')
       table.timestamp('data_hora_inicio').notNullable()
       table.timestamp('data_hora_fim').notNullable()
-      table.enum('status', ['LIVRE', 'OCUPADO', 'BLOQUEADO', 'FINALIZADO']).notNullable().defaultTo('LIVRE')
+      table.enum('status', ['LIVRE', 'OCUPADO', 'BLOQUEADO', 'FINALIZADO', 'RESERVADO']).notNullable().defaultTo('LIVRE')
       table.timestamps(true, true)
     })
 
@@ -89,13 +89,14 @@ export default class extends BaseSchema {
       table.integer('profissional_id').unsigned().notNullable().references('profissionais.id').onDelete('CASCADE')
       table.integer('cliente_id').unsigned().notNullable().references('clientes.id').onDelete('CASCADE')
       table.integer('disponibilidade_id').unsigned().notNullable().references('disponibilidades.id').onDelete('CASCADE')
-      table.integer('sala_id').unsigned().references('salas.id').onDelete('SET NULL')
+      table.integer('sala_id').nullable().unsigned().references('salas.id').onDelete('SET NULL')
       table.timestamp('data_hora_inicio').notNullable()
       table.timestamp('data_hora_fim').nullable()
       table.text('observacoes').nullable()
       table.decimal('valor', 10, 2).nullable()
       table.enum('forma_pagamento', ['DINHEIRO', 'PIX', 'CREDITO', 'DEBITO']).notNullable()
-      table.enum('status', ['CONFIRMADO', 'CANCELADO', 'CONCLUIDO']).notNullable().defaultTo('CONFIRMADO')
+      table.enum('status', ['CONFIRMADO', 'CANCELADO', 'CONCLUIDO', 'PENDENTE']).notNullable().defaultTo('PENDENTE')
+      table.string('justificativa_falta', 200).nullable()
       table.enum('status_pagamento', ['PENDENTE', 'EM_ANALISE', 'PAGO', 'NEGADO', 'CANCELADO', 'ESTORNADO', 'CONTESTADO']).nullable()
       table.timestamps(true, true)
     })
@@ -104,7 +105,12 @@ export default class extends BaseSchema {
       table.increments('id')
       table.string('nome', 40).notNullable()
       table.string('ramo', 40).notNullable()
-      table.integer('cep').notNullable()
+      table.string('cep').notNullable()
+      table.string('cnpj', 14).notNullable()
+      table.string('cidade', 40).notNullable()
+      table.string('bairro', 40).notNullable()
+      table.string('rua', 40).notNullable()
+      table.string('numero', 3).notNullable()
       table.string('site_url').nullable()
       table.float('porcentagem_desconto', 5, 2).notNullable()
       table.string('tipo_convenio', 50).notNullable()
@@ -158,7 +164,7 @@ export default class extends BaseSchema {
       table.increments('id')
       table.integer('atendimento_id').unsigned().nullable().references('id').inTable('atendimentos').onDelete('SET NULL')
       table.integer('user_id').unsigned().notNullable().references('id').inTable('users').onDelete('CASCADE')
-      
+
       table.string('entidade_origem', 50).nullable()
       table.integer('entidade_id').unsigned().nullable()
       table.index(['entidade_origem', 'entidade_id'])
@@ -170,9 +176,9 @@ export default class extends BaseSchema {
       table.decimal('valor', 10, 2).notNullable()
       table.enum('tipo', ['ENTRADA', 'SAIDA']).notNullable()
       table.string('finalidade').notNullable()
-      
+
       table.enum('status', ['PENDENTE', 'CONCLUIDA', 'FALHOU', 'ESTORNADA']).notNullable().defaultTo('PENDENTE')
-      
+
       table.string('descricao').nullable()
       table.string('forma_pagamento').nullable()
       table.string('referencia_externa').nullable()

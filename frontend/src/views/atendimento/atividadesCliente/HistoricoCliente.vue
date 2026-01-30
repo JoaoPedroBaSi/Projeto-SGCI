@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CardBarraNavegacao from '@/components/barra/CardBarraNavegacao.vue';
 import CardHistorico from '@/components/cards/atendimento/horarios/CardHistorico.vue';
 import api from '@/services/api';
 import type { Atendimento, Profissional, Sala } from '@/types';
@@ -10,7 +11,7 @@ const error = ref<string | null>(null);
 const paginaAtual = ref(1);
 const itensPorPagina = 10;
 
-// Captura o ID do profissional logado
+// Captura o ID do usuário logado (Cliente)
 const usuarioLogado = JSON.parse(localStorage.getItem('user') || '{}');
 const clienteLogadoId = usuarioLogado.id;
 
@@ -19,42 +20,38 @@ const fetchSalas = async () => {
   error.value = null;
 
   try {
+    const token = localStorage.getItem('auth_token');
+    const config = { headers: { Authorization: `Bearer ${token}` } };
+
     const [atendimentoRes, salaRes, profRes, funcaoRes] = await Promise.all([
-      api.get<Atendimento[]>('/atendimento'),
-      api.get<Sala[]>('/sala'),
-      api.get<Profissional[]>('/profissional'),
-      api.get<{ id: number; nome: string }[]>('/funcao')
+      api.get<Atendimento[]>('/atendimento', config),
+      api.get<Sala[]>('/sala', config),
+      api.get<Profissional[]>('/profissionais', config),
+      api.get<{ id: number; nome: string }[]>('/funcao', config)
     ]);
 
     const mapaFuncoes: Record<number, string> = {};
     funcaoRes.data.forEach(f => mapaFuncoes[f.id] = f.nome);
 
-    // Lógica Recursiva para processar a lista
-    const processarLista = (lista: Atendimento[]): any[] => {
-      if (lista.length === 0) return [];
+    // --- MUDANÇA AQUI: Não filtre novamente no Frontend ---
+    // O backend já mandou apenas os atendimentos do usuário logado!
+    const dadosVindosDoBack = atendimentoRes.data;
 
-      const [primeiro, ...resto] = lista;
-      const sala = salaRes.data.find(s => s.id === primeiro?.salaId);
-      const prof = profRes.data.find(p => p.id === primeiro?.profissionalId);
+    atendimentos.value = dadosVindosDoBack.map(atend => {
+      const sala = salaRes.data.find(s => s.id === atend.salaId);
+      const prof = profRes.data.find(p => p.id === atend.profissionalId);
 
-      const itemFormatado = {
-        ...primeiro,
+      return {
+        ...atend,
         nomeSala: sala ? sala.nome : 'Sala Indefinida',
         nomeProfissional: prof ? prof.nome : 'Profissional indefinido',
         funcaoProfissional: prof ? (mapaFuncoes[prof.funcaoId] || 'Especialidade') : 'Indefinida'
       };
+    });
 
-      return [itemFormatado, ...processarLista(resto)];
-    };
+    console.log("Atendimentos carregados do Backend:", atendimentos.value.length);
 
-    // FILTRO: Filtra a lista para conter apenas atendimentos do profissional logado antes de formatar
-    const atendimentosDoProfissional = atendimentoRes.data.filter(
-      atend => atend.profissionalId === clienteLogadoId
-    );
-
-    atendimentos.value = processarLista(atendimentosDoProfissional);
-
-  } catch (err) {
+  } catch (err: any) {
     console.error("Erro:", err);
     error.value = "Falha ao carregar dados.";
   } finally {
@@ -82,20 +79,7 @@ onMounted(fetchSalas);
 </script>
 
 <template>
-  <header class="cabecalho">
-    <div class="acoes">
-      <RouterLink class="consulta" to="/cliente/dashboard">< Voltar</RouterLink>
-    </div>
-    <div class="infos-perfil">
-        <div class="foto">
-          <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
-        </div>
-        <div class="texto">
-          <p class="nome">{{ usuarioLogado.nome || 'Usuário' }}</p>
-          <p class="email">{{ usuarioLogado.email || 'Email não disponível' }}</p>
-        </div>
-      </div>
-  </header>
+  <CardBarraNavegacao/>
 
   <h1>Histórico</h1>
 

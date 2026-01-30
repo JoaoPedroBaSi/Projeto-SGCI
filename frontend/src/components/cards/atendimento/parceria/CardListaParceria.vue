@@ -18,6 +18,7 @@ const emit = defineEmits(['editar', 'apagar']);
 const formatarData = (data: string) => {
   return new Date(data).toLocaleDateString('pt-BR');
 };
+
 </script>
 
 <template>
@@ -30,7 +31,7 @@ const formatarData = (data: string) => {
 
       <div class="info-status">
         <p class="label">STATUS</p>
-        <span :class="['status-badge', parceria.status_parceria.toLowerCase()]">
+        <span :class="['status-badge', parceria.status_parceria?.toLowerCase()]">
           {{ parceria.status_parceria }}
         </span>
       </div>
@@ -50,8 +51,13 @@ const formatarData = (data: string) => {
       <button class="btn-editar" @click="emit('editar')">
         Editar
       </button>
-      <button class="btn-apagar" @click="emit('apagar')">
-        Apagar
+      <button
+        class="btn-apagar"
+        @click="emit('apagar')"
+        :disabled="parceria.status_parceria === 'INATIVO'"
+        :style="parceria.status_parceria === 'INATIVO' ? 'opacity: 0.5; cursor: not-allowed' : ''"
+      >
+        {{ parceria.status_parceria === 'INATIVO' ? 'Inativo' : 'Desativar' }}
       </button>
     </div>
   </div>

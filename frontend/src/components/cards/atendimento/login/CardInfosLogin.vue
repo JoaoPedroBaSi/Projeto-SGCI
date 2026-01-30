@@ -1,30 +1,31 @@
 <script setup lang="ts">
 import api from '@/services/api';
-import type { Cliente } from '@/types';
 import { onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
-const clienteLogado = ref<Cliente | null>(null);
+// 1. Declaramos perfilAtivo como a única fonte de dados
+const perfilAtivo = ref<any>(null);
 const route = useRoute();
+
 const carregarDados = async () => {
   try {
-  const cliResponse = await api.get('/cliente');
-  const clienteEncontrado = cliResponse.data[0];
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
 
-  if (clienteEncontrado) {
-    console.log("ID do Cliente:", clienteEncontrado.id);
-    clienteLogado.value = clienteEncontrado;
+    const response = await api.get('/me', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (response.data) {
+      perfilAtivo.value = response.data;
+    }
+  } catch (err) {
+    console.error("Erro ao carregar perfil /me:", err);
+    // Se der erro 401, pode ser token expirado
+  }
 }
 
-} catch (err) {
-  console.error("Erro:", err);
-}
-}
-// Observa mudanças na URL (ID) para recarregar os dados automaticamente
-watch(() => route.params.id, () => {
-  carregarDados();
-});
-
+watch(() => route.params.id, () => carregarDados());
 onMounted(carregarDados);
 </script>
 
@@ -34,8 +35,8 @@ onMounted(carregarDados);
       <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
     </div>
     <div class="texto">
-      <p class="nome">{{ clienteLogado?.nome }}</p>
-      <p class="email">{{ clienteLogado?.email || 'E-mail não informado' }}</p>
+      <p class="nome">{{ perfilAtivo?.nome || 'Carregando...' }}</p>
+      <p class="email">{{ perfilAtivo?.email || 'E-mail não informado' }}</p>
     </div>
   </div>
 </template>

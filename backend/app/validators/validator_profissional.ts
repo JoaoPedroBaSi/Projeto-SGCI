@@ -26,42 +26,52 @@ const dataNascimentoRule = vine.createRule(async (value, _, field) => {
 
 export const storeProfissionalValidator = vine.compile(
   vine.object({
-    //Função id sempre positivo
-    funcao_id: vine.number().positive(),
-    //Nome com tamanho entre 10 a 40 (especificado na migration) -
-    // consideramos esse campo como nome e sobrenome.
-    //Determina que os nomes devem ser maíusculos.
+    // REMOVIDO: funcao_id
+    // Motivo: O Controller do Admin define a função manualmente (ex: cria ou busca 'MEDICO')
+    // Se deixarmos obrigatório aqui, o cadastro falha porque o Front não envia ID.
+    funcao_id: vine.number().positive().optional(), 
+    
+    // Nome e Sobrenome
     nome: vine.string().trim().minLength(10).maxLength(40).toUpperCase(),
-    //Genero com duas opções
-    //A verificação de genero aqui no validator entrou em conflito com o modelo.
-    genero: vine.enum(['MASCULINO', 'FEMININO']),
-    //CPF tem que ter obrigatoriamente 11 digitos e todos esses números consecutivos.
-    cpf: vine.string().trim().minLength(11).maxLength(11).regex(/^\d{11}$/),
-    //Data de nascimento deve corresponder a uma idade mínima de 18 anos e máxima de 120 anos.
+    
+    // Genero
+    genero: vine.enum(['MASCULINO', 'FEMININO', 'OUTRO']), // Adicionei OUTRO para bater com seu Front
+    
+    // CPF
+    cpf: vine.string().trim().minLength(11).maxLength(14), // Ajustei para aceitar mascara se vier
+    
+    // Data de Nascimento
     dataNascimento: vine.date().use(dataNascimentoRule()),
-    // email e senha movidos para users
+    
+    // Contato
     telefone: vine.string().trim().minLength(10).maxLength(15),
 
+    // Opcionais
     registro_conselho: vine.string().trim().maxLength(50).optional(),
-    conselho_uf: vine.string().trim().maxLength(2).optional(), // ex: 'SP'
+    conselho_uf: vine.string().trim().maxLength(2).optional(),
     foto_perfil_url: vine.string().url().optional(),
     biografia: vine.string().trim().maxLength(1000).optional(),
+    
+    // STATUS: Opcional (O Controller define como 'aprovado' automaticamente)
     status: vine.enum(['pendente', 'aprovado', 'rejeitado']).optional(),
+    
     comprovante_credenciamento_url: vine.string().url().optional(),
     observacoes_admin: vine.string().trim().maxLength(400).optional(),
+    
+    // Campos extras que seu Front pode mandar (para não dar erro)
+    especializacao: vine.string().optional(),
+    email: vine.string().email().optional(), // O email é validado no User, mas se vier aqui, aceita
+    senha: vine.string().optional(), // Mesma coisa
+    confirmarSenha: vine.string().optional()
   })
 )
-//Consideramos que apenas a senha é modificável.
-//Valores sensíveis como cpf e email são inauteráveis após a inserção.
-//O nome também é inauterado levando em consideração que hipoteticamente
-//foi feita uma validação para verificar se o nome e o CPF estão de acordo.
+
 export const updateProfissionalValidator = vine.compile(
   vine.object({
-    funcao_id: vine.number().positive(),
+    funcao_id: vine.number().positive().optional(),
     nome: vine.string().trim().minLength(10).maxLength(40).toUpperCase(),
-    genero: vine.enum(['MASCULINO', 'FEMININO']),
-    cpf: vine.string().trim().minLength(11).maxLength(11).regex(/^\d{11}$/),
-    //Data de nascimento deve corresponder a uma idade mínima de 18 anos e máxima de 120 anos.
+    genero: vine.enum(['MASCULINO', 'FEMININO', 'OUTRO']),
+    cpf: vine.string().trim().minLength(11).maxLength(14),
     dataNascimento: vine.date().use(dataNascimentoRule()),
     telefone: vine.string().trim().minLength(10).maxLength(15).optional(),
 
