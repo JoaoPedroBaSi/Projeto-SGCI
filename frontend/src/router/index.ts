@@ -21,6 +21,9 @@ import AprovacaoReservasView from '@/views/AprovacaoReservasView.vue'
 import DashboardClienteView from '@/views/atendimento/dashboard/DashboardCliente.vue'
 import DashboardProfissionalView from '@/views/atendimento/dashboard/DashboardProfissional.vue'
 
+import ProntuarioView from '@/views/prontuario/ProntuarioView.vue'
+import DetalheProntuarioView from '@/views/prontuario/DetalheProntuarioView.vue'
+
 import AprovarAgendamentosView from '../views/AprovarAgendamentosView.vue'
 import ReservaSalasView from '@/views/ReservaSalasView.vue'
 import ControleEstoqueView from '@/views/ControleEstoqueView.vue'
@@ -124,8 +127,8 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-       path: '/dashboard',
-       redirect: '/dashboard/cliente'
+      path: '/dashboard',
+      redirect: '/dashboard/cliente'
     },
     {
       path: '/cliente/consultas/pagar',
@@ -219,7 +222,20 @@ const router = createRouter({
       name: 'pagamento-salas',
       component: () => import('@/views/profissional/PagamentoSalasView.vue'),
       meta: { requiresAuth: true }
-    }
+    },
+    {
+      path: '/profissional/prontuarios',
+      name: 'prontuarios',
+      component: ProntuarioView,
+      meta: { requiresAuth: true }
+    },
+
+    {
+      path: '/profissional/prontuarios/:id', // :id significa que é dinâmico
+      name: 'detalhe-prontuario',
+      component: DetalheProntuarioView,
+      meta: { requiresAuth: true }
+    },
   ],
 })
 

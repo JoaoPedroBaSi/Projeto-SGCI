@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { reservaService } from '@/services/reservaService';
+import Swal from 'sweetalert2';
 
 interface Sala {
   id: number;
@@ -15,6 +17,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['ao-fechar', 'ao-confirmar', 'ao-notificar']);
+const router = useRouter();
 
 const abaAtiva = ref<'avulso' | 'recorrente'>('avulso');
 const enviando = ref(false);
@@ -22,7 +25,8 @@ const enviando = ref(false);
 const carregandoOcupados = ref(false);
 const horariosOcupados = ref<string[]>([]);
 
-const hoje = new Date().toISOString().split('T')[0];
+const agora = new Date();
+const hoje = agora.toLocaleDateString('en-CA');
 
 const dataSelecionada = ref(hoje);
 const horariosSelecionados = ref<string[]>([]);
@@ -46,6 +50,42 @@ const diasOpcoes = [
   { label: 'Q', value: 3 }, { label: 'Q', value: 4 }, { label: 'S', value: 5 }, { label: 'S', value: 6 },
 ];
 
+const horariosVisiveis = computed(() => {
+  if (dataSelecionada.value !== hoje) {
+    return horariosDisponiveis;
+  }
+  const horaAtual = new Date().getHours();
+  return horariosDisponiveis.filter(h => {
+    const horaDoSlot = parseInt(h.split(':')[0]);
+    return horaDoSlot > horaAtual;
+  });
+});
+
+function validarDataPassada(data: string, campo: 'avulso' | 'inicio' | 'fim') {
+  if (data < hoje) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Data passada!',
+      text: 'Por favor, selecione uma data diferente.',
+      confirmButtonColor: '#2CAFB6'
+    });
+    if (campo === 'avulso') dataSelecionada.value = hoje;
+    if (campo === 'inicio') recDataInicio.value = hoje;
+    if (campo === 'fim') recDataFim.value = hoje;
+    return false;
+  }
+  return true;
+}
+
+watch(dataSelecionada, (novaData) => {
+  validarDataPassada(novaData, 'avulso');
+  if (props.visivel) buscarDisponibilidade();
+});
+
+watch(recDataInicio, (novaData) => {
+  validarDataPassada(novaData, 'inicio');
+});
+
 async function buscarDisponibilidade() {
   if (!props.sala || !dataSelecionada.value || abaAtiva.value !== 'avulso') return;
 
@@ -57,11 +97,8 @@ async function buscarDisponibilidade() {
 
     const reservasDaSalaNoDia = todasReservas.filter((r: any) => {
       const mesmaSala = r.sala_id === props.sala!.id;
-
       const mesmaData = r.data_hora_inicio && r.data_hora_inicio.split('T')[0] === dataSelecionada.value;
-
       const ativa = r.status !== 'REJEITADO';
-
       return mesmaSala && mesmaData && ativa;
     });
 
@@ -87,12 +124,9 @@ watch(() => props.visivel, (val) => {
     abaAtiva.value = 'avulso';
     horariosSelecionados.value = [];
     enviando.value = false;
+    if(dataSelecionada.value < hoje) dataSelecionada.value = hoje;
     buscarDisponibilidade();
   }
-});
-
-watch(() => dataSelecionada.value, () => {
-  if (props.visivel) buscarDisponibilidade();
 });
 
 watch(() => abaAtiva.value, (val) => {
@@ -102,6 +136,19 @@ watch(() => abaAtiva.value, (val) => {
 
 function toggleHorario(hora: string) {
   if (horariosOcupados.value.includes(hora)) return;
+
+  const agoraHora = new Date().getHours();
+  const horaSlot = parseInt(hora.split(':')[0]);
+
+  if (dataSelecionada.value === hoje && horaSlot <= agoraHora) {
+     Swal.fire({
+      icon: 'error',
+      title: 'Horário passado!',
+      text: 'Por favor, selecione um horário diferente.',
+      confirmButtonColor: '#ff4d4f'
+    });
+    return;
+  }
 
   if (horariosSelecionados.value.includes(hora)) {
     horariosSelecionados.value = horariosSelecionados.value.filter(h => h !== hora);
@@ -235,8 +282,8 @@ async function confirmarERedirecionar() {
   }
   else {
     if (recDataInicio.value < hoje) {
-      emit('ao-notificar', { mensagem: 'Início não pode ser no passado.', tipo: 'erro' });
-      return;
+       Swal.fire({ title: 'Data Inválida', text: 'O início não pode ser no passado.', icon: 'error' });
+       return;
     }
     if (diasSemanaSelecionados.value.length === 0) {
       emit('ao-notificar', { mensagem: 'Selecione os dias da semana.', tipo: 'erro' });
@@ -262,11 +309,36 @@ async function confirmarERedirecionar() {
 
     emit('ao-confirmar', { total: resposta.valorTotal });
 
+    const result = await Swal.fire({
+      title: 'Reserva Realizada!',
+      text: 'Deseja pagar o aluguel da reserva agora?',
+      icon: 'success',
+      showCancelButton: true,
+      confirmButtonColor: '#2CAFB6',
+      cancelButtonColor: '#7f8c8d',
+      confirmButtonText: 'Sim',
+      cancelButtonText: 'Não'
+    });
+
+    if (result.isConfirmed) {
+      router.push({
+        path: '/profissional/pagamento-salas',
+        query: {
+          salaId: props.sala.id,
+          total: resposta.valorTotal
+        }
+      });
+    } else {
+      emit('ao-fechar');
+    }
+
   } catch (error: any) {
     if (error.response?.status === 409) {
-      emit('ao-notificar', {
-        mensagem: 'Conflito: ' + (error.response.data.message || 'Horário já ocupado'),
-        tipo: 'erro'
+      Swal.fire({
+          icon: 'warning',
+          title: 'Agenda Ocupada',
+          text: error.response.data.message || 'Alguém já reservou esse horário.',
+          confirmButtonColor: '#ff4d4f'
       });
     } else {
       const msg = error.response?.data?.message || error.message;
@@ -317,7 +389,7 @@ async function confirmarERedirecionar() {
             </div>
 
             <div class="grid-horarios">
-              <button v-for="hora in horariosDisponiveis" :key="hora" :disabled="horariosOcupados.includes(hora)"
+              <button v-for="hora in horariosVisiveis" :key="hora" :disabled="horariosOcupados.includes(hora)"
                 :class="['btn-hora', {
                   selecionado: horariosSelecionados.includes(hora),
                   ocupado: horariosOcupados.includes(hora)
@@ -325,6 +397,10 @@ async function confirmarERedirecionar() {
                 {{ hora }}
                 <span v-if="horariosOcupados.includes(hora)" class="tag-ocupado">OCP</span>
               </button>
+
+              <div v-if="horariosVisiveis.length === 0" class="text-center text-muted col-span-4">
+                 Não há mais horários disponíveis para hoje.
+              </div>
             </div>
 
             <div class="legenda">
@@ -335,7 +411,7 @@ async function confirmarERedirecionar() {
           </div>
 
           <div v-else>
-            <div class="row-dates">
+             <div class="row-dates">
               <div class="col">
                 <label class="label-input">DE</label>
                 <input type="date" v-model="recDataInicio" :min="hoje" class="form-input">
@@ -398,6 +474,11 @@ async function confirmarERedirecionar() {
 </template>
 
 <style scoped>
+.col-span-4 {
+    grid-column: span 4;
+    padding: 10px;
+    font-size: 0.9rem;
+}
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -423,7 +504,6 @@ async function confirmarERedirecionar() {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
 
-/* HEADER */
 .modal-header {
   padding: 20px 25px;
   border-bottom: 1px solid #eee;
@@ -473,7 +553,6 @@ async function confirmarERedirecionar() {
   flex-direction: column;
 }
 
-/* TABS */
 .tabs {
   display: flex;
   border-bottom: 2px solid #eee;

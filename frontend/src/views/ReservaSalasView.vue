@@ -79,22 +79,9 @@ async function buscarSalas() {
   }
 }
 
-function processarSucessoReserva(payload: { total: string }) {
+function processarSucessoReserva() {
   modalAberto.value = false;
-
-  adicionarToast('Reserva criada! Redirecionando para pagamento...', 'sucesso');
-
-  setTimeout(() => {
-    if (salaSelecionada.value) {
-      router.push({
-        path: '/checkout-reserva',
-        query: {
-          salaId: salaSelecionada.value.id,
-          total: payload.total
-        }
-      });
-    }
-  }, 1500);
+  adicionarToast('Reserva realizada com sucesso!', 'sucesso');
 }
 
 onMounted(() => {

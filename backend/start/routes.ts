@@ -3,6 +3,8 @@ import router from '@adonisjs/core/services/router'
 import { middleware } from './kernel.js'
 import User from '#models/user'
 import hash from '@adonisjs/core/services/hash'
+const ProntuariosController = () => import('#controllers/prontuarios_controller')
+
 
 // --- ROTA RAIZ ---
 router.get('/', async () => {
@@ -53,6 +55,16 @@ router.put('/profissionais/:id/especializacoes', '#controllers/profissionais_con
 
 router.patch('/profissionais/:id/status', '#controllers/profissionais_controller.atualizarStatus')
       .middleware([middleware.auth(), middleware.adminOnly()])
+// --- ROTAS DE PRONTUÁRIO (Adicionadas manualmente) ---
+router.group(() => {
+  // Lista de prontuários
+  router.get('/profissional/prontuarios', [ProntuariosController, 'index'])
+  
+  // // Salvar prontuário
+  // router.post('/atendimentos/:id/prontuario', [ProntuariosController, 'store'])
+})
+.use(middleware.auth())
+
 
 // =======================================================
 // 🏢 SALAS E INVENTÁRIO

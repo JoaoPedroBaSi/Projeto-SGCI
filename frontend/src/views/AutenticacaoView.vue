@@ -46,6 +46,8 @@ const fazerLogin = async () => {
         const response = await api.post('/login', {
             email: loginData.email,
             password: loginData.senha
+        }, {
+            baseURL: 'http://localhost:3333'
         });
         
         const tokenObj = response.data.token;

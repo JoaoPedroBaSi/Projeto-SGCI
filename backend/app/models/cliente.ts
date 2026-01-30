@@ -10,7 +10,7 @@ export default class Cliente extends BaseModel {
   declare id: number
 
   @column({ columnName: 'nome' }) 
-  declare name: string
+  declare nome: string
 
   @column()
   declare genero: 'MASCULINO' | 'FEMININO'

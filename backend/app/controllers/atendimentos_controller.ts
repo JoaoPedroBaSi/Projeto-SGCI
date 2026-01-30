@@ -2,8 +2,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import { DateTime } from 'luxon'
 import Atendimento from '#models/atendimento'
-import { storeAtendimentoValidator } from '#validators/validator_atendimento'
-import { updateAtendimentoValidator } from '#validators/validator_atendimento'
+import { storeAtendimentoValidator, updateAtendimentoValidator } from '#validators/validator_atendimento'
 import { inject } from '@adonisjs/core'
 import { AtendimentoService } from '#services/atendimento_service'
 import { PagamentoService } from '#services/pagamento_service'
@@ -20,7 +19,6 @@ export default class AtendimentosController {
     protected pagamentoService: PagamentoService,
     protected transacaoService: TransacaoService
   ) {}
-  //Mostra todos os atendimentos
 
 public async index({ auth, request }: HttpContext) {
 const user = await auth.authenticate()

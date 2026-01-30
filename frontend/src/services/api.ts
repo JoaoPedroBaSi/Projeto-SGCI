@@ -3,6 +3,8 @@ import axios from 'axios';
 // URL do Backend no Render
 const API_URL = 'https://sgci-api.onrender.com';
 
+// const API_URL = 'http://localhost:3333';
+
 console.log('🔗 Conectando na API:', API_URL);
 
 const api = axios.create({
