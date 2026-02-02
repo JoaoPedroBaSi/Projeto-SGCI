@@ -18,7 +18,7 @@ interface Atendimento {
 
 const atendimentos = ref<Atendimento[]>([]);
 const carregando = ref(true);
-const statusFiltro = ref<'PENDENTE' | 'CONFIRMADO' | 'CANCELADO'>('CONFIRMADO');
+const statusFiltro = ref<'PENDENTE' | 'CONFIRMADO' | 'CANCELADO'>('PENDENTE');
 
 const buscarAtendimentos = async () => {
   carregando.value = true;
