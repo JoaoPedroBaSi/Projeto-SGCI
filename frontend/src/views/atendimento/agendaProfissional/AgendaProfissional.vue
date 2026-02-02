@@ -33,8 +33,6 @@ const buscarAtendimentos = async () => {
       return;
     }
 
-    // 2. Configura o cabeçalho de autorização para esta instância da API
-    // Isso resolve o erro 401
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
     const [atendRes, cliRes] = await Promise.all([
@@ -102,6 +100,9 @@ const dataExibida = computed(() => {
 
 <template>
   <header class="cabecalho">
+    <div class="acoes">
+      <RouterLink class="consulta" to="/dashboard/profissional"> < Voltar </RouterLink>
+    </div>
     <div class="infos">
       <div class="titulo">
         <h2>Minha agenda</h2>
@@ -137,18 +138,24 @@ const dataExibida = computed(() => {
 </template>
 
 <style lang="css" scoped>
+  .acoes a {
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 16px;
+    border-radius: 8px;
+  }
   .cabecalho {
     padding: 0 50px;
     display: flex;
     justify-content: space-between;
-    min-height: 150px; /* Mudado de height para min-height */
+    min-height: 150px;
     align-items: center;
     background-color: white;
-    flex-wrap: wrap; /* Permite quebra de linha */
+    flex-wrap: wrap;
     gap: 20px;
   }
 
-  /* Mantendo sua estilização de botões e textos */
   .dias { display: flex; margin-top: 8px; flex-wrap: wrap; gap: 5px; }
   .dias .botao-dia {
     text-decoration: none;
@@ -201,32 +208,36 @@ const dataExibida = computed(() => {
 
   .card-agenda h2 {
     width: 100%;
-    max-width: 1200px; /* Aumentado para dar mais amplitude */
+    max-width: 1200px;
     text-align: left;
     margin-bottom: 25px;
     color: #333;
-    font-size: 1.8rem; /* Um pouco maior para acompanhar o card */
+    font-size: 1.8rem;
   }
 
   .lista-cards {
-  width: 100%;
-  max-width: 1200px; /* Aumentado para acompanhar o título */
-  display: flex;
-  flex-direction: column;
-  gap: 15px; /* Espaçamento entre um card e outro */
-}
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
 
-  /* REGRAS DE RESPONSIVIDADE (Ajustes sem mudar estilo) */
   @media (max-width: 1000px) {
     .cabecalho { padding: 20px; justify-content: center; }
     .config-perfil { justify-content: center; width: 100%; }
     .infos { align-items: center; text-align: center; }
+    .acoes {
+      width: 100%; /* Faz o botão ocupar a linha toda em cima no mobile */
+      display: flex;
+      justify-content: flex-start;
+    }
   }
 
   @media (max-width: 600px) {
     .infos-perfil { border-left: none; padding-left: 0; }
     .dias { justify-content: center; }
-    .botao-disponibilidade span { display: none; } /* Esconde só o texto para caber o botão */
+    .botao-disponibilidade span { display: none; }
     .cabecalho { padding: 15px; }
   }
 </style>
