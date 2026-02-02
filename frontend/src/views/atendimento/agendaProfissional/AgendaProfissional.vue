@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue';
 import CardAgenda from '@/components/cards/atendimento/horarios/CardAgenda.vue';
-import { Settings } from 'lucide-vue-next';
 import type { Atendimento, Cliente } from '@/types';
 import api from '@/services/api';
 import CardInfosLogin from '@/components/cards/atendimento/login/CardInfosLogin.vue';
@@ -113,7 +112,6 @@ const dataExibida = computed(() => {
         <button class="botao-dia" @click="mudarDia(1)">Dia seguinte ></button>
       </div>
     </div>
-
     <CardInfosLogin/>
   </header>
 

@@ -103,8 +103,8 @@ onMounted(buscarAtendimentos);
   .grid-consultas {
     display: flex;
     flex-wrap: wrap;
-    gap: 30px;            /* Aumentei um pouco o espaço entre eles */
-    justify-content: center; /* ISSO CENTRALIZA OS CARDS NO MEIO DA TELA */
+    gap: 30px;
+    justify-content: center;
     padding: 20px 0;
   }
   .feedback { text-align: center; padding: 50px; color: #888; }
