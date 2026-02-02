@@ -12,7 +12,7 @@ const error = ref<string | null>(null);
 const paginaAtual = ref(1);
 const itensPorPagina = 10;
 
-// Pega o ID do usuário logado
+// Recupera dados do usuário
 const usuarioLogado = JSON.parse(localStorage.getItem('user_data') || '{}');
 const clienteLogadoId = usuarioLogado.id;
 
@@ -22,48 +22,60 @@ error.value = null;
 const fetchDados = async () => {
   try {
     const [atendimentoRes, salaRes, profRes, funcaoRes] = await Promise.all([
-      api.get<Atendimento[]>('/atendimento'),
+      api.get<any[]>('/atendimento'),
       api.get<Sala[]>('/sala'),
-      api.get<Profissional[]>('/profissionais'), // Rota corrigida (Plural)
+      api.get<Profissional[]>('/profissionais'), // Rota correta no Plural
       api.get<{ id: number; nome: string }[]>('/funcao')
     ]);
 
     listaProfissionais.value = profRes.data;
 
+    // Mapa de Funções para acesso rápido
     const mapaFuncoes: Record<number, string> = {};
     funcaoRes.data.forEach(f => mapaFuncoes[f.id] = f.nome);
 
-    const processarLista = (lista: Atendimento[]): any[] => {
-      if (lista.length === 0) return [];
-      const [primeiro, ...resto] = lista;
-      
-      const sala = salaRes.data.find(s => Number(s.id) === Number(primeiro?.salaId));
-      const prof = profRes.data.find(p => Number(p.id) === Number(primeiro?.profissionalId));
-
-      const itemFormatado = {
-        ...primeiro,
-        nomeSala: sala ? sala.nome : 'Sala Indefinida',
-        nomeProfissional: prof ? prof.nome : 'Profissional indefinido',
-        funcaoProfissional: prof ? (mapaFuncoes[prof.funcaoId] || 'Especialidade') : 'Indefinida'
-      };
-      return [itemFormatado, ...processarLista(resto)];
-    };
-
-    // Filtra apenas os atendimentos DESTE cliente
-    const atendimentosDoCliente = atendimentoRes.data.filter(
-      atend => Number(atend.clienteId) === Number(clienteLogadoId)
+    // Filtra para pegar apenas os agendamentos do usuário logado
+    const meusAtendimentos = atendimentoRes.data.filter(
+      atend => Number(atend.clienteId || atend.cliente_id) === Number(clienteLogadoId)
     );
 
-    atendimentos.value = processarLista(atendimentosDoCliente);
+    // --- MAPEAMENTO ROBUSTO ---
+    atendimentos.value = meusAtendimentos.map((item) => {
+      // Busca Sala e Profissional (Verifica camelCase e snake_case)
+      const salaId = item.salaId || item.sala_id;
+      const profId = item.profissionalId || item.profissional_id;
+      
+      const sala = salaRes.data.find(s => Number(s.id) === Number(salaId));
+      const prof = profRes.data.find(p => Number(p.id) === Number(profId));
+
+      return {
+        ...item,
+        // Garante que a data exista, tentando todas as variações possíveis
+        dataHoraInicio: item.dataHoraInicio || item.data_hora_inicio || item.data,
+        status: item.status,
+        
+        // Dados Relacionados
+        nomeSala: sala ? sala.nome : 'Sala não definida',
+        nomeProfissional: prof ? prof.nome : 'Profissional não definido',
+        
+        // CORREÇÃO DO TYPESCRIPT: Usamos (prof as any) para ler propriedades dinâmicas
+        funcaoProfissional: prof 
+          ? (mapaFuncoes[(prof as any).funcaoId || (prof as any).funcao_id] || 'Especialista') 
+          : ''
+      };
+    });
+
+    console.log("Atendimentos processados:", atendimentos.value);
 
   } catch (err) {
-    console.error("Erro:", err);
-    error.value = "Falha ao carregar dados.";
+    console.error("Erro ao carregar agenda:", err);
+    error.value = "Não foi possível carregar seus agendamentos.";
   } finally {
     isLoading.value = false;
   }
 };
 
+// Lógica de Paginação
 const atendimentosPaginados = computed(() => {
   const inicio = (paginaAtual.value - 1) * itensPorPagina;
   return atendimentos.value.slice(inicio, inicio + itensPorPagina);
