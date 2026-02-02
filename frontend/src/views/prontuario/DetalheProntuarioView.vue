@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
+// REMOVIDO: import axios from 'axios';
+import api from '@/services/api'; // <--- IMPORT CORRETO
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 
 const route = useRoute();
@@ -34,12 +35,9 @@ const form = ref({
 const carregarDados = async () => {
   try {
     loading.value = true;
-    const token = localStorage.getItem('auth_token');
-
-    // Busca os dados no Localhost
-    const response = await axios.get(`http://localhost:3333/atendimento/${atendimentoId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    
+    // CORREÇÃO: Usando 'api' em vez de axios puro + localhost
+    const response = await api.get(`/atendimento/${atendimentoId}`);
 
     const dados = response.data;
 
@@ -60,7 +58,6 @@ const carregarDados = async () => {
       foto: cliente.foto_perfil_url || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'
     };
 
-    // 👇👇 AQUI ESTÁ A CORREÇÃO PRINCIPAL 👇👇
     // Se o backend retornou um prontuário salvo, joga os textos nos campos
     if (dados.prontuario) {
       console.log("Dados carregados:", dados.prontuario);
@@ -71,7 +68,6 @@ const carregarDados = async () => {
       form.value.descricao = dados.prontuario.descricao || '';
       modoLeitura.value = true;
     }
-    // 👆👆 FIM DA CORREÇÃO 👆👆
 
   } catch (error) {
     console.error("Erro ao carregar:", error);
@@ -90,11 +86,9 @@ const salvarProntuario = async () => {
 
   try {
     salvando.value = true;
-    const token = localStorage.getItem('auth_token');
-
-    await axios.post(`http://localhost:3333/atendimentos/${atendimentoId}/prontuario`, form.value, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    
+    // CORREÇÃO: Usando 'api.post' e URL relativa
+    await api.post(`/atendimentos/${atendimentoId}/prontuario`, form.value);
 
     alert('✅ Sucesso! O prontuário foi salvo.');
     // Recarrega os dados para garantir sincronia
@@ -191,6 +185,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* ESTILOS MANTIDOS IGUAIS */
 .page-container {
   padding: 20px 40px;
   font-family: 'Montserrat', sans-serif;
