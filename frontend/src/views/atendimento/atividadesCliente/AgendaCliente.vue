@@ -12,7 +12,7 @@ const error = ref<string | null>(null);
 const paginaAtual = ref(1);
 const itensPorPagina = 10;
 
-// CORREÇÃO 1: Pegando 'user_data' (padrão do login) em vez de 'user'
+// Pega o ID do usuário logado
 const usuarioLogado = JSON.parse(localStorage.getItem('user_data') || '{}');
 const clienteLogadoId = usuarioLogado.id;
 
@@ -24,9 +24,16 @@ const fetchDados = async () => {
     const [atendimentoRes, salaRes, profRes, funcaoRes] = await Promise.all([
       api.get<Atendimento[]>('/atendimento'),
       api.get<Sala[]>('/sala'),
-      api.get<Profissional[]>('/profissionais'), // CORREÇÃO 2: Rota no PLURAL
+      api.get<Profissional[]>('/profissionais'), 
       api.get<{ id: number; nome: string }[]>('/funcao')
     ]);
+
+    // === DIAGNÓSTICO (Olhe no Console F12) ===
+    console.log("=== INÍCIO DO DIAGNÓSTICO ===");
+    console.log("👤 ID do Usuário Logado:", clienteLogadoId);
+    console.log("📦 Total de Atendimentos no Banco:", atendimentoRes.data.length);
+    console.log("📄 Dados brutos dos atendimentos:", atendimentoRes.data);
+    // ==========================================
 
     listaProfissionais.value = profRes.data;
 
@@ -49,10 +56,12 @@ const fetchDados = async () => {
       return [itemFormatado, ...processarLista(resto)];
     };
 
-    // CORREÇÃO 3: Filtrando pelo ID do usuário logado dinamicamente
+    // Filtra apenas os atendimentos DESTE cliente
     const atendimentosDoCliente = atendimentoRes.data.filter(
       atend => Number(atend.clienteId) === Number(clienteLogadoId)
     );
+    
+    console.log("✅ Atendimentos filtrados para você:", atendimentosDoCliente.length);
 
     atendimentos.value = processarLista(atendimentosDoCliente);
 
@@ -64,7 +73,6 @@ const fetchDados = async () => {
   }
 };
 
-// Lógica de Paginação
 const atendimentosPaginados = computed(() => {
   const inicio = (paginaAtual.value - 1) * itensPorPagina;
   return atendimentos.value.slice(inicio, inicio + itensPorPagina);
@@ -83,166 +91,3 @@ const irParaPagina = (pagina: number) => {
 
 onMounted(fetchDados);
 </script>
-
-<template>
-  <CardBarraNavegacao/>
-
-  <h1>Agenda</h1>
-
-  <main>
-    <div class="container-cards" v-if="!isLoading">
-      <div v-for="atendimento in atendimentosPaginados" :key="atendimento.id">
-        <CardHistorico class="historico-card" :consulta="atendimento" pagina="agenda" :lista-profissionais="listaProfissionais"/>
-      </div>
-
-      <p v-if="atendimentos.length === 0 && !error">Nenhum registro encontrado.</p>
-      <p v-if="error" class="error-msg">{{ error }}</p>
-    </div>
-    <div v-else class="loader">Carregando...</div>
-
-    <div class="paginacao" v-if="!isLoading && atendimentos.length > 0">
-      <button
-        class="btn-pag"
-        :disabled="paginaAtual === 1 || isLoading"
-        @click="irParaPagina(paginaAtual - 1)"
-      >
-        &lt;
-      </button>
-
-      <button
-        v-for="n in Math.max(totalPaginas, 1)"
-        :key="n"
-        :class="['btn-pag', { 'ativo': n === paginaAtual }]"
-        :disabled="isLoading"
-        @click="irParaPagina(n)"
-      >
-        {{ n }}
-      </button>
-
-      <button
-        class="btn-pag"
-        :disabled="paginaAtual === totalPaginas || isLoading"
-        @click="irParaPagina(paginaAtual + 1)"
-      >
-        &gt;
-      </button>
-    </div>
-  </main>
-</template>
-
-<style scoped lang="css">
-  .cabecalho {
-    padding: 0 50px;
-    display: flex;
-    justify-content: space-between;
-    height: 150px;
-    align-items: center;
-    background-color: white;
-  }
-  .infos-perfil img {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-  .infos-perfil {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border-left: 1px solid #eee;
-    padding-left: 20px;
-  }
-  .texto{
-    gap: 2px;
-  }
-  .texto p {
-    margin: 0;
-    line-height: 1.2;
-  }
-  .texto .email {
-    color: #666;
-    font-size: 0.85rem;
-  }
-  .acoes {
-    margin: 30px;
-    display: flex;
-    gap: 20px;
-  }
-  .acoes a {
-    padding: 10px 20px;
-    text-align: center;
-    text-decoration: none;
-    font-size: 16px;
-    border-radius: 8px;
-  }
-  .consulta {
-    border: 2px solid #128093; color: #128093;
-  }
-  .historico-link {
-    border: 2px solid blue; color: blue;
-  }
-  h1 { text-align: center; font-family: 'Montserrat', sans-serif; margin-top: 30px; }
-
-  main {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    min-height: 80vh;
-  }
-
-  .container-cards {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    padding-top: 20px;
-  }
-
-  .historico-card { margin-bottom: 20px; }
-
-  .paginacao {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    padding: 40px 0;
-    width: 100%;
-    background: white;
-    border-top: 1px solid #eee;
-  }
-
-  .btn-pag {
-    width: 35px;
-    height: 35px;
-    border-radius: 6px;
-    border: 1px solid #ddd;
-    background: white;
-    cursor: pointer;
-    transition: 0.2s;
-  }
-
-  .btn-pag.ativo {
-    background-color: #128093;
-    color: white;
-    border-color: #128093;
-  }
-
-  .btn-pag:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-  }
-  
-  .error-msg {
-    color: red;
-    font-weight: bold;
-    margin-top: 20px;
-  }
-  
-  .loader {
-    margin-top: 50px;
-    font-size: 1.2rem;
-    color: #666;
-  }
-</style>
