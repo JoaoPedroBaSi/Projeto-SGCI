@@ -5,6 +5,7 @@ import api from '@/services/api';
 import type { Atendimento, Profissional, Sala } from '@/types';
 import { computed, onMounted, ref } from 'vue';
 
+// Definição de tipos mais flexível para evitar erros de TS
 const atendimentos = ref<any[]>([]);
 const listaProfissionais = ref<Profissional[]>([]);
 const isLoading = ref(true);
@@ -12,7 +13,7 @@ const error = ref<string | null>(null);
 const paginaAtual = ref(1);
 const itensPorPagina = 10;
 
-// Recupera dados do usuário
+// Recupera dados do usuário logado
 const usuarioLogado = JSON.parse(localStorage.getItem('user_data') || '{}');
 const clienteLogadoId = usuarioLogado.id;
 
@@ -24,7 +25,7 @@ const fetchDados = async () => {
     const [atendimentoRes, salaRes, profRes, funcaoRes] = await Promise.all([
       api.get<any[]>('/atendimento'),
       api.get<Sala[]>('/sala'),
-      api.get<Profissional[]>('/profissionais'), // Rota correta no Plural
+      api.get<Profissional[]>('/profissionais'), // Rota corrigida (Plural)
       api.get<{ id: number; nome: string }[]>('/funcao')
     ]);
 
@@ -34,38 +35,48 @@ const fetchDados = async () => {
     const mapaFuncoes: Record<number, string> = {};
     funcaoRes.data.forEach(f => mapaFuncoes[f.id] = f.nome);
 
-    // Filtra para pegar apenas os agendamentos do usuário logado
+    // 1. Filtra apenas os agendamentos do usuário logado
     const meusAtendimentos = atendimentoRes.data.filter(
       atend => Number(atend.clienteId || atend.cliente_id) === Number(clienteLogadoId)
     );
 
-    // --- MAPEAMENTO ROBUSTO ---
+    // 2. Mapeamento "Blindado" (Garante que o Card entenda os dados)
     atendimentos.value = meusAtendimentos.map((item) => {
-      // Busca Sala e Profissional (Verifica camelCase e snake_case)
       const salaId = item.salaId || item.sala_id;
       const profId = item.profissionalId || item.profissional_id;
       
       const sala = salaRes.data.find(s => Number(s.id) === Number(salaId));
       const prof = profRes.data.find(p => Number(p.id) === Number(profId));
 
+      // Pega a função usando 'as any' para evitar erro de TypeScript se vier snake_case
+      const nomeFuncao = prof 
+        ? (mapaFuncoes[(prof as any).funcaoId] || mapaFuncoes[(prof as any).funcao_id] || 'Especialista') 
+        : 'Indefinida';
+
+      const dataCorreta = item.dataHoraInicio || item.data_hora_inicio || item.data;
+
       return {
-        ...item,
-        // Garante que a data exista, tentando todas as variações possíveis
-        dataHoraInicio: item.dataHoraInicio || item.data_hora_inicio || item.data,
+        ...item, // Mantém todas as propriedades originais
+        
+        // Propriedades padronizadas para o Card
+        id: item.id,
         status: item.status,
         
-        // Dados Relacionados
+        // Datas (Envia com todos os nomes possíveis)
+        data: dataCorreta,
+        dataHoraInicio: dataCorreta,
+        
+        // Nomes formatados
         nomeSala: sala ? sala.nome : 'Sala não definida',
         nomeProfissional: prof ? prof.nome : 'Profissional não definido',
-        
-        // CORREÇÃO DO TYPESCRIPT: Usamos (prof as any) para ler propriedades dinâmicas
-        funcaoProfissional: prof 
-          ? (mapaFuncoes[(prof as any).funcaoId || (prof as any).funcao_id] || 'Especialista') 
-          : ''
+        funcaoProfissional: nomeFuncao,
+
+        // Objeto profissional completo (caso o card precise)
+        profissional: prof || { nome: 'Profissional não definido' }
       };
     });
 
-    console.log("Atendimentos processados:", atendimentos.value);
+    console.log("Atendimentos prontos para a tela:", atendimentos.value);
 
   } catch (err) {
     console.error("Erro ao carregar agenda:", err);
@@ -102,14 +113,27 @@ onMounted(fetchDados);
 
   <main>
     <div class="container-cards" v-if="!isLoading">
+      
       <div v-for="atendimento in atendimentosPaginados" :key="atendimento.id">
-        <CardHistorico class="historico-card" :consulta="atendimento" pagina="agenda" :lista-profissionais="listaProfissionais"/>
+        <CardHistorico 
+            class="historico-card" 
+            :consulta="atendimento" 
+            pagina="agenda" 
+            :lista-profissionais="listaProfissionais"
+        />
       </div>
 
-      <p v-if="atendimentos.length === 0 && !error">Nenhum registro encontrado.</p>
+      <div v-if="atendimentos.length === 0 && !error" class="empty-state">
+        <p>Nenhum agendamento encontrado.</p>
+        <small>Verifique se você completou o agendamento.</small>
+      </div>
+
       <p v-if="error" class="error-msg">{{ error }}</p>
     </div>
-    <div v-else class="loader">Carregando...</div>
+
+    <div v-else class="loader">
+      <p>Carregando sua agenda...</p>
+    </div>
 
     <div class="paginacao" v-if="!isLoading && atendimentos.length > 0">
       <button
@@ -142,7 +166,13 @@ onMounted(fetchDados);
 </template>
 
 <style scoped lang="css">
-  h1 { text-align: center; font-family: 'Montserrat', sans-serif; margin-top: 30px; color: #128093; }
+  h1 { 
+    text-align: center; 
+    font-family: 'Montserrat', sans-serif; 
+    margin-top: 30px; 
+    color: #128093; 
+    font-weight: 800;
+  }
 
   main {
     display: flex;
@@ -150,6 +180,7 @@ onMounted(fetchDados);
     align-items: center;
     width: 100%;
     min-height: 80vh;
+    padding-bottom: 50px;
   }
 
   .container-cards {
@@ -159,19 +190,23 @@ onMounted(fetchDados);
     align-items: center;
     width: 100%;
     padding-top: 20px;
+    width: 100%;
+    max-width: 800px; /* Limita a largura para ficar bonito */
   }
 
-  .historico-card { margin-bottom: 20px; }
+  .historico-card { 
+    margin-bottom: 20px; 
+    width: 100%;
+  }
 
   .paginacao {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 8px;
-    padding: 40px 0;
+    padding: 20px 0;
     width: 100%;
-    background: white;
-    border-top: 1px solid #eee;
+    margin-top: auto;
   }
 
   .btn-pag {
@@ -182,6 +217,8 @@ onMounted(fetchDados);
     background: white;
     cursor: pointer;
     transition: 0.2s;
+    font-weight: bold;
+    color: #555;
   }
 
   .btn-pag.ativo {
@@ -205,5 +242,12 @@ onMounted(fetchDados);
     margin-top: 50px;
     font-size: 1.2rem;
     color: #666;
+    font-weight: bold;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: #777;
+    margin-top: 40px;
   }
 </style>
