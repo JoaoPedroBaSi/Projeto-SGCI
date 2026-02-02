@@ -104,8 +104,9 @@ onMounted(buscarAtendimentos);
     display: flex;
     flex-wrap: wrap;
     gap: 30px;
-    justify-content: center;
+    justify-content: flex-start;
     padding: 20px 0;
+    width: 100%;
   }
   .feedback { text-align: center; padding: 50px; color: #888; }
 </style>

@@ -105,15 +105,13 @@ const dataFormatada = computed(() => {
     --text-dark: #333;
     --border-color: #ddd;
     background-color: #ffffff;
-    width: 100%;
-    max-width: 45%;
-    display: inline-block;
-    vertical-align: top;
+    flex: 1 1 calc(50% - 30px);
+    max-width: calc(50% - 15px);
+    min-width: 350px;
     border-radius: 15px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
     padding: 25px;
     box-sizing: border-box;
-    margin: 10px;
   }
 
   .cabecalho h3 {
@@ -259,9 +257,9 @@ const dataFormatada = computed(() => {
 
   @media (max-width: 1024px) {
     .card-consulta {
-      max-width: 90%;
-      display: block;
-      margin: 15px auto;
+      flex: 1 1 100%;
+      max-width: 100%;
+      min-width: unset;
     }
   }
 </style>
