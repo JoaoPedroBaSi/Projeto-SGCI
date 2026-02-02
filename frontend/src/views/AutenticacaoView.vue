@@ -7,7 +7,7 @@ const router = useRouter();
 
 // === ESTADO DE NAVEGAÇÃO ===
 const expandirLogin = ref(false);
-const expandirCadastro = ref(false); // Agora expandirCadastro mostra direto o form do cliente
+const expandirCadastro = ref(false);
 
 // === DADOS ===
 const loginData = reactive({ email: '', senha: '' });
@@ -18,14 +18,10 @@ const formCliente = reactive({
     bairro: '', cidade: '', estado: '', tipoSanguineo: '', alergias: '', observacoes: ''
 });
 
-// REMOVIDO: formProfissional (Não existe mais aqui)
-
 // === FUNÇÕES AUXILIARES ===
 const limparFormatacao = (valor: string) => valor ? valor.replace(/\D/g, '') : '';
 
-// REMOVIDO: handleFileUpload (Não tem mais upload nessa tela)
-
-// === TOGGLES (Visual Simplificado) ===
+// === TOGGLES ===
 const toggleLogin = () => {
     if (!expandirLogin.value) {
         expandirCadastro.value = false;
@@ -40,14 +36,12 @@ const toggleCadastro = () => {
     expandirCadastro.value = !expandirCadastro.value;
 }
 
-// === LOGIN (Mantido igual) ===
+// === LOGIN (CORRIGIDO) ===
 const fazerLogin = async () => {
     try {
         const response = await api.post('/login', {
             email: loginData.email,
             password: loginData.senha
-        }, {
-            baseURL: 'http://localhost:3333'
         });
         
         const tokenObj = response.data.token;
@@ -81,11 +75,11 @@ const fazerLogin = async () => {
 
     } catch (error: any) {
         console.error(error);
-        alert(error.response?.data?.message || 'Erro ao fazer login.');
+        alert(error.response?.data?.message || 'Erro ao fazer login. Verifique e-mail e senha.');
     }
 }
 
-// === CADASTRO CLIENTE (Mantido) ===
+// === CADASTRO CLIENTE ===
 const fazerCadastroCliente = async () => {
     if (formCliente.senha !== formCliente.confirmarSenha) return alert('As senhas não coincidem!');
     try {
@@ -113,8 +107,6 @@ const fazerCadastroCliente = async () => {
         alert(msg);
     }
 }
-
-// REMOVIDO: fazerCadastroProfissional
 </script>
 
 <template>
