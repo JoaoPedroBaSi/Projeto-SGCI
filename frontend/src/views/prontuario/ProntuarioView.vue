@@ -28,18 +28,15 @@ const usuarioLogado = ref({
   email: 'profissional@sgci.com'
 });
 
-// --- Buscar Dados do Backend (AGORA USANDO API) ---
+// --- Buscar Dados do Backend (AGORA CORRIGIDO) ---
 const fetchProntuarios = async () => {
   try {
     loading.value = true;
     erro.value = '';
 
-    // O 'api' já tem a URL base e o Interceptor do Token configurados.
-    // Basta chamar a rota relativa.
-    const response = await api.get('/profissional/prontuarios', {
-      baseURL: 'http://localhost:3333'
-    })
-
+    // CORREÇÃO: Removido o { baseURL: 'localhost' }
+    // Agora ele usa a URL do Render definida no api.ts automaticamente
+    const response = await api.get('/profissional/prontuarios');
 
     listaPacientes.value = response.data.map((item: any) => {
       // Proteção: Se o cliente for nulo (ex: deletado), cria um objeto vazio
@@ -106,7 +103,7 @@ const pacientesFiltrados = computed(() => {
 
 // --- Ações ---
 function abrirProntuario(id: number) {
-  router.push(`/profissional/prontuarios/${id}`); // Ou sua rota correta
+  router.push(`/profissional/prontuarios/${id}`); 
 }
 
 // Formatação de Data
@@ -236,7 +233,7 @@ function getStatusClass(status: string) {
 </template>
 
 <style scoped>
-/* REUTILIZANDO O DESIGN SYSTEM DO SEU GRUPO */
+/* ESTILOS MANTIDOS IDÊNTICOS */
 
 .layout-wrapper {
   display: flex;
