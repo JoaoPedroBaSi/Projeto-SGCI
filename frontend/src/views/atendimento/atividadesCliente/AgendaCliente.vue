@@ -12,18 +12,19 @@ const error = ref<string | null>(null);
 const paginaAtual = ref(1);
 const itensPorPagina = 10;
 
-const usuarioLogado = JSON.parse(localStorage.getItem('user') || '{}');
+// CORREÇÃO 1: Pegando 'user_data' (padrão do login) em vez de 'user'
+const usuarioLogado = JSON.parse(localStorage.getItem('user_data') || '{}');
 const clienteLogadoId = usuarioLogado.id;
+
 isLoading.value = true;
 error.value = null;
 
-const fetchSalas = async () => {
-
+const fetchDados = async () => {
   try {
     const [atendimentoRes, salaRes, profRes, funcaoRes] = await Promise.all([
       api.get<Atendimento[]>('/atendimento'),
       api.get<Sala[]>('/sala'),
-      api.get<Profissional[]>('/profissional'),
+      api.get<Profissional[]>('/profissionais'), // CORREÇÃO 2: Rota no PLURAL
       api.get<{ id: number; nome: string }[]>('/funcao')
     ]);
 
@@ -35,8 +36,9 @@ const fetchSalas = async () => {
     const processarLista = (lista: Atendimento[]): any[] => {
       if (lista.length === 0) return [];
       const [primeiro, ...resto] = lista;
-      const sala = salaRes.data.find(s => s.id === primeiro?.salaId);
-      const prof = profRes.data.find(p => p.id === primeiro?.profissionalId);
+      
+      const sala = salaRes.data.find(s => Number(s.id) === Number(primeiro?.salaId));
+      const prof = profRes.data.find(p => Number(p.id) === Number(primeiro?.profissionalId));
 
       const itemFormatado = {
         ...primeiro,
@@ -47,8 +49,9 @@ const fetchSalas = async () => {
       return [itemFormatado, ...processarLista(resto)];
     };
 
+    // CORREÇÃO 3: Filtrando pelo ID do usuário logado dinamicamente
     const atendimentosDoCliente = atendimentoRes.data.filter(
-      atend => atend.clienteId === 3//clienteLogadoId
+      atend => Number(atend.clienteId) === Number(clienteLogadoId)
     );
 
     atendimentos.value = processarLista(atendimentosDoCliente);
@@ -61,6 +64,7 @@ const fetchSalas = async () => {
   }
 };
 
+// Lógica de Paginação
 const atendimentosPaginados = computed(() => {
   const inicio = (paginaAtual.value - 1) * itensPorPagina;
   return atendimentos.value.slice(inicio, inicio + itensPorPagina);
@@ -77,7 +81,7 @@ const irParaPagina = (pagina: number) => {
   }
 };
 
-onMounted(fetchSalas);
+onMounted(fetchDados);
 </script>
 
 <template>
@@ -91,11 +95,12 @@ onMounted(fetchSalas);
         <CardHistorico class="historico-card" :consulta="atendimento" pagina="agenda" :lista-profissionais="listaProfissionais"/>
       </div>
 
-      <p v-if="atendimentos.length === 0">Nenhum registro encontrado.</p>
+      <p v-if="atendimentos.length === 0 && !error">Nenhum registro encontrado.</p>
+      <p v-if="error" class="error-msg">{{ error }}</p>
     </div>
     <div v-else class="loader">Carregando...</div>
 
-    <div class="paginacao">
+    <div class="paginacao" v-if="!isLoading && atendimentos.length > 0">
       <button
         class="btn-pag"
         :disabled="paginaAtual === 1 || isLoading"
@@ -176,14 +181,14 @@ onMounted(fetchSalas);
   .historico-link {
     border: 2px solid blue; color: blue;
   }
-  h1 { text-align: center; font-family: 'Montserrat', sans-serif; }
+  h1 { text-align: center; font-family: 'Montserrat', sans-serif; margin-top: 30px; }
 
   main {
     display: flex;
     flex-direction: column;
     align-items: center;
     width: 100%;
-    min-height: 80vh; /* Garante que a página tenha altura */
+    min-height: 80vh;
   }
 
   .container-cards {
@@ -192,6 +197,7 @@ onMounted(fetchSalas);
     flex-direction: column;
     align-items: center;
     width: 100%;
+    padding-top: 20px;
   }
 
   .historico-card { margin-bottom: 20px; }
@@ -226,5 +232,17 @@ onMounted(fetchSalas);
   .btn-pag:disabled {
     opacity: 0.3;
     cursor: not-allowed;
+  }
+  
+  .error-msg {
+    color: red;
+    font-weight: bold;
+    margin-top: 20px;
+  }
+  
+  .loader {
+    margin-top: 50px;
+    font-size: 1.2rem;
+    color: #666;
   }
 </style>
