@@ -42,17 +42,16 @@ export default class AtendimentosController {
     return await query.orderBy('id', 'desc')
   }
 
-  // --- CORREÇÃO PRINCIPAL AQUI ---
-  public async show({ params }: HttpContext) {
+public async show({ params }: HttpContext) {
     const atendimento = await Atendimento.query()
       .where('id', params.id)
       .preload('cliente', (query) => {
-        // Trazemos dados extras para o prontuário ficar bonito
-        query.select('id', 'nome', 'data_nascimento')
+        // REMOVI 'foto_perfil_url' DAQUI POIS ELA NÃO EXISTE NO BANCO
+        query.select('id', 'nome', 'data_nascimento') 
       })
       .preload('profissional', (query) => query.select('id', 'nome'))
-      .preload('prontuario') // <--- CRUCIAL: Carrega o prontuário se existir
-      .firstOrFail() // <--- CRUCIAL: Retorna 1 objeto, e não um array
+      .preload('prontuario')
+      .firstOrFail()
 
     return atendimento
   }
