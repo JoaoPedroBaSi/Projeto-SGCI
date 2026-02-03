@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted, computed } from 'vue';
 import SalaCard from '@/components/cards/ReservaSalaCard.vue';
 import ReservaModal from '@/components/modals/ReservaModal.vue';
 import { salaService } from '@/services/salaService';
@@ -21,14 +20,22 @@ interface Toast {
   tipo: 'sucesso' | 'erro' | 'info';
 }
 
-const router = useRouter();
-const dataFiltro = ref('2025-12-23');
+const dataFiltro = ref(new Date().toISOString().split('T')[0]);
 const buscaSala = ref('');
 const modalAberto = ref(false);
 const salaSelecionada = ref<Sala | null>(null);
 const listaSalas = ref<Sala[]>([]);
 const carregando = ref(true);
 const toasts = ref<Toast[]>([]);
+
+const salasFiltradas = computed(() => {
+  if (!buscaSala.value) return listaSalas.value;
+
+  const termo = buscaSala.value.toLowerCase().trim();
+  return listaSalas.value.filter(sala =>
+    sala.nome.toLowerCase().includes(termo)
+  );
+});
 
 function adicionarToast(mensagem: string, tipo: 'sucesso' | 'erro' | 'info' = 'sucesso') {
   const id = Date.now();
@@ -40,11 +47,6 @@ function adicionarToast(mensagem: string, tipo: 'sucesso' | 'erro' | 'info' = 's
 
 function lidarComNotificacaoModal(payload: { mensagem: string, tipo: 'sucesso' | 'erro' | 'info' }) {
   adicionarToast(payload.mensagem, payload.tipo);
-}
-
-function definirDataHoje() {
-  const hoje = new Date();
-  dataFiltro.value = hoje.toLocaleDateString('en-CA');
 }
 
 function abrirModalReserva(sala: Sala) {
@@ -85,7 +87,6 @@ function processarSucessoReserva() {
 }
 
 onMounted(() => {
-  definirDataHoje();
   buscarSalas();
 });
 </script>
@@ -131,15 +132,18 @@ onMounted(() => {
               <label>BUSCAR SALA</label>
               <div class="search-wrapper">
                 <input type="text" v-model="buscaSala" placeholder="Ex: Sala 01..." class="input-filtro">
-                <button class="btn-hoje" @click="definirDataHoje">Hoje</button>
               </div>
             </div>
           </section>
 
           <div v-if="carregando" class="loading-state">Carregando salas...</div>
 
+          <div v-else-if="salasFiltradas.length === 0" class="loading-state">
+            Nenhuma sala encontrada para "{{ buscaSala }}".
+          </div>
+
           <section v-else class="grid-salas">
-            <SalaCard v-for="sala in listaSalas" :key="sala.id" :dados="sala" @ao-reservar="abrirModalReserva" />
+            <SalaCard v-for="sala in salasFiltradas" :key="sala.id" :dados="sala" @ao-reservar="abrirModalReserva" />
           </section>
 
         </div>
@@ -316,18 +320,6 @@ onMounted(() => {
 .search-wrapper .input-filtro {
   width: auto;
   flex: 1;
-}
-
-.btn-hoje {
-  background-color: #00838F;
-  color: white;
-  border: none;
-  padding: 0 25px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  white-space: nowrap;
 }
 
 .grid-salas {
