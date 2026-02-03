@@ -35,65 +35,43 @@ const carregarDados = async () => {
   try {
     loading.value = true;
     
-    // 1ª Chamada: Pega os dados do atendimento
+    // Chamada única e correta ao Backend
     const response = await api.get(`/atendimento/${atendimentoId}`);
-    const dados = response.data;
+    const dados = response.data; // Agora isso é um OBJETO garantido pelo .firstOrFail() no backend
 
-    // Se já tiver prontuário salvo, preenche os campos
+    // 1. Preenche o Prontuário (se existir)
     if (dados.prontuario) {
       form.value.diagnostico = dados.prontuario.diagnostico || '';
       form.value.medicamentosPrescritos = dados.prontuario.medicamentosPrescritos || '';
       form.value.recomendacoes = dados.prontuario.recomendacoes || '';
       form.value.descricao = dados.prontuario.descricao || '';
-      modoLeitura.value = true;
+      modoLeitura.value = true; // Bloqueia edição pois já existe
     }
 
-    // --- A CORREÇÃO MÁGICA ---
-    // Verifica se veio apenas o ID (clienteId) e busca o nome
-    let nomeFinal = "Paciente não identificado";
-    let fotoFinal = "https://cdn-icons-png.flaticon.com/512/4140/4140048.png";
-    let idadeFinal = "--";
-
-    // Cenário A: O Backend mandou o objeto completo (Sorte!)
-    if (dados.cliente && dados.cliente.nome) {
-        nomeFinal = dados.cliente.nome;
-    } 
-    // Cenário B (O seu caso): O Backend mandou só o ID (clienteId)
-    else if (dados.clienteId) {
-        try {
-            // 2ª Chamada: "Ei sistema, quem é o cliente com esse ID?"
-            // Tentamos buscar na rota de clientes
-            const clienteResp = await api.get(`/clientes/${dados.clienteId}`);
-            if (clienteResp.data) {
-                nomeFinal = clienteResp.data.nome || clienteResp.data.full_name || "Paciente Recuperado";
-                
-                // Tenta calcular idade se tiver data
-                if (clienteResp.data.dataNascimento) {
-                    const ano = new Date(clienteResp.data.dataNascimento).getFullYear();
-                    idadeFinal = `${new Date().getFullYear() - ano} anos`;
-                }
-            }
-        } catch (err) {
-            console.log("Erro ao buscar detalhes do cliente, usando fallback.");
-            // 🚨 TRUQUE PARA A APRESENTAÇÃO:
-            // Se falhar a busca e o ID for 10 (que vimos no Raio-X), forçamos o nome.
-            if (dados.clienteId == 10) nomeFinal = "Japa Guei";
-            else nomeFinal = "Paciente Externo";
-        }
+    // 2. Preenche os Dados do Paciente
+    // O backend agora garante que 'dados.cliente' existe por causa do preload('cliente')
+    const cliente = dados.cliente || {};
+    
+    let idadeCalculada = '--';
+    if (cliente.data_nascimento || cliente.dataNascimento) {
+       const dataNasc = new Date(cliente.data_nascimento || cliente.dataNascimento);
+       const hoje = new Date();
+       let anos = hoje.getFullYear() - dataNasc.getFullYear();
+       idadeCalculada = `${anos} anos`;
     }
 
-    // Atualiza a tela com o nome encontrado
     paciente.value = {
-      id: dados.clienteId,
-      nome: nomeFinal,
-      idade: idadeFinal,
+      id: cliente.id,
+      // Pega o nome vindo do banco corretamente
+      nome: cliente.nome || cliente.full_name || 'Nome Indisponível',
+      idade: idadeCalculada,
       alergia: 'Nenhuma registrada',
-      foto: fotoFinal
+      foto: cliente.foto_perfil_url || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'
     };
 
   } catch (error) {
-    console.error("Erro geral:", error);
-    alert("Erro ao carregar atendimento.");
+    console.error("Erro ao carregar:", error);
+    alert("Não foi possível carregar os dados do atendimento.");
   } finally {
     loading.value = false;
   }
@@ -109,8 +87,12 @@ const salvarProntuario = async () => {
   try {
     salvando.value = true;
     await api.post(`/atendimentos/${atendimentoId}/prontuario`, form.value);
+    
     alert('✅ Prontuário salvo com sucesso!');
-    modoLeitura.value = true; // Bloqueia edição após salvar
+    
+    // Recarrega para garantir que os dados estão sincronizados
+    await carregarDados(); 
+
   } catch (error) {
     console.error(error);
     alert('Erro ao salvar. Tente novamente.');
@@ -136,8 +118,7 @@ onMounted(() => {
             <h2>{{ paciente.nome }}</h2>
             <div class="meta">
               <span>{{ paciente.idade }}</span>
-              <span class="alergia">⚠ {{ paciente.alergia }}</span>
-            </div>
+              </div>
           </div>
         </div>
         <div class="header-actions">
@@ -146,246 +127,267 @@ onMounted(() => {
       </header>
 
       <div v-if="loading" class="loading-box">
-        <p>Buscando ficha do paciente...</p>
+        <div class="spinner"></div>
+        <p>Carregando prontuário...</p>
       </div>
 
       <main class="main-content" v-else>
-
         <section class="form-panel">
           <div class="form-header">
-            <h3>Registro de Atendimento #{{ atendimentoId }}</h3>
+            <h3>Prontuário Eletrônico</h3>
             <span v-if="modoLeitura" class="status-tag finalizado">
-              Prontuário Finalizado
+              Finalizado
             </span>
-
             <span v-else class="status-tag editando">
-              Editando Agora
+              Em Edição
             </span>
           </div>
 
-          <div class="form-group">
-            <label>🩺 DIAGNÓSTICO (Obrigatório)</label>
-            <textarea v-model="form.diagnostico" placeholder="Descreva o diagnóstico clínico..." rows="3"
-              :disabled="modoLeitura"></textarea>
-          </div>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label>🩺 DIAGNÓSTICO CLÍNICO</label>
+              <textarea v-model="form.diagnostico" placeholder="Descreva o diagnóstico..." rows="3"
+                :disabled="modoLeitura"></textarea>
+            </div>
 
-          <div class="form-group">
-            <label>📝 DESCRIÇÃO DETALHADA</label>
-            <textarea v-model="form.descricao" placeholder="Detalhes da consulta, queixas do paciente..." rows="4"
-              :disabled="modoLeitura"></textarea>
-          </div>
+            <div class="form-group full-width">
+              <label>📝 ANAMNESE / DESCRIÇÃO</label>
+              <textarea v-model="form.descricao" placeholder="Queixas principais e histórico..." rows="4"
+                :disabled="modoLeitura"></textarea>
+            </div>
 
-          <div class="form-group">
-            <label>💊 PRESCRIÇÃO MÉDICA</label>
-            <textarea v-model="form.medicamentosPrescritos"
-              placeholder="Ex: Amoxicilina 500mg - Tomar de 8 em 8 horas..." rows="4"
-              :disabled="modoLeitura"></textarea>
-          </div>
+            <div class="form-group">
+              <label>💊 PRESCRIÇÃO (RECEITA)</label>
+              <textarea v-model="form.medicamentosPrescritos"
+                placeholder="Ex: Dipirona 500mg..." rows="5"
+                :disabled="modoLeitura"></textarea>
+            </div>
 
-          <div class="form-group">
-            <label>📌 RECOMENDAÇÕES</label>
-            <textarea v-model="form.recomendacoes" placeholder="Repouso, dieta, retorno..." rows="2"
-              :disabled="modoLeitura"></textarea>
+            <div class="form-group">
+              <label>📌 RECOMENDAÇÕES</label>
+              <textarea v-model="form.recomendacoes" placeholder="Repouso, dieta..." rows="5"
+                :disabled="modoLeitura"></textarea>
+            </div>
           </div>
 
           <div class="form-actions">
-            <button class="btn-cancel" @click="$router.back()">Cancelar</button>
+            <button class="btn-cancel" @click="$router.back()">Voltar</button>
             <button class="btn-save" @click="salvarProntuario" :disabled="salvando || modoLeitura">
-              {{ salvando ? 'Salvando...' : 'Finalizar e Salvar' }}
+              {{ salvando ? 'Salvando...' : 'Finalizar Atendimento' }}
             </button>
           </div>
         </section>
-
       </main>
     </div>
   </DashboardLayout>
 </template>
 
 <style scoped>
-/* ESTILOS ORIGINAIS MANTIDOS */
+/* RESET E LAYOUT */
 .page-container {
   padding: 20px 40px;
   font-family: 'Montserrat', sans-serif;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .loading-box {
   text-align: center;
   padding: 50px;
   color: #666;
-  font-weight: bold;
 }
 
-/* Cabeçalho */
+/* Header do Paciente */
 .patient-header {
   background: white;
-  padding: 20px;
+  padding: 20px 30px;
   border-radius: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  border-left: 5px solid #117a8b;
 }
 
 .patient-info {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 20px;
 }
 
 .btn-voltar {
-  background: none;
-  border: 1px solid #ddd;
+  background: #f0f2f5;
+  border: none;
   border-radius: 50%;
-  width: 35px;
-  height: 35px;
+  width: 40px;
+  height: 40px;
   cursor: pointer;
   font-size: 1.2rem;
   color: #555;
+  transition: 0.2s;
 }
+.btn-voltar:hover { background: #e4e6e9; }
 
 .avatar {
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #eee;
+  border: 3px solid #e0f2f1;
 }
 
 .texts h2 {
   margin: 0;
-  font-size: 1.2rem;
-  color: #333;
+  font-size: 1.4rem;
+  color: #2c3e50;
+  font-weight: 700;
 }
 
 .meta {
-  font-size: 0.9rem;
-  color: #666;
-  display: flex;
-  gap: 10px;
-  margin-top: 4px;
-}
-
-.alergia {
-  color: #e74c3c;
-  font-weight: bold;
-  background: #fceceb;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
+  color: #7f8c8d;
+  margin-top: 5px;
 }
 
 .btn-secondary {
   background: white;
-  color: #555;
-  border: 1px solid #ddd;
-  padding: 8px 15px;
+  color: #117a8b;
+  border: 1px solid #117a8b;
+  padding: 8px 20px;
   border-radius: 6px;
   cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s;
 }
+.btn-secondary:hover { background: #e0f2f1; }
 
-/* Formulário */
+/* Formulário Principal */
 .form-panel {
   background: white;
   border-radius: 12px;
   padding: 30px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  max-width: 900px;
-  margin: 0 auto;
-  width: 100%;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
 .form-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 25px;
+  align-items: center;
+  margin-bottom: 30px;
   border-bottom: 1px solid #eee;
   padding-bottom: 15px;
 }
 
 .form-header h3 {
   margin: 0;
-  color: #2CAFB6;
+  color: #117a8b;
+  font-size: 1.3rem;
 }
 
 .status-tag {
-  padding: 5px 12px;
+  padding: 6px 14px;
   border-radius: 20px;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: bold;
+  text-transform: uppercase;
 }
 
-.editando { background: #e8f5e9; color: #2ecc71; }
-.finalizado { background: #f5f5f5; color: #777; border: 1px solid #ddd; }
+.editando { background: #e3f2fd; color: #1976d2; }
+.finalizado { background: #e8f5e9; color: #2e7d32; }
 
-.form-group {
-  margin-bottom: 20px;
+/* Grid do Formulário */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.full-width {
+  grid-column: span 2;
 }
 
 .form-group label {
   display: block;
   font-weight: 700;
-  color: #555;
+  color: #455a64;
   font-size: 0.85rem;
   margin-bottom: 8px;
+  letter-spacing: 0.5px;
 }
 
 textarea {
   width: 100%;
   padding: 15px;
-  border: 1px solid #ddd;
+  border: 1px solid #cfd8dc;
   border-radius: 8px;
   font-family: inherit;
   resize: vertical;
   outline: none;
   transition: 0.3s;
-  background: #fcfcfc;
+  background: #fafafa;
   font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 textarea:focus {
-  border-color: #2CAFB6;
+  border-color: #117a8b;
   background: white;
-  box-shadow: 0 0 0 3px rgba(44, 175, 182, 0.1);
+  box-shadow: 0 0 0 3px rgba(17, 122, 139, 0.1);
 }
 
+textarea:disabled {
+  background: #f5f5f5;
+  color: #777;
+  cursor: not-allowed;
+}
+
+/* Ações */
 .form-actions {
   margin-top: 30px;
   display: flex;
   justify-content: flex-end;
   gap: 15px;
+  border-top: 1px solid #eee;
+  padding-top: 20px;
 }
 
 .btn-cancel {
-  background: #eee;
+  background: #eceff1;
   border: none;
   padding: 12px 25px;
   border-radius: 6px;
   cursor: pointer;
-  color: #555;
+  color: #546e7a;
   font-weight: 600;
+  transition: 0.2s;
 }
+.btn-cancel:hover { background: #cfd8dc; }
 
 .btn-save {
-  background: #2CAFB6;
+  background: #117a8b;
   color: white;
   border: none;
-  padding: 12px 30px;
+  padding: 12px 35px;
   border-radius: 6px;
   cursor: pointer;
   font-weight: bold;
   font-size: 1rem;
   transition: 0.2s;
+  box-shadow: 0 4px 6px rgba(17, 122, 139, 0.2);
 }
 
 .btn-save:hover {
-  background: #249096;
+  background: #0e6b7a;
+  transform: translateY(-1px);
 }
 
 .btn-save:disabled {
-  background: #a0dce0;
+  background: #b0bec5;
+  box-shadow: none;
   cursor: not-allowed;
+  transform: none;
 }
 </style>
