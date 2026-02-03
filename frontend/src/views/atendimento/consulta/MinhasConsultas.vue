@@ -18,7 +18,7 @@ interface Atendimento {
 
 const atendimentos = ref<Atendimento[]>([]);
 const carregando = ref(true);
-const statusFiltro = ref<'PENDENTE' | 'CONFIRMADO' | 'CANCELADO'>('CONFIRMADO');
+const statusFiltro = ref<'PENDENTE' | 'CONFIRMADO' | 'CANCELADO'>('PENDENTE');
 
 const buscarAtendimentos = async () => {
   carregando.value = true;
@@ -103,9 +103,10 @@ onMounted(buscarAtendimentos);
   .grid-consultas {
     display: flex;
     flex-wrap: wrap;
-    gap: 30px;            /* Aumentei um pouco o espaço entre eles */
-    justify-content: center; /* ISSO CENTRALIZA OS CARDS NO MEIO DA TELA */
+    gap: 30px;
+    justify-content: flex-start;
     padding: 20px 0;
+    width: 100%;
   }
   .feedback { text-align: center; padding: 50px; color: #888; }
 </style>

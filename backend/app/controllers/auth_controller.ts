@@ -24,17 +24,12 @@ export default class AuthController {
       // 2. Cria token
       const token = await User.accessTokens.create(user)
 
-      // 3. Lógica para saber quem é quem
-      // Se ele é profissional, ele tem acesso total. Se não, é cliente.
-      // O 'perfil_tipo' no banco já ajuda, mas vamos garantir.
-      
       return response.ok({
         type: 'bearer',
         token: token.value!.release(),
         user: {
             id: user.id,
             email: user.email,
-            // Retorna o tipo gravado no banco (profissional ou cliente)
             perfil_tipo: user.perfil_tipo, 
             name: user.fullName
         }
@@ -46,7 +41,7 @@ export default class AuthController {
   }
 
   // ==========================================================
-  // 📝 REGISTRO (LÓGICA NOVA: PROFISSIONAL TAMBÉM É CLIENTE)
+  // 📝 REGISTRO (CORRIGIDO name -> nome)
   // ==========================================================
   public async register({ request, response }: HttpContext) {
     // Validação
@@ -104,8 +99,8 @@ export default class AuthController {
       if (perfil_tipo === 'cliente') {
         // CASO 1: É apenas Cliente
         await Cliente.create({
-            id: user.id, // ID COMPARTILHADO (Mesmo do User)
-            name: fullName,
+            id: user.id, 
+            nome: fullName, // <--- CORRIGIDO AQUI (Era 'name')
             genero: payload.genero,
             dataNascimento: payload.dataNascimento ? DateTime.fromJSDate(new Date(payload.dataNascimento)) : DateTime.now(),
             cpf: payload.cpf,
@@ -119,7 +114,7 @@ export default class AuthController {
         
         // A. Cria a ficha técnica do Profissional
         await Profissional.create({
-            id: user.id, // ID COMPARTILHADO
+            id: user.id,
             funcaoId: payload.funcao_id,
             nome: fullName,
             genero: payload.genero,
@@ -132,16 +127,15 @@ export default class AuthController {
             conselho_uf: payload.conselho_uf,
             foto_perfil_url: payload.foto_perfil_url || null,
             biografia: payload.biografia || null,
-            status: 'pendente', // Profissional nasce pendente
+            status: 'pendente',
             comprovante_credenciamento_url: payload.comprovante_credenciamento_url || null,
             observacoes_admin: payload.observacoes_admin || null,
           }, { client: trx })
 
         // B. Cria AUTOMATICAMENTE a ficha de Cliente (Paciente)
-        // Isso permite que o médico seja atendido na clínica
         await Cliente.create({
-            id: user.id, // O MESMO ID!
-            name: fullName,
+            id: user.id, 
+            nome: fullName, // <--- CORRIGIDO AQUI TAMBÉM (Era 'name')
             genero: payload.genero,
             dataNascimento: payload.dataNascimento ? DateTime.fromJSDate(new Date(payload.dataNascimento)) : DateTime.now(),
             cpf: payload.cpf,
@@ -167,10 +161,10 @@ export default class AuthController {
         }
       })
 
-    } catch (error) {
+    } catch (error: any) { // Adicionado tipagem any para o erro
       await trx.rollback()
       console.error(error)
-      return response.status(500).json({ message: 'Erro ao registrar usuário', error: error.message })
+      return response.status(500).json({ message: 'Erro ao registrar usuário', error: error.message || error })
     }
   }
 
@@ -206,7 +200,7 @@ export default class AuthController {
           .subject('Recuperação de Senha')
           .htmlView('emails/esqueci_senha', {
             user: user.serialize(),
-            link: `http://localhost:3333/redefinir-senha?token=${token}`, // Ajuste para a URL do seu front
+            link: `http://localhost:3333/redefinir-senha?token=${token}`,
           })
       })
 

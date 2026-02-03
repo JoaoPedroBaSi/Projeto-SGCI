@@ -5,6 +5,7 @@ import api from '@/services/api';
 import type { Atendimento, Profissional, Sala } from '@/types';
 import { computed, onMounted, ref } from 'vue';
 
+// Definição de tipos mais flexível para evitar erros de TS
 const atendimentos = ref<any[]>([]);
 const listaProfissionais = ref<Profissional[]>([]);
 const isLoading = ref(true);
@@ -12,55 +13,80 @@ const error = ref<string | null>(null);
 const paginaAtual = ref(1);
 const itensPorPagina = 10;
 
-const usuarioLogado = JSON.parse(localStorage.getItem('user') || '{}');
+// Recupera dados do usuário logado
+const usuarioLogado = JSON.parse(localStorage.getItem('user_data') || '{}');
 const clienteLogadoId = usuarioLogado.id;
+
 isLoading.value = true;
 error.value = null;
 
-const fetchSalas = async () => {
-
+const fetchDados = async () => {
   try {
     const [atendimentoRes, salaRes, profRes, funcaoRes] = await Promise.all([
-      api.get<Atendimento[]>('/atendimento'),
+      api.get<any[]>('/atendimento'),
       api.get<Sala[]>('/sala'),
-      api.get<Profissional[]>('/profissional'),
+      api.get<Profissional[]>('/profissionais'), // Rota corrigida (Plural)
       api.get<{ id: number; nome: string }[]>('/funcao')
     ]);
 
     listaProfissionais.value = profRes.data;
 
+    // Mapa de Funções para acesso rápido
     const mapaFuncoes: Record<number, string> = {};
     funcaoRes.data.forEach(f => mapaFuncoes[f.id] = f.nome);
 
-    const processarLista = (lista: Atendimento[]): any[] => {
-      if (lista.length === 0) return [];
-      const [primeiro, ...resto] = lista;
-      const sala = salaRes.data.find(s => s.id === primeiro?.salaId);
-      const prof = profRes.data.find(p => p.id === primeiro?.profissionalId);
-
-      const itemFormatado = {
-        ...primeiro,
-        nomeSala: sala ? sala.nome : 'Sala Indefinida',
-        nomeProfissional: prof ? prof.nome : 'Profissional indefinido',
-        funcaoProfissional: prof ? (mapaFuncoes[prof.funcaoId] || 'Especialidade') : 'Indefinida'
-      };
-      return [itemFormatado, ...processarLista(resto)];
-    };
-
-    const atendimentosDoCliente = atendimentoRes.data.filter(
-      atend => atend.clienteId === 3//clienteLogadoId
+    // 1. Filtra apenas os agendamentos do usuário logado
+    const meusAtendimentos = atendimentoRes.data.filter(
+      atend => Number(atend.clienteId || atend.cliente_id) === Number(clienteLogadoId)
     );
 
-    atendimentos.value = processarLista(atendimentosDoCliente);
+    // 2. Mapeamento "Blindado" (Garante que o Card entenda os dados)
+    atendimentos.value = meusAtendimentos.map((item) => {
+      const salaId = item.salaId || item.sala_id;
+      const profId = item.profissionalId || item.profissional_id;
+      
+      const sala = salaRes.data.find(s => Number(s.id) === Number(salaId));
+      const prof = profRes.data.find(p => Number(p.id) === Number(profId));
+
+      // Pega a função usando 'as any' para evitar erro de TypeScript se vier snake_case
+      const nomeFuncao = prof 
+        ? (mapaFuncoes[(prof as any).funcaoId] || mapaFuncoes[(prof as any).funcao_id] || 'Especialista') 
+        : 'Indefinida';
+
+      const dataCorreta = item.dataHoraInicio || item.data_hora_inicio || item.data;
+
+      return {
+        ...item, // Mantém todas as propriedades originais
+        
+        // Propriedades padronizadas para o Card
+        id: item.id,
+        status: item.status,
+        
+        // Datas (Envia com todos os nomes possíveis)
+        data: dataCorreta,
+        dataHoraInicio: dataCorreta,
+        
+        // Nomes formatados
+        nomeSala: sala ? sala.nome : 'Sala não definida',
+        nomeProfissional: prof ? prof.nome : 'Profissional não definido',
+        funcaoProfissional: nomeFuncao,
+
+        // Objeto profissional completo (caso o card precise)
+        profissional: prof || { nome: 'Profissional não definido' }
+      };
+    });
+
+    console.log("Atendimentos prontos para a tela:", atendimentos.value);
 
   } catch (err) {
-    console.error("Erro:", err);
-    error.value = "Falha ao carregar dados.";
+    console.error("Erro ao carregar agenda:", err);
+    error.value = "Não foi possível carregar seus agendamentos.";
   } finally {
     isLoading.value = false;
   }
 };
 
+// Lógica de Paginação
 const atendimentosPaginados = computed(() => {
   const inicio = (paginaAtual.value - 1) * itensPorPagina;
   return atendimentos.value.slice(inicio, inicio + itensPorPagina);
@@ -77,7 +103,7 @@ const irParaPagina = (pagina: number) => {
   }
 };
 
-onMounted(fetchSalas);
+onMounted(fetchDados);
 </script>
 
 <template>
@@ -87,15 +113,29 @@ onMounted(fetchSalas);
 
   <main>
     <div class="container-cards" v-if="!isLoading">
+      
       <div v-for="atendimento in atendimentosPaginados" :key="atendimento.id">
-        <CardHistorico class="historico-card" :consulta="atendimento" pagina="agenda" :lista-profissionais="listaProfissionais"/>
+        <CardHistorico 
+            class="historico-card" 
+            :consulta="atendimento" 
+            pagina="agenda" 
+            :lista-profissionais="listaProfissionais"
+        />
       </div>
 
-      <p v-if="atendimentos.length === 0">Nenhum registro encontrado.</p>
-    </div>
-    <div v-else class="loader">Carregando...</div>
+      <div v-if="atendimentos.length === 0 && !error" class="empty-state">
+        <p>Nenhum agendamento encontrado.</p>
+        <small>Verifique se você completou o agendamento.</small>
+      </div>
 
-    <div class="paginacao">
+      <p v-if="error" class="error-msg">{{ error }}</p>
+    </div>
+
+    <div v-else class="loader">
+      <p>Carregando sua agenda...</p>
+    </div>
+
+    <div class="paginacao" v-if="!isLoading && atendimentos.length > 0">
       <button
         class="btn-pag"
         :disabled="paginaAtual === 1 || isLoading"
@@ -126,64 +166,21 @@ onMounted(fetchSalas);
 </template>
 
 <style scoped lang="css">
-  .cabecalho {
-    padding: 0 50px;
-    display: flex;
-    justify-content: space-between;
-    height: 150px;
-    align-items: center;
-    background-color: white;
+  h1 { 
+    text-align: center; 
+    font-family: 'Montserrat', sans-serif; 
+    margin-top: 30px; 
+    color: #128093; 
+    font-weight: 800;
   }
-  .infos-perfil img {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-  .infos-perfil {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border-left: 1px solid #eee;
-    padding-left: 20px;
-  }
-  .texto{
-    gap: 2px;
-  }
-  .texto p {
-    margin: 0;
-    line-height: 1.2;
-  }
-  .texto .email {
-    color: #666;
-    font-size: 0.85rem;
-  }
-  .acoes {
-    margin: 30px;
-    display: flex;
-    gap: 20px;
-  }
-  .acoes a {
-    padding: 10px 20px;
-    text-align: center;
-    text-decoration: none;
-    font-size: 16px;
-    border-radius: 8px;
-  }
-  .consulta {
-    border: 2px solid #128093; color: #128093;
-  }
-  .historico-link {
-    border: 2px solid blue; color: blue;
-  }
-  h1 { text-align: center; font-family: 'Montserrat', sans-serif; }
 
   main {
     display: flex;
     flex-direction: column;
     align-items: center;
     width: 100%;
-    min-height: 80vh; /* Garante que a página tenha altura */
+    min-height: 80vh;
+    padding-bottom: 50px;
   }
 
   .container-cards {
@@ -192,19 +189,24 @@ onMounted(fetchSalas);
     flex-direction: column;
     align-items: center;
     width: 100%;
+    padding-top: 20px;
+    width: 100%;
+    max-width: 800px; /* Limita a largura para ficar bonito */
   }
 
-  .historico-card { margin-bottom: 20px; }
+  .historico-card { 
+    margin-bottom: 20px; 
+    width: 100%;
+  }
 
   .paginacao {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 8px;
-    padding: 40px 0;
+    padding: 20px 0;
     width: 100%;
-    background: white;
-    border-top: 1px solid #eee;
+    margin-top: auto;
   }
 
   .btn-pag {
@@ -215,6 +217,8 @@ onMounted(fetchSalas);
     background: white;
     cursor: pointer;
     transition: 0.2s;
+    font-weight: bold;
+    color: #555;
   }
 
   .btn-pag.ativo {
@@ -226,5 +230,24 @@ onMounted(fetchSalas);
   .btn-pag:disabled {
     opacity: 0.3;
     cursor: not-allowed;
+  }
+  
+  .error-msg {
+    color: red;
+    font-weight: bold;
+    margin-top: 20px;
+  }
+  
+  .loader {
+    margin-top: 50px;
+    font-size: 1.2rem;
+    color: #666;
+    font-weight: bold;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: #777;
+    margin-top: 40px;
   }
 </style>

@@ -60,7 +60,7 @@ export default class extends BaseSeeder {
     const cliente = await Cliente.updateOrCreate(
       { id: userCliente.id },
       {
-        name: userCliente.fullName ?? 'Cliente Exemplo', 
+        nome: userCliente.fullName ?? 'Cliente Exemplo', 
         cpf: '111.111.111-11',
         telefone: '11999999999',
         email: userCliente.email,

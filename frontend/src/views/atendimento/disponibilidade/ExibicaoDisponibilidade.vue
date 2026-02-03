@@ -2,20 +2,19 @@
 import { ref, computed, onMounted } from 'vue';
 import api from '@/services/api';
 import type { Profissional, Disponibilidade } from '@/types';
+import CardBarraNavegacao from '@/components/barra/CardBarraNavegacao.vue';
 
-const usuarioLogado = JSON.parse(localStorage.getItem('user') || '{}');
 const busca = ref('');
 const profissionais = ref<Profissional[]>([]);
 const disponibilidades = ref<Disponibilidade[]>([]);
 const carregando = ref(false);
 
-// 1. Busca dados iniciais
 const carregarDados = async () => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('auth_token');
   carregando.value = true;
   try {
     const [profRes, dispRes] = await Promise.all([
-      api.get<Profissional[]>('/profissional'),
+      api.get<Profissional[]>('/profissionais'),
       api.get<Disponibilidade[]>('/disponibilidade', {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -97,20 +96,7 @@ const formatarHora = (iso: string) => {
 </script>
 
 <template>
-  <header class="cabecalho">
-    <div class="acoes">
-      <RouterLink class="consulta" to="/cliente/agendar">< Voltar</RouterLink>
-    </div>
-    <div class="infos-perfil">
-        <div class="foto">
-          <img src="https://cdn-icons-png.flaticon.com/512/12225/12225881.png" alt="Perfil">
-        </div>
-        <div class="texto">
-          <p class="nome">{{ usuarioLogado.nome || 'Usuário' }}</p>
-          <p class="email">{{ usuarioLogado.email || 'E-mail não informado' }}</p>
-        </div>
-      </div>
-  </header>
+  <CardBarraNavegacao/>
 
   <div class="barra-pesquisa">
     <input
