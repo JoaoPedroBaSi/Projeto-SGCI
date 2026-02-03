@@ -42,11 +42,12 @@ export default class AtendimentosController {
     return await query.orderBy('id', 'desc')
   }
 
-public async show({ params }: HttpContext) {
+  // --- CORREÇÃO AQUI: Removemos 'foto_perfil_url' para evitar Erro 500 ---
+  public async show({ params }: HttpContext) {
     const atendimento = await Atendimento.query()
       .where('id', params.id)
       .preload('cliente', (query) => {
-        // REMOVI 'foto_perfil_url' DAQUI POIS ELA NÃO EXISTE NO BANCO
+        // Selecionamos apenas campos que EXISTEM no banco
         query.select('id', 'nome', 'data_nascimento') 
       })
       .preload('profissional', (query) => query.select('id', 'nome'))
