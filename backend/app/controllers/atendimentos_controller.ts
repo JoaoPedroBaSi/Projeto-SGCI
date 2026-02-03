@@ -48,7 +48,7 @@ export default class AtendimentosController {
       .where('id', params.id)
       .preload('cliente', (query) => {
         // Trazemos dados extras para o prontuário ficar bonito
-        query.select('id', 'nome', 'data_nascimento', 'foto_perfil_url')
+        query.select('id', 'nome', 'data_nascimento')
       })
       .preload('profissional', (query) => query.select('id', 'nome'))
       .preload('prontuario') // <--- CRUCIAL: Carrega o prontuário se existir
