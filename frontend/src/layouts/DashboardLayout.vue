@@ -110,18 +110,20 @@ onMounted(() => {
               { label: 'Meus Pacientes', route: '#pacientes' }
             ]
           },
+          // --- CORREÇÃO AQUI: Link real para Prontuários ---
           {
             label: 'Prontuários', icon: markRaw(ClipboardList), key: 'pront_prof',
             children: [
-              { label: 'Meus Prontuários', route: '#prontuarios' },
+              { label: 'Meus Prontuários', route: '/profissional/prontuarios' }, // <--- ROTA CORRIGIDA
               { label: 'Registrar Relatório', route: '#relatorios' }
             ]
           },
+          // --- CORREÇÃO AQUI: Limpeza do menu Disponibilidade ---
           {
             label: 'Disponibilidade', icon: markRaw(Clock), key: 'disp_prof',
             children: [
-              { label: 'Meus Horários', route: '/profissional/disponibilidade' },
-              { label: 'Cadastrar', route: '/profissional/cadastro/disponibilidade' }
+              // Removido 'Meus Horários' conforme solicitado anteriormente
+              { label: 'Gerenciar Agenda', route: '/profissional/disponibilidade' } // Ajuste a rota se necessário (ex: /cadastro)
             ]
           },
           {
@@ -157,7 +159,6 @@ onMounted(() => {
           {
             label: 'Gestão', icon: markRaw(Briefcase), key: 'gestao_admin',
             children: [
-              // AQUI ESTÁ A MUDANÇA: Adicionei o botão Novo Profissional
               { label: 'Novo Profissional', route: '/admin/cadastrar-profissional' },
               { label: 'Aprovar Profissionais', route: '/admin/aprovacoes' }
             ]
