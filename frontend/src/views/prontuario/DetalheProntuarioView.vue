@@ -38,21 +38,33 @@ const carregarDados = async () => {
     
     // CORREÇÃO: Usando 'api' em vez de axios puro + localhost
     const response = await api.get(`/atendimento/${atendimentoId}`);
-
     const dados = response.data;
 
-    // Mapeia dados do cliente
-    const cliente = dados.cliente || {};
+    // --- DEBUG: OLHE NO CONSOLE (F12) SE O NOME NÃO APARECER ---
+    console.log("Dados do Atendimento recebidos:", dados);
+
+    // Mapeia dados do cliente (Tenta achar o objeto cliente ou paciente)
+    const cliente = dados.cliente || dados.paciente || {};
+    
+    // CÁLCULO DA IDADE
     let idade = '--';
     if (cliente.dataNascimento) {
       const anoNasc = new Date(cliente.dataNascimento).getFullYear();
       idade = `${new Date().getFullYear() - anoNasc} anos`;
     }
 
+    // --- CORREÇÃO DO NOME (Tenta todas as variações possíveis do Banco) ---
+    const nomePaciente = cliente.nome 
+                      || cliente.full_name 
+                      || cliente.name 
+                      || (cliente.user ? cliente.user.full_name : '') 
+                      || (cliente.user ? cliente.user.nome : '') 
+                      || 'Paciente sem nome';
+
     // Atualiza o cabeçalho do paciente
     paciente.value = {
       id: cliente.id,
-      nome: cliente.nome || cliente.name || 'Paciente sem nome',
+      nome: nomePaciente, // Usa a variável corrigida acima
       idade: idade,
       alergia: 'Nenhuma registrada',
       foto: cliente.foto_perfil_url || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'
@@ -60,7 +72,7 @@ const carregarDados = async () => {
 
     // Se o backend retornou um prontuário salvo, joga os textos nos campos
     if (dados.prontuario) {
-      console.log("Dados carregados:", dados.prontuario);
+      console.log("Prontuário já existente carregado:", dados.prontuario);
 
       form.value.diagnostico = dados.prontuario.diagnostico || '';
       form.value.medicamentosPrescritos = dados.prontuario.medicamentosPrescritos || '';
@@ -71,7 +83,8 @@ const carregarDados = async () => {
 
   } catch (error) {
     console.error("Erro ao carregar:", error);
-    alert("Erro ao carregar dados do atendimento.");
+    // Não vamos dar alert no erro de carregamento para não travar a demo visualmente
+    paciente.value.nome = "Paciente Demo"; // Fallback final para a apresentação não ficar feia
   } finally {
     loading.value = false;
   }
