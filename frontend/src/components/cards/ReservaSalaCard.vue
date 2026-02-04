@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// Importamos o ícone de Prédio/Sala da Lucide
 import { Building } from 'lucide-vue-next';
 
 interface Sala {
@@ -128,7 +127,6 @@ const emit = defineEmits(['ao-reservar']);
   display: block;
 }
 
-/* CORPO DO CARD */
 .card-body {
   padding: 20px;
   display: flex;

@@ -23,7 +23,7 @@ const confirmarCancelamento = async () => {
 
   try {
     enviandoCancelamento.value = true;
-    const token = localStorage.getItem('auth_token'); // Ajustado
+    const token = localStorage.getItem('auth_token');
 
     await api.patch(`/atendimento/${props.atendimento.id}/cancelar`,
       { justificativa_falta: justificativa.value },
@@ -34,7 +34,6 @@ const confirmarCancelamento = async () => {
     exibindoModal.value = false;
     emit('atualizado');
   } catch (error: any) {
-    // Exibe a mensagem real do Backend (ex: "Cancelamento deve ser feito com 24h de antecedência")
     const msg = error.response?.data?.message || "Erro ao cancelar.";
     alert("⚠️ " + msg);
     console.error("Erro detalhado:", error.response?.data);
@@ -67,13 +66,12 @@ const concluirAtendimento = async () => {
 
   carregando.value = true;
   try {
-    // Certifique-se que o router está: router.patch('/atendimento/:id/concluir', ...)
     const response = await api.patch(`/atendimento/${props.atendimento.id}/concluir`, {}, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
     alert(response.data.message || "Concluído!");
-    emit('atualizado'); // Faz o card sumir da agenda (pois o filtro é atend.status === 'CONFIRMADO')
+    emit('atualizado');
   } catch (error: any) {
     const msg = error.response?.data?.message || "Erro ao concluir.";
     alert("⚠️ " + msg);
@@ -109,26 +107,24 @@ const datasFormatadas = computed(() => {
       <div class="bloco-info">
         <h3 class="nome-cliente">{{ props.nomeCliente }}</h3>
         <div class="pagamento-info">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="14" x="2" y="5" rx="2" />
+            <line x1="2" x2="22" y1="10" />
+          </svg>
           <span v-if="atendimento.valor">R$ {{ atendimento.valor }} • {{ atendimento.formaPagamento }}</span>
           <span v-else class="aviso">Aguardando definição de valor</span>
         </div>
       </div>
 
       <div class="bloco-acoes">
-        <button
-          class="btn btn-concluir"
-          @click="concluirAtendimento"
-          :disabled="carregando || atendimento.status === 'CONCLUIDO' || !atendimento.valor"
-        >
+        <button class="btn btn-concluir" @click="concluirAtendimento"
+          :disabled="carregando || atendimento.status === 'CONCLUIDO' || !atendimento.valor">
           Concluir
         </button>
 
-        <button
-          class="btn btn-cancelar"
-          @click="exibindoModal = true"
-          :disabled="carregando || atendimento.status === 'CONCLUIDO'"
-        >
+        <button class="btn btn-cancelar" @click="exibindoModal = true"
+          :disabled="carregando || atendimento.status === 'CONCLUIDO'">
           Cancelar
         </button>
       </div>
@@ -145,11 +141,8 @@ const datasFormatadas = computed(() => {
 
           <div class="corpo-modal">
             <label>Justificativa do cancelamento</label>
-            <textarea
-              v-model="justificativa"
-              placeholder="Ex: Emergência médica, imprevisto com equipamento..."
-              rows="4"
-            ></textarea>
+            <textarea v-model="justificativa" placeholder="Ex: Emergência médica, imprevisto com equipamento..."
+              rows="4"></textarea>
             <small class="aviso-cliente">Esta mensagem será enviada ao cliente.</small>
           </div>
 
@@ -157,11 +150,8 @@ const datasFormatadas = computed(() => {
             <button @click="exibindoModal = false" class="btn-voltar">
               Voltar
             </button>
-            <button
-              @click="confirmarCancelamento"
-              class="btn-confirmar-cancelar"
-              :disabled="enviandoCancelamento || !justificativa.trim()"
-            >
+            <button @click="confirmarCancelamento" class="btn-confirmar-cancelar"
+              :disabled="enviandoCancelamento || !justificativa.trim()">
               {{ enviandoCancelamento ? 'Cancelando...' : 'Confirmar Cancelamento' }}
             </button>
           </div>
@@ -169,24 +159,24 @@ const datasFormatadas = computed(() => {
       </div>
     </Transition>
   </Teleport>
-  </template>
+</template>
 
 <style scoped>
 .atendimento-wrapper {
-  width: 100%; /* Ocupa tudo que o pai oferecer */
+  width: 100%;
   padding: 5px 0;
 }
 
 .atendimento-card {
   display: flex;
   align-items: center;
-  width: 100%; /* Mudado de 80% para 100% */
+  width: 100%;
   background: #ffffff;
-  border-radius: 20px; /* Bordas um pouco mais arredondadas */
-  padding: 25px 40px; /* Aumentado o respiro interno */
+  border-radius: 20px;
+  padding: 25px 40px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.04);
   border: 1px solid #f0f0f0;
-  gap: 40px; /* Mais espaço entre as seções */
+  gap: 40px;
 }
 
 .atendimento-card:hover {
@@ -212,7 +202,6 @@ const datasFormatadas = computed(() => {
   text-transform: uppercase;
 }
 
-/* Bloco Central (Nome e Pagamento) */
 .bloco-info {
   flex-grow: 1;
   display: flex;
@@ -241,7 +230,6 @@ const datasFormatadas = computed(() => {
   font-style: italic;
 }
 
-/* Botões de Ação lado a lado */
 .bloco-acoes {
   display: flex;
   gap: 12px;
@@ -259,7 +247,7 @@ const datasFormatadas = computed(() => {
 }
 
 .btn-concluir {
-  background-color: #28a745; /* Verde bonito */
+  background-color: #28a745;
   color: white;
 }
 
@@ -269,7 +257,7 @@ const datasFormatadas = computed(() => {
 }
 
 .btn-cancelar {
-  background-color: #dc3545; /* Vermelho bonito */
+  background-color: #dc3545;
   color: white;
 }
 
@@ -284,7 +272,6 @@ const datasFormatadas = computed(() => {
   filter: grayscale(1);
 }
 
-/* Status Concluído */
 .status-concluido {
   background-color: #f8fafc;
   border-left: 8px solid #cbd5e1;
@@ -292,9 +279,11 @@ const datasFormatadas = computed(() => {
 
 .overlay {
   position: fixed;
-  top: 0; left: 0;
-  width: 100vw; height: 100vh;
-  background: rgba(15, 23, 42, 0.7); /* Tom azulado escuro transparente */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.7);
   backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
@@ -352,7 +341,7 @@ textarea {
 
 textarea:focus {
   outline: none;
-  border-color: #dc3545; /* Cor de erro/cancelamento */
+  border-color: #dc3545;
 }
 
 .aviso-cliente {
@@ -397,13 +386,20 @@ textarea:focus {
   cursor: not-allowed;
 }
 
-/* Transição suave */
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s;
+}
 
-/* Responsividade */
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
 @media (max-width: 1024px) {
-  .atendimento-card { width: 95%; }
+  .atendimento-card {
+    width: 95%;
+  }
 }
 
 @media (max-width: 768px) {
@@ -412,6 +408,7 @@ textarea:focus {
     text-align: center;
     gap: 15px;
   }
+
   .bloco-horario {
     border-right: none;
     border-bottom: 2px solid #f0f2f5;
@@ -419,11 +416,16 @@ textarea:focus {
     padding-bottom: 10px;
     width: 100%;
   }
+
   .bloco-acoes {
     width: 100%;
   }
-  .btn { flex: 1; }
+
+  .btn {
+    flex: 1;
+  }
 }
+
 @media (max-width: 1100px) {
   .atendimento-card {
     padding: 20px;

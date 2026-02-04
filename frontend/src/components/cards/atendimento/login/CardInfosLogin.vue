@@ -3,7 +3,6 @@ import api from '@/services/api';
 import { onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
-// 1. Declaramos perfilAtivo como a única fonte de dados
 const perfilAtivo = ref<any>(null);
 const route = useRoute();
 
@@ -21,7 +20,6 @@ const carregarDados = async () => {
     }
   } catch (err) {
     console.error("Erro ao carregar perfil /me:", err);
-    // Se der erro 401, pode ser token expirado
   }
 }
 
@@ -42,14 +40,28 @@ onMounted(carregarDados);
 </template>
 
 <style lang="css" scoped>
-  .infos-perfil {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border-left: 1px solid #eee;
-    padding-left: 20px;
-  }
-  .infos-perfil img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
-  .texto p { margin: 0; line-height: 1.2; }
-  .texto .email { color: #666; font-size: 0.85rem; }
+.infos-perfil {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-left: 1px solid #eee;
+  padding-left: 20px;
+}
+
+.infos-perfil img {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.texto p {
+  margin: 0;
+  line-height: 1.2;
+}
+
+.texto .email {
+  color: #666;
+  font-size: 0.85rem;
+}
 </style>

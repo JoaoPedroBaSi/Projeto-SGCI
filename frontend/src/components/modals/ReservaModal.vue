@@ -581,7 +581,6 @@ async function confirmarERedirecionar() {
   padding: 25px;
 }
 
-/* INPUTS */
 .label-input {
   display: block;
   font-size: 0.75rem;

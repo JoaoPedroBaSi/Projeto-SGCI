@@ -30,10 +30,8 @@ watch(() => props.visivel, (val) => {
     form.value.observacao = '';
 
     if (props.idPreSelecionado) {
-      // Se veio um ID da tabela, seleciona ele
       form.value.idItem = props.idPreSelecionado;
     } else if (props.listaOpcoes.length > 0) {
-      // Se não, seleciona o primeiro da lista
       form.value.idItem = props.listaOpcoes[0].id;
     }
   }
@@ -117,7 +115,6 @@ function setTipo(tipo: 'ENTRADA' | 'SAIDA') {
 </template>
 
 <style scoped>
-/* Mesmo CSS anterior */
 .modal-overlay {
   position: fixed;
   top: 0;

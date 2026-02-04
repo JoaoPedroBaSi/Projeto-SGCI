@@ -3,13 +3,12 @@ import { ref, computed } from 'vue';
 
 const props = defineProps<{
   visivel: boolean;
-  acao: string; // 'confirmar' | 'recusar'
+  acao: string;
   item: any;
 }>();
 
 const emit = defineEmits(['ao-fechar', 'ao-salvar']);
 
-// Estados
 const justificativa = ref('');
 
 const tituloModal = computed(() => {
@@ -125,7 +124,6 @@ function confirmarAcao() {
   animation: scaleUp 0.3s ease;
 }
 
-/* HEADER */
 .modal-header {
   background-color: white;
   padding: 20px 25px 15px 25px;
@@ -170,7 +168,6 @@ function confirmarAcao() {
   color: #ff6b6b;
 }
 
-/* BODY */
 .modal-body {
   padding: 15px 25px 20px 25px;
 }
@@ -194,7 +191,6 @@ function confirmarAcao() {
   margin-top: 5px;
 }
 
-/* FORMULÁRIOS */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -231,7 +227,6 @@ function confirmarAcao() {
   margin-top: 5px;
 }
 
-/* FOOTER */
 .modal-footer {
   padding: 15px 25px 25px 25px;
   display: flex;
@@ -282,7 +277,6 @@ function confirmarAcao() {
   box-shadow: 0 4px 10px rgba(255, 107, 107, 0.3);
 }
 
-/* ANIMAÇÕES */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;

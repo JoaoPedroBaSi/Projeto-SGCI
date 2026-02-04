@@ -8,7 +8,7 @@ import { useRouter } from 'vue-router';
 const parcerias = ref<Parceria[]>([]);
 const router = useRouter();
 const mostrarModal = ref(false);
-const parceriaSelecionada = ref<any>(null); // Usando any aqui para facilitar a manipulação do form
+const parceriaSelecionada = ref<any>(null);
 
 const carregarParcerias = async () => {
   const token = localStorage.getItem('auth_token');
@@ -33,7 +33,6 @@ const carregarParcerias = async () => {
 };
 
 const abrirModalEdicao = (item: Parceria) => {
-  // Criamos uma cópia profunda para o modal não alterar o card em tempo real antes de salvar
   parceriaSelecionada.value = JSON.parse(JSON.stringify(item));
   mostrarModal.value = true;
 };
@@ -86,13 +85,8 @@ onMounted(carregarParcerias);
 
     <main class="content">
       <section class="section-card-list">
-        <CardListaParceria
-          v-for="item in parcerias"
-          :key="item.id"
-          :parceria="item"
-          @editar="abrirModalEdicao(item)"
-          @apagar="confirmarExclusao(item.id)"
-        />
+        <CardListaParceria v-for="item in parcerias" :key="item.id" :parceria="item" @editar="abrirModalEdicao(item)"
+          @apagar="confirmarExclusao(item.id)" />
       </section>
     </main>
 
@@ -152,7 +146,6 @@ onMounted(carregarParcerias);
 </template>
 
 <style scoped>
-/* Estrutura da Página */
 .page-container {
   background-color: #f4f4f4;
   min-height: 100vh;
@@ -162,7 +155,7 @@ onMounted(carregarParcerias);
   background: white;
   padding: 40px 60px;
   margin-bottom: 30px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .botao-opcao {
@@ -181,7 +174,6 @@ onMounted(carregarParcerias);
   color: white;
 }
 
-/* Lista de Cards */
 .section-card-list {
   max-width: 1000px;
   margin: 0 auto;
@@ -191,12 +183,16 @@ onMounted(carregarParcerias);
   padding: 0 20px 40px;
 }
 
-/* Modal */
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.6);
-  display: flex; justify-content: center; align-items: center;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
   z-index: 1000;
 }
 
@@ -206,7 +202,7 @@ onMounted(carregarParcerias);
   border-radius: 12px;
   width: 90%;
   max-width: 500px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
 .modal-header {
@@ -241,7 +237,8 @@ onMounted(carregarParcerias);
   margin-bottom: 5px;
 }
 
-input, select {
+input,
+select {
   padding: 10px;
   border: 1px solid #ddd;
   border-radius: 6px;

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// Importa a moldura (Layout)
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 </script>
 

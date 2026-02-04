@@ -7,7 +7,7 @@ import {
   Legend,
   ArcElement,
   CategoryScale,
-  type ChartOptions // Importando o tipo
+  type ChartOptions
 } from 'chart.js'
 
 ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale)
@@ -17,7 +17,6 @@ defineProps<{
   chartOptions?: any
 }>()
 
-// Aplicando a tipagem correta
 const chartOptions: ChartOptions<'pie'> = {
   responsive: true,
   maintainAspectRatio: false,

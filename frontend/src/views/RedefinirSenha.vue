@@ -1,24 +1,20 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useRouter, useRoute } from 'vue-router'; 
-// CORREÇÃO: Usando a instância api configurada em vez de axios puro
-import api from '@/services/api'; 
+import { useRouter, useRoute } from 'vue-router';
+import api from '@/services/api';
 
 const router = useRouter();
-const route = useRoute(); // Para pegar o token da URL
+const route = useRoute();
 
-// Dados do formulário
 const novaSenha = ref('');
 const confirmarSenha = ref('');
 
 const redefinirSenha = async () => {
-    // 1. Validação básica
     if (novaSenha.value !== confirmarSenha.value) {
         alert("As senhas não coincidem!");
         return;
     }
-    
-    // 2. Pegar o token da URL
+
     const token = route.query.token;
 
     if (!token) {
@@ -27,16 +23,14 @@ const redefinirSenha = async () => {
     }
 
     try {
-        // 3. A CHAMADA CORRETA (Usando api.post e rota relativa)
         await api.post('/redefinir-senha', {
             token: token,
-            password: novaSenha.value // Enviando como 'password'
+            password: novaSenha.value
         });
 
         alert("Senha redefinida com sucesso! Agora você pode logar.");
-        
-        // Redireciona para o login
-        router.push('/'); 
+
+        router.push('/');
 
     } catch (error: any) {
         console.error(error);
@@ -48,7 +42,7 @@ const redefinirSenha = async () => {
 
 <template>
     <div class="page-layout">
-        
+
         <div class="lado-esquerdo">
             <img src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?q=80&w=2080&auto=format&fit=crop" alt="Médica" />
             <div class="filtro-verde"></div>
@@ -56,27 +50,27 @@ const redefinirSenha = async () => {
 
         <div class="lado-direito">
             <div class="card-redefinir">
-                
+
                 <h2 class="titulo">Redefinição de senha</h2>
 
                 <form @submit.prevent="redefinirSenha">
                     <div class="campo">
                         <label>Nova senha</label>
-                        <input 
-                            type="password" 
-                            v-model="novaSenha" 
-                            placeholder="Digite sua nova senha" 
-                            required 
+                        <input
+                            type="password"
+                            v-model="novaSenha"
+                            placeholder="Digite sua nova senha"
+                            required
                         />
                     </div>
 
                     <div class="campo">
                         <label>Confirme a senha</label>
-                        <input 
-                            type="password" 
-                            v-model="confirmarSenha" 
-                            placeholder="Digite sua nova senha novamente" 
-                            required 
+                        <input
+                            type="password"
+                            v-model="confirmarSenha"
+                            placeholder="Digite sua nova senha novamente"
+                            required
                         />
                     </div>
 
@@ -96,7 +90,7 @@ const redefinirSenha = async () => {
 </template>
 
 <style scoped>
-/* === LAYOUT GERAL (Consistente com HomeView) === */
+
 .page-layout {
     display: flex;
     height: 100vh;
@@ -128,18 +122,17 @@ const redefinirSenha = async () => {
 
 .lado-direito {
     flex: 1;
-    background-color: #0e7490; /* Verde Teal */
+    background-color: #0e7490;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
 }
 
-/* === CARD CENTRALIZADO === */
 .card-redefinir {
     width: 100%;
     max-width: 450px;
-    background-color: #2197ac; /* Fundo transparente */
+    background-color: #2197ac;
     border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 2.5rem;
     border-radius: 16px;
@@ -157,7 +150,6 @@ const redefinirSenha = async () => {
     color: white;
 }
 
-/* === CAMPOS === */
 .campo {
     margin-bottom: 1.5rem;
     text-align: left;
@@ -193,12 +185,11 @@ input::placeholder {
     color: rgba(255, 255, 255, 0.5);
 }
 
-/* === BOTÃO === */
 .btn-redefinir {
     width: 100%;
     padding: 16px;
     margin-top: 10px;
-    background-color: #2dd4bf; /* Cyan Claro */
+    background-color: #2dd4bf;
     color: #0f766e;
     font-weight: 800;
     font-size: 1.1rem;
@@ -214,7 +205,6 @@ input::placeholder {
     transform: scale(1.02);
 }
 
-/* === LINKS === */
 .links {
     margin-top: 20px;
 }
@@ -230,7 +220,6 @@ input::placeholder {
     text-decoration: underline;
 }
 
-/* RESPONSIVIDADE */
 @media (max-width: 768px) {
     .page-layout { flex-direction: column; }
     .lado-esquerdo { display: none; }

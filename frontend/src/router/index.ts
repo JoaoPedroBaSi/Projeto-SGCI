@@ -4,7 +4,6 @@ import HomeView from '../views/HomeView.vue'
 import AutenticacaoView from '@/views/AutenticacaoView.vue'
 
 import CadastroClienteView from '../views/CadastroClienteView.vue'
-// REMOVIDO: Importação da tela antiga de cadastro de profissional
 
 import RedefinirSenhaView from '../views/RedefinirSenha.vue'
 import EsqueciSenha from '../views/EsqueciSenha.vue'
@@ -28,8 +27,6 @@ import AprovarAgendamentosView from '../views/AprovarAgendamentosView.vue'
 import ReservaSalasView from '@/views/ReservaSalasView.vue'
 import ControleEstoqueView from '@/views/ControleEstoqueView.vue'
 
-// CONFIGURAÇÃO DAS ROTAS
-
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -41,73 +38,69 @@ const router = createRouter({
     {
       path: '/autenticacao',
       name: 'autenticacao',
-      component: AutenticacaoView
+      component: AutenticacaoView,
     },
     { path: '/login', redirect: '/' },
     {
       path: '/cadastro/cliente',
       name: 'cadastro-cliente',
-      component: CadastroClienteView
+      component: CadastroClienteView,
     },
-    // REMOVIDO: Rota pública de cadastro de profissional (Agora é só pelo Admin)
     {
       path: '/redefinir-senha',
       name: 'redefinir-senha',
-      component: RedefinirSenhaView
+      component: RedefinirSenhaView,
     },
     {
       path: '/esqueci-senha',
       name: 'esqueci-senha',
-      component: EsqueciSenha
+      component: EsqueciSenha,
     },
 
-    // --- ROTAS DO ADMINISTRADOR ---
     {
       path: '/admin/dashboard',
       name: 'admin-dashboard',
-      component: AdminDashboardView
+      component: AdminDashboardView,
     },
     {
       path: '/admin/aprovacoes',
       name: 'aprovacao-profissional',
-      component: AprovacaoProfissional
+      component: AprovacaoProfissional,
     },
     {
       path: '/admin/cadastrar-profissional',
       name: 'admin-cadastrar-profissional',
-      // Importação dinâmica: O arquivo TEM que existir na pasta views/admin/
       component: () => import('../views/admin/CadastroProfissionalView.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/admin/salas',
       name: 'admin-salas',
       component: SalasView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/admin/reservas',
       name: 'admin-reservas',
       component: AprovacaoReservasView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/admin/solicitacoes',
       name: 'admin-solicitacoes',
-      component: AprovarAgendamentosView
+      component: AprovarAgendamentosView,
     },
     {
       path: '/admin/estoque',
       name: 'admin-estoque',
-      component: ControleEstoqueView
+      component: ControleEstoqueView,
     },
-    // -----------------------------
 
     {
       path: '/perfil',
       name: 'perfil',
       component: PerfilView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/consulta/aprovacao',
@@ -118,17 +111,17 @@ const router = createRouter({
       path: '/dashboard/cliente',
       name: 'dashboard-cliente',
       component: DashboardClienteView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/dashboard/profissional',
       name: 'dashboard-profissional',
       component: DashboardProfissionalView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/dashboard',
-      redirect: '/dashboard/cliente'
+      redirect: '/dashboard/cliente',
     },
     {
       path: '/cliente/consultas/pagar',
@@ -203,38 +196,38 @@ const router = createRouter({
     {
       path: '/profissional/reservas',
       name: 'profissional-reservas',
-      component: ReservaSalasView
+      component: ReservaSalasView,
     },
     {
       path: '/profissional/solicitar-reposicao',
       name: 'solicitar-reposicao',
       component: SolicitacaoReposicaoView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/profissional/financeiro',
       name: 'financeiro-profissional',
       component: FinanceiroView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/profissional/pagamento-salas',
       name: 'pagamento-salas',
       component: () => import('@/views/profissional/PagamentoSalasView.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/profissional/prontuarios',
       name: 'prontuarios',
       component: ProntuarioView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
 
     {
-      path: '/profissional/prontuarios/:id', // :id significa que é dinâmico
+      path: '/profissional/prontuarios/:id',
       name: 'detalhe-prontuario',
       component: DetalheProntuarioView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
   ],
 })

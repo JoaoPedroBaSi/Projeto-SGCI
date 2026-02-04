@@ -1,11 +1,9 @@
 <script lang="ts" setup>
 import { ref, onMounted, computed } from 'vue';
 import api from '@/services/api';
-// Verifique se este caminho abaixo está correto para o seu Card
 import CardMinhaConsulta from '@/components/cards/atendimento/consulta/CardMinhaConsulta.vue';
 import CardBarraNavegacao from '@/components/barra/CardBarraNavegacao.vue';
 
-// Interfaces para evitar erros de tipagem
 interface Atendimento {
   id: number;
   status: 'PENDENTE' | 'CONFIRMADO' | 'CANCELADO';
@@ -27,13 +25,11 @@ const buscarAtendimentos = async () => {
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
   try {
-    // Buscamos atendimentos e salas em paralelo
     const [atendimentoRes, salaRes] = await Promise.all([
       api.get(`/atendimento?cliente_id=${userData.id}`, config),
       api.get('/sala', config)
     ]);
 
-    // Fazemos o mapeamento para injetar o nome da sala em cada atendimento
     atendimentos.value = atendimentoRes.data.map((atend: any) => {
       const sala = salaRes.data.find((s: any) => Number(s.id) === Number(atend.salaId));
       return {
@@ -56,18 +52,14 @@ onMounted(buscarAtendimentos);
 </script>
 
 <template>
-  <CardBarraNavegacao/>
+  <CardBarraNavegacao />
   <main class="page-container">
     <header class="header-pagina">
       <h1>Minhas consultas</h1>
 
       <div class="filtros-container">
-        <button
-          v-for="status in ['PENDENTE', 'CONFIRMADO', 'CANCELADO']"
-          :key="status"
-          :class="['btn-filtro', { ativo: statusFiltro === status }]"
-          @click="statusFiltro = status as any"
-        >
+        <button v-for="status in ['PENDENTE', 'CONFIRMADO', 'CANCELADO']" :key="status"
+          :class="['btn-filtro', { ativo: statusFiltro === status }]" @click="statusFiltro = status as any">
           {{ status }}
         </button>
       </div>
@@ -77,12 +69,8 @@ onMounted(buscarAtendimentos);
 
     <div v-else-if="atendimentosFiltrados.length > 0">
       <div class="grid-consultas">
-        <CardMinhaConsulta
-          v-for="atendimento in atendimentosFiltrados"
-          :key="atendimento.id"
-          :atendimento="atendimento"
-          @atualizar="buscarAtendimentos"
-        />
+        <CardMinhaConsulta v-for="atendimento in atendimentosFiltrados" :key="atendimento.id" :atendimento="atendimento"
+          @atualizar="buscarAtendimentos" />
       </div>
     </div>
 
@@ -93,20 +81,63 @@ onMounted(buscarAtendimentos);
 </template>
 
 <style scoped>
+.page-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  font-family: sans-serif;
+}
 
-  .page-container { padding: 20px; max-width: 1400px; margin: 0 auto; font-family: sans-serif; }
-  .header-pagina { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 20px; }
-  h1 { color: #128093; margin: 0; }
-  .filtros-container { display: flex; gap: 10px; background: #eee; padding: 5px; border-radius: 12px; }
-  .btn-filtro { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: #666; background: transparent; transition: 0.3s; }
-  .btn-filtro.ativo { background: #128093; color: white; }
-  .grid-consultas {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 30px;
-    justify-content: flex-start;
-    padding: 20px 0;
-    width: 100%;
-  }
-  .feedback { text-align: center; padding: 50px; color: #888; }
+.header-pagina {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+h1 {
+  color: #128093;
+  margin: 0;
+}
+
+.filtros-container {
+  display: flex;
+  gap: 10px;
+  background: #eee;
+  padding: 5px;
+  border-radius: 12px;
+}
+
+.btn-filtro {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  color: #666;
+  background: transparent;
+  transition: 0.3s;
+}
+
+.btn-filtro.ativo {
+  background: #128093;
+  color: white;
+}
+
+.grid-consultas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+  justify-content: flex-start;
+  padding: 20px 0;
+  width: 100%;
+}
+
+.feedback {
+  text-align: center;
+  padding: 50px;
+  color: #888;
+}
 </style>

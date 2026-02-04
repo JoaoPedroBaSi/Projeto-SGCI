@@ -9,7 +9,6 @@ import {
   PointElement, CategoryScale, LinearScale
 } from 'chart.js'
 
-// Registro obrigatório dos módulos do Chart.js
 ChartJS.register(Title, Tooltip, Legend, LineElement, PointElement, CategoryScale, LinearScale)
 
 defineProps<{
@@ -17,7 +16,6 @@ defineProps<{
   chartOptions?: any
 }>()
 
-// Opções padrão para garantir que o gráfico preencha o container
 const chartOptions = {
   responsive: true,
   maintainAspectRatio: false

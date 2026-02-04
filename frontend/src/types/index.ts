@@ -5,7 +5,6 @@ export interface User {
   email: string,
   userId: number,
 }
-// Interface básica para o Cliente
 export interface Cliente {
   id: number;
   nome: string;
@@ -23,7 +22,6 @@ export interface Sala {
   capacidadePacientes: number;
 }
 
-// Se for usar Pedidos novamente, mantenha esta interface
 export interface Pedido {
   id: number,
   descricao: string,
@@ -91,10 +89,10 @@ export interface Parceria {
   bairro: string,
   rua: string,
   numero: string,
-  tipo_convenio: string,      // Snake_case para bater com o Vine
-  data_inicio: string,        // Snake_case para bater com o Vine
-  site_url: string,           // Snake_case para bater com o Vine
+  tipo_convenio: string,
+  data_inicio: string,
+  site_url: string,
   status_parceria: string,
   porcentagem_desconto: number,
-  tipo_relacionamento: string // Valor padrão para não vir vazio
+  tipo_relacionamento: string
 }

@@ -20,8 +20,6 @@ const formulario = reactive({
   observacoes: ''
 });
 
-// --- LÓGICA DE FILTRAGEM ---
-
 const profissionalSelecionado = computed(() => {
   if (!props.listaProfissionais) return null;
   return props.listaProfissionais.find(p => p.id === Number(formulario.profissional_id));
@@ -33,19 +31,15 @@ const horariosDisponiveis = computed(() => {
   }
 
   return profissionalSelecionado.value.disponibilidades.filter((disp: any) => {
-    // No seu JSON vem 'dataHoraInicio'. Vamos extrair a data (YYYY-MM-DD)
     const dataISO = disp.dataHoraInicio.split('T')[0];
 
-    // Filtra pela data selecionada e garante que está LIVRE
     return dataISO === formulario.data && disp.status === 'LIVRE';
   }).map((disp: any) => {
-    // Vamos formatar a exibição da hora para o select (HH:mm)
-    // Ex: "2026-01-21T10:30:00.000+00:00" -> "10:30"
     const horaFormatada = disp.dataHoraInicio.split('T')[1].substring(0, 5);
 
     return {
       ...disp,
-      horaFormatada // Criamos este campo para facilitar o template
+      horaFormatada
     };
   });
 });
@@ -60,7 +54,6 @@ const obterIdCliente = () => {
     return null;
   }
 };
-// --- ENVIO ---
 
 const lidarComEnvio = async () => {
   const dispSelecionada = horariosDisponiveis.value.find(h => h.horaFormatada === formulario.hora);
@@ -79,39 +72,33 @@ const lidarComEnvio = async () => {
   try {
     const config = { headers: { Authorization: `Bearer ${token}` } };
 
-    // Verifique se o seu backend espera profissional_id ou profissionalId
     const payload = {
-    profissional_id: Number(formulario.profissional_id),
-    cliente_id: Number(clienteId),
-    disponibilidade_id: Number(dispSelecionada.id),
-    // .split('.')[0] remove os milissegundos se sobrarem, garantindo o formato YYYY-MM-DDTHH:mm:ss
-    data_hora_inicio: dispSelecionada.dataHoraInicio.includes('.')
-      ? dispSelecionada.dataHoraInicio.split('.')[0]
-      : dispSelecionada.dataHoraInicio,
-    observacoes: formulario.observacoes,
-    forma_pagamento: formulario.forma_pagamento,
-    status: 'PENDENTE'
-  };
+      profissional_id: Number(formulario.profissional_id),
+      cliente_id: Number(clienteId),
+      disponibilidade_id: Number(dispSelecionada.id),
+      data_hora_inicio: dispSelecionada.dataHoraInicio.includes('.')
+        ? dispSelecionada.dataHoraInicio.split('.')[0]
+        : dispSelecionada.dataHoraInicio,
+      observacoes: formulario.observacoes,
+      forma_pagamento: formulario.forma_pagamento,
+      status: 'PENDENTE'
+    };
 
     const response = await api.post('/atendimento', payload, config);
 
     if (response.status === 201 || response.status === 200) {
       exibirFeedback("✅ Agendamento solicitado com sucesso!", "sucesso");
-      // Limpa o formulário
       Object.assign(formulario, { profissional_id: '', data: '', hora: '', forma_pagamento: '', observacoes: '' });
     }
   } catch (error: any) {
-  // Isso vai imprimir no console exatamente qual campo o Adonis não gostou
-  if (error.response?.data?.errors) {
-    console.error("ERRO DE VALIDAÇÃO:", error.response.data.errors);
+    if (error.response?.data?.errors) {
+      console.error("ERRO DE VALIDAÇÃO:", error.response.data.errors);
+    }
+
+    console.error("Erro 500 Detalhado:", error.response?.data);
+    exibirFeedback(error.response?.data?.message || "Erro interno no servidor.", "erro");
   }
-
-  console.error("Erro 500 Detalhado:", error.response?.data);
-  exibirFeedback(error.response?.data?.message || "Erro interno no servidor.", "erro");
-}
 };
-
-// --- AUXILIARES ---
 
 const exibirFeedback = (msg: string, tipo: 'sucesso' | 'erro') => {
   feedback.mensagem = msg;
@@ -142,7 +129,6 @@ const nomeProfissionalSelecionado = computed(() => {
   return profissionalSelecionado.value?.nome || 'não selecionado';
 });
 
-// Reseta a hora se o usuário mudar o profissional ou a data
 watch(() => [formulario.data, formulario.profissional_id], () => {
   formulario.hora = '';
 });
@@ -185,7 +171,8 @@ watch(() => [formulario.data, formulario.profissional_id], () => {
             <label for="hora">Horário Disponível</label>
             <select v-model="formulario.hora" id="hora" :disabled="!horariosDisponiveis.length" required>
               <option value="" disabled>
-                {{ !formulario.data ? 'Aguardando data...' : (horariosDisponiveis.length ? 'Horário' : 'Nenhum horário livre') }}
+                {{ !formulario.data ? 'Aguardando data...' : (horariosDisponiveis.length ? 'Horário' : 'Nenhum horário
+                livre') }}
               </option>
               <option v-for="horario in horariosDisponiveis" :key="horario.id" :value="horario.horaFormatada">
                 {{ horario.horaFormatada }}
@@ -198,7 +185,8 @@ watch(() => [formulario.data, formulario.profissional_id], () => {
           <label for="pagamento">Forma de Pagamento</label>
           <select v-model="formulario.forma_pagamento" id="pagamento" required>
             <option value="">Selecione o método</option>
-            <option v-for="metodo in ['PIX', 'CARTÃO DE CRÉDITO', 'DEBITO', 'DINHEIRO', 'BOLETO']" :key="metodo" :value="metodo">
+            <option v-for="metodo in ['PIX', 'CARTÃO DE CRÉDITO', 'DEBITO', 'DINHEIRO', 'BOLETO']" :key="metodo"
+              :value="metodo">
               {{ metodo }}
             </option>
           </select>
@@ -206,7 +194,8 @@ watch(() => [formulario.data, formulario.profissional_id], () => {
 
         <div class="field-group">
           <label for="observacoes">Motivo da Consulta (Opcional)</label>
-          <textarea id="observacoes" v-model="formulario.observacoes" placeholder="Descreva brevemente..." rows="3"></textarea>
+          <textarea id="observacoes" v-model="formulario.observacoes" placeholder="Descreva brevemente..."
+            rows="3"></textarea>
         </div>
       </div>
 
@@ -265,7 +254,7 @@ watch(() => [formulario.data, formulario.profissional_id], () => {
   padding: 40px 20px;
   display: flex;
   justify-content: center;
-  align-items: center; /* Centraliza verticalmente na tela */
+  align-items: center;
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   background-color: #f0f2f5;
   min-height: 100vh;
@@ -273,16 +262,15 @@ watch(() => [formulario.data, formulario.profissional_id], () => {
 
 .booking-card {
   background: white;
-  /* LARGURA E ALTURA FIXAS */
   width: 900px;
   min-height: 750px;
 
   display: flex;
   flex-direction: column;
-  border-radius: 24px; /* Cantos um pouco mais modernos */
-  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+  border-radius: 24px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
   padding: 60px;
-  box-sizing: border-box; /* Garante que o padding não aumente o tamanho final */
+  box-sizing: border-box;
 }
 
 .booking-header {
@@ -309,10 +297,9 @@ watch(() => [formulario.data, formulario.profissional_id], () => {
   display: flex;
   flex-direction: column;
   gap: 25px;
-  flex-grow: 1; /* Faz o corpo ocupar o espaço disponível e empurrar o footer */
+  flex-grow: 1;
 }
 
-/* Container para Alertas - Ocupa espaço fixo para evitar saltos no layout */
 .feedback-wrapper {
   min-height: 60px;
 }
@@ -320,7 +307,7 @@ watch(() => [formulario.data, formulario.profissional_id], () => {
 .grid-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 40px; /* Mais espaço horizontal */
+  gap: 40px;
 }
 
 .field-group {
@@ -335,7 +322,9 @@ watch(() => [formulario.data, formulario.profissional_id], () => {
   color: var(--text-main);
 }
 
-input, select, textarea {
+input,
+select,
+textarea {
   padding: 16px 20px;
   border: 1.5px solid var(--border);
   border-radius: 12px;
@@ -346,7 +335,9 @@ input, select, textarea {
   box-sizing: border-box;
 }
 
-input:focus, select:focus, textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 4px rgba(18, 128, 147, 0.1);
@@ -354,10 +345,9 @@ input:focus, select:focus, textarea:focus {
 
 textarea {
   height: 120px;
-  resize: none; /* Evita que o usuário mude o tamanho manualmente */
+  resize: none;
 }
 
-/* Rodapé sempre na base do card */
 .booking-footer {
   margin-top: 40px;
   display: flex;
@@ -385,69 +375,68 @@ textarea {
 }
 
 .feedback-container {
-  position: absolute; /* Fixa em relação ao booking-card */
-  top: 20px;          /* Distância do topo */
+  position: absolute;
+  top: 20px;
   left: 50%;
-  transform: translateX(-50%); /* Centraliza horizontalmente */
-  width: 80%;         /* Largura do alerta */
-  z-index: 100;       /* Garante que fica acima de tudo */
-  pointer-events: none; /* Permite clicar no que estiver atrás do alerta */
+  transform: translateX(-50%);
+  width: 80%;
+  z-index: 100;
+  pointer-events: none;
 }
 
 .alert {
-  pointer-events: auto; /* Reativa cliques dentro do alerta se necessário */
+  pointer-events: auto;
   padding: 16px 24px;
   border-radius: 12px;
   font-size: 1rem;
   text-align: center;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); /* Sombra para dar profundidade */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
   border: 1px solid;
-  animation: slideDown 0.3s ease-out; /* Animação de entrada */
+  animation: slideDown 0.3s ease-out;
 }
 
-/* Garante que o booking-card seja a referência para o position: absolute */
 .booking-card {
-  position: relative; /* ADICIONE ISSO */
+  position: relative;
   background: white;
   width: 900px;
   min-height: 750px;
-  /* ... resto do seu código ... */
 }
 
-/* Animação suave para o alerta descer */
 @keyframes slideDown {
   from {
     transform: translateY(-20px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
   }
 }
 
-/* Ajuste das cores */
 .sucesso {
   background-color: #e8f5e9;
   color: #2e7d32;
   border-color: #c8e6c9;
 }
+
 .erro {
   background-color: #ffebee;
   color: #c62828;
   border-color: #ffcdd2;
 }
+
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5); /* Fundo escurecido */
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999; /* Garante que fique acima de tudo */
+  z-index: 9999;
 }
 
 .modal-card {
@@ -456,7 +445,7 @@ textarea {
   border-radius: 20px;
   width: 100%;
   max-width: 500px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   animation: scaleIn 0.3s ease-out;
 }
 
@@ -510,7 +499,6 @@ textarea {
   gap: 15px;
 }
 
-/* Botões do Modal */
 .btn-confirm {
   flex: 1;
   padding: 12px;
@@ -531,20 +519,28 @@ textarea {
   color: var(--text-muted);
 }
 
-/* Animações do Modal */
 @keyframes scaleIn {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
-.modal-enter-active, .modal-leave-active {
+.modal-enter-active,
+.modal-leave-active {
   transition: opacity 0.3s ease;
 }
 
-.modal-enter-from, .modal-leave-to {
+.modal-enter-from,
+.modal-leave-to {
   opacity: 0;
 }
-/* Responsividade Básica */
+
 @media (max-width: 950px) {
   .booking-card {
     width: 95%;

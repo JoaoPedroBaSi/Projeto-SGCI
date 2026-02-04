@@ -8,22 +8,18 @@ const route = useRoute();
 const router = useRouter();
 const atendimentoId = route.params.id;
 
-// Estados da tela
 const loading = ref(true);
 const salvando = ref(false);
 const modoLeitura = ref(false);
 
-// Dados do Paciente
 const paciente = ref({
   nome: 'Carregando...',
   idade: '--',
   alergia: 'Verificar histórico',
   foto: '',
-  // CORREÇÃO AQUI: Dizemos que pode ser número OU nulo
-  id: null as number | null 
+  id: null as number | null
 });
 
-// Dados do Formulário
 const form = ref({
   diagnostico: '',
   medicamentosPrescritos: '',
@@ -31,49 +27,40 @@ const form = ref({
   descricao: ''
 });
 
-// --- 1. BUSCAR DADOS DO ATENDIMENTO ---
 const carregarDados = async () => {
   try {
     loading.value = true;
-    
-    // Chamada ao Backend
+
     const response = await api.get(`/atendimento/${atendimentoId}`);
     const dados = response.data;
 
-    // 1. Preenche o Prontuário (se existir)
     if (dados.prontuario) {
       form.value.diagnostico = dados.prontuario.diagnostico || '';
       form.value.medicamentosPrescritos = dados.prontuario.medicamentosPrescritos || '';
       form.value.recomendacoes = dados.prontuario.recomendacoes || '';
       form.value.descricao = dados.prontuario.descricao || '';
-      modoLeitura.value = true; 
+      modoLeitura.value = true;
     }
 
-    // 2. Preenche os Dados do Paciente
     const cliente = dados.cliente || {};
-    
-    // --- LÓGICA DE SEGURANÇA (FALLBACK) ---
-    // Tenta pegar o nome vindo do banco
+
     let nomeFinal = cliente.nome || cliente.full_name || cliente.name;
-    
-    // SE NÃO VIER NOME (Backend falhou), usamos o ID para identificar
+
     if (!nomeFinal) {
-        // Se for o ID do seu teste (geralmente 5 ou 10), coloca o nome
-        // Na dúvida, se não tiver nome, colocamos "Paciente Confirmado" para não ficar feio
-        nomeFinal = "Japa Guei"; 
+      nomeFinal = "Japa Guei";
     }
 
-    let idadeCalculada = '22 anos'; // Idade padrão se falhar o cálculo
+    let idadeCalculada = '22 anos';
     if (cliente.data_nascimento || cliente.dataNascimento) {
-       const dataNasc = new Date(cliente.data_nascimento || cliente.dataNascimento);
-       const hoje = new Date();
-       let anos = hoje.getFullYear() - dataNasc.getFullYear();
-       idadeCalculada = `${anos} anos`;
+      const dataNasc = new Date(cliente.data_nascimento || cliente.dataNascimento);
+      const hoje = new Date();
+      let anos = hoje.getFullYear() - dataNasc.getFullYear();
+      idadeCalculada = `${anos} anos`;
     }
 
     paciente.value = {
       id: cliente.id || dados.clienteId,
-      nome: nomeFinal, // Agora nunca ficará vazio
+      nome: nomeFinal,
       idade: idadeCalculada,
       alergia: 'Nenhuma registrada',
       foto: cliente.foto_perfil_url || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'
@@ -81,20 +68,18 @@ const carregarDados = async () => {
 
   } catch (error) {
     console.error("Erro ao carregar:", error);
-    // Em caso de erro CRÍTICO (servidor fora do ar), mostramos dados fictícios
     paciente.value = {
-        id: 99,
-        nome: "Japa Guei (Modo Offline)",
-        idade: "22 anos",
-        alergia: "Nenhuma",
-        foto: "https://cdn-icons-png.flaticon.com/512/4140/4140048.png"
+      id: 99,
+      nome: "Japa Guei (Modo Offline)",
+      idade: "22 anos",
+      alergia: "Nenhuma",
+      foto: "https://cdn-icons-png.flaticon.com/512/4140/4140048.png"
     };
   } finally {
     loading.value = false;
   }
 };
 
-// --- 2. SALVAR PRONTUÁRIO ---
 const salvarProntuario = async () => {
   if (!form.value.diagnostico) {
     alert('Por favor, preencha pelo menos o Diagnóstico.');
@@ -104,9 +89,9 @@ const salvarProntuario = async () => {
   try {
     salvando.value = true;
     await api.post(`/atendimentos/${atendimentoId}/prontuario`, form.value);
-    
+
     alert('✅ Prontuário salvo com sucesso!');
-    await carregarDados(); 
+    await carregarDados();
 
   } catch (error) {
     console.error(error);
@@ -173,8 +158,7 @@ onMounted(() => {
 
             <div class="form-group">
               <label>💊 PRESCRIÇÃO (RECEITA)</label>
-              <textarea v-model="form.medicamentosPrescritos"
-                placeholder="Ex: Dipirona 500mg..." rows="5"
+              <textarea v-model="form.medicamentosPrescritos" placeholder="Ex: Dipirona 500mg..." rows="5"
                 :disabled="modoLeitura"></textarea>
             </div>
 
@@ -198,7 +182,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* RESET E LAYOUT */
 .page-container {
   padding: 20px 40px;
   font-family: 'Montserrat', sans-serif;
@@ -215,7 +198,6 @@ onMounted(() => {
   color: #666;
 }
 
-/* Header do Paciente */
 .patient-header {
   background: white;
   padding: 20px 30px;
@@ -244,7 +226,10 @@ onMounted(() => {
   color: #555;
   transition: 0.2s;
 }
-.btn-voltar:hover { background: #e4e6e9; }
+
+.btn-voltar:hover {
+  background: #e4e6e9;
+}
 
 .avatar {
   width: 60px;
@@ -277,9 +262,11 @@ onMounted(() => {
   font-weight: 600;
   transition: 0.2s;
 }
-.btn-secondary:hover { background: #e0f2f1; }
 
-/* Formulário Principal */
+.btn-secondary:hover {
+  background: #e0f2f1;
+}
+
 .form-panel {
   background: white;
   border-radius: 12px;
@@ -310,10 +297,16 @@ onMounted(() => {
   text-transform: uppercase;
 }
 
-.editando { background: #e3f2fd; color: #1976d2; }
-.finalizado { background: #e8f5e9; color: #2e7d32; }
+.editando {
+  background: #e3f2fd;
+  color: #1976d2;
+}
 
-/* Grid do Formulário */
+.finalizado {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -359,7 +352,6 @@ textarea:disabled {
   cursor: not-allowed;
 }
 
-/* Ações */
 .form-actions {
   margin-top: 30px;
   display: flex;
@@ -379,7 +371,10 @@ textarea:disabled {
   font-weight: 600;
   transition: 0.2s;
 }
-.btn-cancel:hover { background: #cfd8dc; }
+
+.btn-cancel:hover {
+  background: #cfd8dc;
+}
 
 .btn-save {
   background: #117a8b;

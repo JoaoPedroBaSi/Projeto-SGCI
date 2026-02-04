@@ -19,11 +19,10 @@ const fetchHistoricoParaProfissional = async () => {
     const token = localStorage.getItem('auth_token');
     const config = { headers: { Authorization: `Bearer ${token}` } };
 
-    // Buscamos os dados necessários
     const [atendimentoRes, salaRes, clienteRes] = await Promise.all([
-      api.get<Atendimento[]>('/atendimento', config), // O back já filtra pelo profissional logado
+      api.get<Atendimento[]>('/atendimento', config),
       api.get<Sala[]>('/sala', config),
-      api.get<any[]>('/cliente', config) // Precisamos da lista de clientes para pegar os nomes
+      api.get<any[]>('/cliente', config)
     ]);
 
     atendimentos.value = atendimentoRes.data.map(atend => {
@@ -33,11 +32,8 @@ const fetchHistoricoParaProfissional = async () => {
       return {
         ...atend,
         nomeSala: sala ? sala.nome : 'Sala Indefinida',
-        // TRATAMENTO DIFERENCIADO:
-        // No card, o campo "nomeProfissional" é o título principal.
-        // Para o profissional, o título principal deve ser o nome do PACIENTE.
         nomeProfissional: cliente ? cliente.nome : 'Paciente indefinido',
-        funcaoProfissional: 'Paciente' // Subtítulo do card
+        funcaoProfissional: 'Paciente'
       };
     });
 
@@ -49,7 +45,6 @@ const fetchHistoricoParaProfissional = async () => {
   }
 };
 
-// --- Lógica de Paginação (Idêntica à original) ---
 const atendimentosPaginados = computed(() => {
   const inicio = (paginaAtual.value - 1) * itensPorPagina;
   return atendimentos.value.slice(inicio, inicio + itensPorPagina);
@@ -70,14 +65,14 @@ onMounted(fetchHistoricoParaProfissional);
 </script>
 
 <template>
-  <CardBarraNavegacao/>
+  <CardBarraNavegacao />
 
   <h1>Histórico de Consultas</h1>
 
   <main>
     <div class="container-cards" v-if="!isLoading">
       <div v-for="atendimento in atendimentosPaginados" :key="atendimento.id">
-        <CardHistorico class="historico-card" :consulta="atendimento" pagina="historico"/>
+        <CardHistorico class="historico-card" :consulta="atendimento" pagina="historico" />
       </div>
 
       <p v-if="atendimentos.length === 0">Nenhum registro encontrado no histórico.</p>
@@ -85,29 +80,17 @@ onMounted(fetchHistoricoParaProfissional);
     <div v-else class="loader">Carregando...</div>
 
     <div class="paginacao">
-      <button
-        class="btn-pag"
-        :disabled="paginaAtual === 1 || isLoading"
-        @click="irParaPagina(paginaAtual - 1)"
-      >
+      <button class="btn-pag" :disabled="paginaAtual === 1 || isLoading" @click="irParaPagina(paginaAtual - 1)">
         &lt;
       </button>
 
-      <button
-        v-for="n in totalPaginas"
-        :key="n"
-        :class="['btn-pag', { 'ativo': n === paginaAtual }]"
-        :disabled="isLoading"
-        @click="irParaPagina(n)"
-      >
+      <button v-for="n in totalPaginas" :key="n" :class="['btn-pag', { 'ativo': n === paginaAtual }]"
+        :disabled="isLoading" @click="irParaPagina(n)">
         {{ n }}
       </button>
 
-      <button
-        class="btn-pag"
-        :disabled="paginaAtual === totalPaginas || isLoading"
-        @click="irParaPagina(paginaAtual + 1)"
-      >
+      <button class="btn-pag" :disabled="paginaAtual === totalPaginas || isLoading"
+        @click="irParaPagina(paginaAtual + 1)">
         &gt;
       </button>
     </div>
@@ -115,29 +98,71 @@ onMounted(fetchHistoricoParaProfissional);
 </template>
 
 <style scoped lang="css">
-  /* Estilos copiados integralmente para manter a paridade visual */
-  h1 { text-align: center; font-family: 'Montserrat', sans-serif; margin-top: 20px; color: #128093; }
-  main { display: flex; flex-direction: column; align-items: center; width: 100%; min-height: 80vh; }
-  .container-cards { flex-grow: 1; display: flex; flex-direction: column; align-items: center; width: 100%; }
-  .historico-card { margin-bottom: 20px; width: 100%; max-width: 1000px; }
-  .loader { text-align: center; padding: 50px; color: #128093; font-weight: bold; }
+h1 {
+  text-align: center;
+  font-family: 'Montserrat', sans-serif;
+  margin-top: 20px;
+  color: #128093;
+}
 
-  .paginacao {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    padding: 40px 0;
-    width: 100%;
-    background: white;
-    border-top: 1px solid #eee;
-  }
+main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-height: 80vh;
+}
 
-  .btn-pag {
-    width: 35px; height: 35px; border-radius: 6px; border: 1px solid #ddd;
-    background: white; cursor: pointer; transition: 0.2s;
-  }
+.container-cards {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
 
-  .btn-pag.ativo { background-color: #128093; color: white; border-color: #128093; }
-  .btn-pag:disabled { opacity: 0.3; cursor: not-allowed; }
+.historico-card {
+  margin-bottom: 20px;
+  width: 100%;
+  max-width: 1000px;
+}
+
+.loader {
+  text-align: center;
+  padding: 50px;
+  color: #128093;
+  font-weight: bold;
+}
+
+.paginacao {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 0;
+  width: 100%;
+  background: white;
+  border-top: 1px solid #eee;
+}
+
+.btn-pag {
+  width: 35px;
+  height: 35px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  background: white;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-pag.ativo {
+  background-color: #128093;
+  color: white;
+  border-color: #128093;
+}
+
+.btn-pag:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
 </style>

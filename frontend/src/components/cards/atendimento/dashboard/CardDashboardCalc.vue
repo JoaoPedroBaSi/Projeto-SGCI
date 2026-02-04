@@ -75,10 +75,9 @@ const config = computed(() => {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
-/* Estilização do Header com a Borda */
 .header-card {
   padding: 16px 20px;
-  border-bottom: 2px solid var(--border-color); /* A borda solicitada */
+  border-bottom: 2px solid var(--border-color);
   background-color: #fafbfc;
 }
 
@@ -92,7 +91,6 @@ const config = computed(() => {
   text-align: center;
 }
 
-/* Corpo do Card */
 .body-card {
   flex-grow: 1;
   display: flex;
@@ -108,7 +106,6 @@ const config = computed(() => {
   margin: 0;
 }
 
-/* Rodapé */
 .footer-card {
   padding: 12px;
   background-color: #ffffff;

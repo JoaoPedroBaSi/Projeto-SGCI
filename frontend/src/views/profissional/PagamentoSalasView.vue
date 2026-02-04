@@ -165,7 +165,7 @@ onMounted(() => {
             <div class="hist-info">
               <span class="hist-desc">{{ hist.finalidade || hist.descricao }}</span>
               <span class="hist-ref">Status: {{ hist.status }} - {{ formatDate(hist.updatedAt || hist.updated_at)
-                }}</span>
+              }}</span>
             </div>
             <div class="hist-valor">
               {{ formatMoney(hist.valor) }}

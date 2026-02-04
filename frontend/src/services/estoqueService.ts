@@ -33,19 +33,16 @@ export interface MovimentacaoHistorico {
 }
 
 export const estoqueService = {
-  // GET /inventario
   listarItens: async () => {
     const response = await api.get<InventarioItem[]>('/inventario');
     return response.data;
   },
 
-  // GET /mov_inventario
   listarHistorico: async () => {
     const response = await api.get<MovimentacaoHistorico[]>('/mov_inventario');
     return response.data;
   },
 
-  // POST /mov_inventario
   novaMovimentacao: async (dados: MovimentacaoDTO) => {
     const response = await api.post('/mov_inventario', dados);
     return response.data;

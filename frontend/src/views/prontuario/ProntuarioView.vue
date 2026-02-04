@@ -2,11 +2,10 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
-import api from '@/services/api'; // <--- O IMPORT CORRETO
+import api from '@/services/api';
 
 const router = useRouter();
 
-// --- Interfaces (Tipagem) ---
 interface Paciente {
   id: number;
   nome: string;
@@ -15,35 +14,29 @@ interface Paciente {
   status: string;
 }
 
-// --- Estados ---
 const busca = ref('');
 const filtroStatus = ref<'Ativos' | 'Inativos'>('Ativos');
 const loading = ref(false);
 const listaPacientes = ref<Paciente[]>([]);
 const erro = ref('');
 
-// Dados do Usuário Logado
 const usuarioLogado = ref({
   nome: 'Profissional',
   email: 'profissional@sgci.com'
 });
 
-// --- Buscar Dados do Backend (AGORA CORRIGIDO) ---
 const fetchProntuarios = async () => {
   try {
     loading.value = true;
     erro.value = '';
 
-    // CORREÇÃO: Removido o { baseURL: 'localhost' }
-    // Agora ele usa a URL do Render definida no api.ts automaticamente
     const response = await api.get('/profissional/prontuarios');
 
     listaPacientes.value = response.data.map((item: any) => {
-      // Proteção: Se o cliente for nulo (ex: deletado), cria um objeto vazio
       const cliente = item.cliente || {};
 
       return {
-        id: item.id, 
+        id: item.id,
         nome: cliente.name || cliente.nome || item.nome || item.name || 'Cliente Desconhecido',
 
         cpf: cliente.cpf || item.cpf || '---',
@@ -60,13 +53,11 @@ const fetchProntuarios = async () => {
   }
 };
 
-// --- Recuperar usuário do LocalStorage ---
 const carregarDadosUsuario = () => {
   const userStr = localStorage.getItem('user_data');
   if (userStr) {
     try {
       const user = JSON.parse(userStr);
-      // Se o nome vier null do banco (como vimos antes), coloca um fallback
       usuarioLogado.value.nome = user.nome || 'Doutor(a)';
       usuarioLogado.value.email = user.email || 'email@sgci.com';
     } catch (e) {
@@ -80,7 +71,6 @@ onMounted(() => {
   fetchProntuarios();
 });
 
-// --- Lógica de Filtro ---
 const pacientesFiltrados = computed(() => {
   let lista = listaPacientes.value;
 
@@ -101,12 +91,10 @@ const pacientesFiltrados = computed(() => {
   return lista;
 });
 
-// --- Ações ---
 function abrirProntuario(id: number) {
-  router.push(`/profissional/prontuarios/${id}`); 
+  router.push(`/profissional/prontuarios/${id}`);
 }
 
-// Formatação de Data
 function formatarData(iso: string) {
   if (!iso) return '--/--/----';
   const data = new Date(iso);
@@ -202,7 +190,7 @@ function getStatusClass(status: string) {
                 <div class="status-dot-wrapper">
                   <span v-if="paciente.status === 'CONFIRMADO'" class="dot green"></span>
                   <span class="status-text">{{ paciente.status === 'CONFIRMADO' ? 'Consulta Agendada' : paciente.status
-                  }}</span>
+                    }}</span>
                 </div>
               </div>
 
@@ -233,8 +221,6 @@ function getStatusClass(status: string) {
 </template>
 
 <style scoped>
-/* ESTILOS MANTIDOS IDÊNTICOS */
-
 .layout-wrapper {
   display: flex;
   flex-direction: column;
@@ -318,7 +304,6 @@ function getStatusClass(status: string) {
   margin: 0 auto;
 }
 
-/* TOOLBAR CUSTOMIZADA */
 .toolbar-custom {
   display: flex;
   justify-content: space-between;
@@ -369,7 +354,6 @@ function getStatusClass(status: string) {
   color: #555;
 }
 
-/* GRID & CARDS */
 .grid-labels {
   display: grid;
   grid-template-columns: 2fr 1.5fr 1fr 180px;

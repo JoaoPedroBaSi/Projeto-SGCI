@@ -10,7 +10,7 @@ const atendimentos = ref<Atendimento[]>([]);
 const carregando = ref(true);
 
 const buscarAtendimentos = async () => {
-  carregando.value = true; // Ativa o loading ao atualizar
+  carregando.value = true;
   const token = localStorage.getItem('auth_token');
   const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
   const clienteId = userData.id;

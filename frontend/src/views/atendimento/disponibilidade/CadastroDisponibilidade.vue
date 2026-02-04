@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import CardBarraNavegacao from '@/components/barra/CardBarraNavegacao.vue';
 import CardDisponibilidade from '@/components/cards/atendimento/disponibilidade/CardDisponibilidade.vue';
-  //import { Settings } from 'lucide-vue-next';
   const usuarioLogado = JSON.parse(localStorage.getItem('user') || '{}');
 </script>
 

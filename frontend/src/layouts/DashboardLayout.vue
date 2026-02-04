@@ -26,7 +26,6 @@ const router = useRouter();
 const userName = ref('');
 const userType = ref('');
 
-// Controle de menus abertos/fechados
 const openMenus = ref<Record<string, boolean>>({});
 
 interface MenuItem {
@@ -56,13 +55,9 @@ onMounted(() => {
       const user = JSON.parse(data);
       userName.value = user.fullName || user.nome || 'Usuário';
 
-      // Normaliza o tipo para minúsculo e trata possíveis variações do backend
       const tipo = (user.perfil_tipo || user.perfilTipo || 'cliente').toLowerCase();
       userType.value = tipo;
 
-      // ==========================================================
-      // 1. MENU DO CLIENTE
-      // ==========================================================
       if (tipo === 'cliente') {
         menuItems.value = [
           { label: 'Início', icon: markRaw(Home), route: '/cliente/dashboard' },
@@ -96,9 +91,6 @@ onMounted(() => {
         ];
       }
 
-      // ==========================================================
-      // 2. MENU DO PROFISSIONAL
-      // ==========================================================
       else if (tipo === 'profissional') {
         menuItems.value = [
           { label: 'Início', icon: markRaw(Home), route: '/profissional/dashboard' },
@@ -110,20 +102,17 @@ onMounted(() => {
               { label: 'Meus Pacientes', route: '#pacientes' }
             ]
           },
-          // --- CORREÇÃO AQUI: Link real para Prontuários ---
           {
             label: 'Prontuários', icon: markRaw(ClipboardList), key: 'pront_prof',
             children: [
-              { label: 'Meus Prontuários', route: '/profissional/prontuarios' }, // <--- ROTA CORRIGIDA
+              { label: 'Meus Prontuários', route: '/profissional/prontuarios' },
               { label: 'Registrar Relatório', route: '#relatorios' }
             ]
           },
-          // --- CORREÇÃO AQUI: Limpeza do menu Disponibilidade ---
           {
             label: 'Disponibilidade', icon: markRaw(Clock), key: 'disp_prof',
             children: [
-              // Removido 'Meus Horários' conforme solicitado anteriormente
-              { label: 'Gerenciar Agenda', route: '/profissional/disponibilidade' } // Ajuste a rota se necessário (ex: /cadastro)
+              { label: 'Gerenciar Agenda', route: '/profissional/disponibilidade' }
             ]
           },
           {
@@ -150,9 +139,6 @@ onMounted(() => {
         ];
       }
 
-      // ==========================================================
-      // 3. MENU DO ADMIN
-      // ==========================================================
       else if (tipo === 'admin') {
         menuItems.value = [
           { label: 'Início', icon: markRaw(Home), route: '/admin/dashboard' },
@@ -200,7 +186,6 @@ onMounted(() => {
         ];
       }
     } else {
-      // Sem dados no localstorage, volta pro login
       router.push('/');
     }
   } catch (error) {
@@ -273,9 +258,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* =========================================
-   RESET E ESTRUTURA GERAL
-   ========================================= */
 * {
   box-sizing: border-box;
 }
@@ -284,24 +266,21 @@ onMounted(() => {
   display: flex;
   height: 100vh;
   width: 100vw;
-  background-color: #f8f9fa; /* Fundo cinza claro para conteúdo */
+  background-color: #f8f9fa;
   font-family: 'Montserrat', sans-serif;
   overflow: hidden;
 }
 
-/* =========================================
-   SIDEBAR (MENU LATERAL)
-   ========================================= */
 .sidebar {
   width: 260px;
-  min-width: 260px; /* Garante que não encolha */
-  background-color: #117a8b; /* Teal Base */
+  min-width: 260px;
+  background-color: #117a8b;
   color: white;
   display: flex;
   flex-direction: column;
   padding: 30px 20px;
   z-index: 10;
-  box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .nav-content {
@@ -309,18 +288,18 @@ onMounted(() => {
   overflow-y: auto;
   overflow-x: hidden;
   margin-bottom: 20px;
-  /* Scrollbar Firefox */
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }
 
-/* Scrollbar Webkit (Chrome, Edge, Safari) */
 .nav-content::-webkit-scrollbar {
   width: 6px;
 }
+
 .nav-content::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .nav-content::-webkit-scrollbar-thumb {
   background-color: rgba(255, 255, 255, 0.3);
   border-radius: 4px;
@@ -347,9 +326,6 @@ onMounted(() => {
   letter-spacing: 1px;
 }
 
-/* =========================================
-   ITENS DO MENU
-   ========================================= */
 .menu-item {
   display: flex;
   align-items: center;
@@ -398,9 +374,6 @@ onMounted(() => {
   font-weight: 600;
 }
 
-/* =========================================
-   MODO PACIENTE (ESTILO ESPECIAL)
-   ========================================= */
 .patient-mode-section {
   margin-top: 25px;
   padding-top: 10px;
@@ -429,43 +402,48 @@ onMounted(() => {
 }
 
 .patient-btn:hover {
-  background-color: #2dd4bf; /* Teal Claro */
+  background-color: #2dd4bf;
   border-color: #2dd4bf;
 }
 
 .active-patient {
   background-color: #2dd4bf !important;
-  color: #0f766e !important; /* Texto escuro para contraste */
+  color: #0f766e !important;
   font-weight: bold;
 }
+
 .active-patient :deep(.icon-svg) {
-   stroke: #0f766e !important;
-}
-.active-patient .label-text {
-   color: #0f766e !important;
+  stroke: #0f766e !important;
 }
 
-/* =========================================
-   SUBMENU
-   ========================================= */
+.active-patient .label-text {
+  color: #0f766e !important;
+}
+
 .submenu {
   margin-left: 15px;
   border-left: 1px solid rgba(255, 255, 255, 0.2);
   padding-left: 5px;
   margin-bottom: 8px;
-  /* Animação simples de fade */
   animation: fadeIn 0.3s ease-in-out;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .submenu-item {
   display: block;
   padding: 8px 15px;
-  color: #b2dfdb !important; /* Teal ultra claro */
+  color: #b2dfdb !important;
   text-decoration: none;
   font-size: 0.85rem;
   transition: 0.2s;
@@ -485,22 +463,17 @@ onMounted(() => {
   background-color: rgba(255, 255, 255, 0.15);
 }
 
-/* =========================================
-   SETA (CHEVRON)
-   ========================================= */
 :deep(.arrow-icon) {
   stroke: #ffffff;
   transition: transform 0.3s ease;
   opacity: 0.7;
   margin-left: auto;
 }
+
 .rotated {
   transform: rotate(180deg);
 }
 
-/* =========================================
-   BOTÃO SAIR
-   ========================================= */
 .btn-logout {
   margin-top: auto;
   flex-shrink: 0;
@@ -529,15 +502,12 @@ onMounted(() => {
   stroke: #117a8b;
 }
 
-/* =========================================
-   CONTEÚDO PRINCIPAL (MAIN)
-   ========================================= */
 .content {
   flex: 1;
-  padding: 0; /* O padding deve ser gerenciado pelas páginas internas ou adicionado aqui se preferir */
+  padding: 0;
   overflow-y: auto;
   height: 100%;
   position: relative;
-  min-width: 0; /* Previne overflow flex em conteúdos largos */
+  min-width: 0;
 }
 </style>

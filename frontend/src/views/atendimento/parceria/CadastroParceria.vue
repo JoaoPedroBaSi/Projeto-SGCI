@@ -11,12 +11,12 @@ const form = ref({
   bairro: '',
   rua: '',
   numero: '',
-  tipo_convenio: '',      // Snake_case para bater com o Vine
-  data_inicio: '',        // Snake_case para bater com o Vine
-  site_url: '',           // Snake_case para bater com o Vine
+  tipo_convenio: '',
+  data_inicio: '',
+  site_url: '',
   status_parceria: 'EM NEGOCIACAO',
   porcentagem_desconto: 0,
-  tipo_relacionamento: 'ENTRADA' // Valor padrão para não vir vazio
+  tipo_relacionamento: 'ENTRADA'
 });
 
 const cadastrar = async () => {
@@ -27,15 +27,13 @@ const cadastrar = async () => {
       ...form.value,
       cnpj: form.value.cnpj.replace(/\D/g, ''),
       cep: form.value.cep.replace(/\D/g, ''),
-      porcentagem_desconto: Number(form.value.porcentagem_desconto), // Garantia extra
+      porcentagem_desconto: Number(form.value.porcentagem_desconto),
       site_url: form.value.site_url || null,
       data_inicio: form.value.status_parceria === 'EM NEGOCIACAO' ? null : form.value.data_inicio
     };
 
-    // Usando a instância 'api' configurada
     const response = await api.post('/parceria', payload, {
       headers: {
-        // Certifique-se de que NÃO há espaços extras ou caracteres ocultos
         'Authorization': `Bearer ${token?.trim()}`
       }
     });
@@ -130,30 +128,30 @@ const cadastrar = async () => {
       </div>
 
       <div class="grid-row">
-    <div class="field-group">
-      <label>Status da Parceria</label>
-      <select v-model="form.status_parceria">
-        <option value="ATIVO">Ativo</option>
-        <option value="INATIVO">Inativo</option>
-        <option value="EM NEGOCIACAO">Em Negociação</option>
-      </select>
-    </div>
-    <div class="grid-row">
-  <div class="field-group">
-    <label>Tipo de Relacionamento</label>
-    <select v-model="form.tipo_relacionamento" required>
-      <option value="ENTRADA">Entrada</option>
-      <option value="SAIDA">Saída</option>
-      <option value="MISTO">Misto</option>
-      <option value="ESTRATEGICO">Estratégico</option>
-    </select>
-  </div>
-</div>
-    <div class="field-group">
-      <label>% Desconto</label>
-      <input v-model="form.porcentagem_desconto" type="number">
-    </div>
-  </div>
+        <div class="field-group">
+          <label>Status da Parceria</label>
+          <select v-model="form.status_parceria">
+            <option value="ATIVO">Ativo</option>
+            <option value="INATIVO">Inativo</option>
+            <option value="EM NEGOCIACAO">Em Negociação</option>
+          </select>
+        </div>
+        <div class="grid-row">
+          <div class="field-group">
+            <label>Tipo de Relacionamento</label>
+            <select v-model="form.tipo_relacionamento" required>
+              <option value="ENTRADA">Entrada</option>
+              <option value="SAIDA">Saída</option>
+              <option value="MISTO">Misto</option>
+              <option value="ESTRATEGICO">Estratégico</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>% Desconto</label>
+          <input v-model="form.porcentagem_desconto" type="number">
+        </div>
+      </div>
 
       <footer class="booking-footer">
         <button type="submit" class="btn-primary">
@@ -182,12 +180,12 @@ const cadastrar = async () => {
 
 .booking-card {
   background: white;
-  width: 900px; /* Largura idêntica ao exemplo */
-  min-height: 850px; /* Ajustado para caber todos os campos */
+  width: 900px;
+  min-height: 850px;
   display: flex;
   flex-direction: column;
   border-radius: 24px;
-  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
   padding: 60px;
   box-sizing: border-box;
 }
@@ -225,7 +223,6 @@ const cadastrar = async () => {
   flex-grow: 1;
 }
 
-/* Grids de layout */
 .grid-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -244,7 +241,9 @@ const cadastrar = async () => {
   gap: 10px;
 }
 
-.flex-2 { grid-column: span 1; } /* Ajustado pelo grid nativo */
+.flex-2 {
+  grid-column: span 1;
+}
 
 .field-group label {
   font-weight: 600;
@@ -252,7 +251,8 @@ const cadastrar = async () => {
   color: var(--text-main);
 }
 
-input, select {
+input,
+select {
   padding: 16px 20px;
   border: 1.5px solid var(--border);
   border-radius: 12px;
@@ -263,7 +263,8 @@ input, select {
   box-sizing: border-box;
 }
 
-input:focus, select:focus {
+input:focus,
+select:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 4px rgba(18, 128, 147, 0.1);
@@ -301,7 +302,9 @@ input:focus, select:focus {
     padding: 30px;
     min-height: auto;
   }
-  .grid-row, .grid-row-triple {
+
+  .grid-row,
+  .grid-row-triple {
     grid-template-columns: 1fr;
   }
 }

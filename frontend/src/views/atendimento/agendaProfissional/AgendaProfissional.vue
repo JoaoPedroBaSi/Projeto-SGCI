@@ -5,14 +5,12 @@ import type { Atendimento, Cliente } from '@/types';
 import api from '@/services/api';
 import CardInfosLogin from '@/components/cards/atendimento/login/CardInfosLogin.vue';
 
-// Estado para armazenar todos os atendimentos vindos da API
 const todosAtendimentos = ref<Atendimento[]>([]);
 const todosClientes = ref<Cliente[]>([]);
 const carregando = ref(true);
 
 const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
 
-// Tenta pegar o ID de todas as formas que o seu sistema costuma salvar
 const profissionalIdLogado = ref(
   userData.id ||
   userData.user?.id ||
@@ -24,7 +22,6 @@ const buscarAtendimentos = async () => {
   try {
     carregando.value = true;
 
-    // 1. Recupera o token (verifique se o nome é 'auth_token' ou 'token')
     const token = localStorage.getItem('auth_token');
 
     if (!token) {
@@ -60,7 +57,7 @@ const atendimentosFiltrados = computed(() => {
 
       return (
         dataAtendimento === dataFormatada &&
-        Number(atend.profissionalId) === Number(profissionalIdLogado.value) && // Adicionado .value
+        Number(atend.profissionalId) === Number(profissionalIdLogado.value) &&
         atend.status === 'CONFIRMADO'
       );
     })
@@ -83,7 +80,6 @@ const mudarDia = (quantidade: number) => {
   dataSelecionada.value = novaData;
 };
 
-// Computed para o título dinâmico
 const dataExibida = computed(() => {
   const data = dataSelecionada.value;
   const hoje = new Date();
@@ -100,19 +96,21 @@ const dataExibida = computed(() => {
 <template>
   <header class="cabecalho">
     <div class="acoes">
-      <RouterLink class="consulta" to="/dashboard/profissional"> < Voltar </RouterLink>
+      <RouterLink class="consulta" to="/dashboard/profissional">
+        < Voltar </RouterLink>
     </div>
     <div class="infos">
       <div class="titulo">
         <h2>Minha agenda</h2>
       </div>
       <div class="dias">
-        <button class="botao-dia" @click="mudarDia(-1)">< Dia anterior</button>
-        <span class="botao-dia active">{{ dataExibida }}</span>
-        <button class="botao-dia" @click="mudarDia(1)">Dia seguinte ></button>
+        <button class="botao-dia" @click="mudarDia(-1)">
+          < Dia anterior</button>
+            <span class="botao-dia active">{{ dataExibida }}</span>
+            <button class="botao-dia" @click="mudarDia(1)">Dia seguinte ></button>
       </div>
     </div>
-    <CardInfosLogin/>
+    <CardInfosLogin />
   </header>
 
   <main>
@@ -120,13 +118,8 @@ const dataExibida = computed(() => {
       <h2>{{ dataExibida }}</h2>
       <div v-if="carregando">Carregando agenda...</div>
       <div v-else-if="atendimentosFiltrados.length > 0" class="lista-cards">
-        <CardAgenda
-          v-for="atendimento in atendimentosFiltrados"
-          :key="atendimento.id"
-          :atendimento="atendimento"
-          :nome-cliente="atendimento.nomeCliente"
-          @atualizado="buscarAtendimentos"
-        />
+        <CardAgenda v-for="atendimento in atendimentosFiltrados" :key="atendimento.id" :atendimento="atendimento"
+          :nome-cliente="atendimento.nomeCliente" @atualizado="buscarAtendimentos" />
       </div>
       <div v-else class="vazio">
         <p>Nenhum atendimento para este dia.</p>
@@ -136,106 +129,163 @@ const dataExibida = computed(() => {
 </template>
 
 <style lang="css" scoped>
-  .acoes a {
-    padding: 10px 20px;
-    text-align: center;
-    text-decoration: none;
-    font-size: 16px;
-    border-radius: 8px;
-  }
+.acoes a {
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 16px;
+  border-radius: 8px;
+}
+
+.cabecalho {
+  padding: 0 50px;
+  display: flex;
+  justify-content: space-between;
+  min-height: 150px;
+  align-items: center;
+  background-color: white;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.dias {
+  display: flex;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.dias .botao-dia {
+  text-decoration: none;
+  padding: 6px 12px;
+  border: 1px solid #a0a0a0;
+  color: #a0a0a0;
+  border-radius: 5px;
+  font-size: 14px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.dias .botao-dia:hover {
+  cursor: pointer;
+  border-color: #128093;
+  background-color: white;
+  color: #128093;
+}
+
+.config-perfil {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.config .botao-disponibilidade {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  background-color: #128093;
+  color: white;
+  padding: 10px 18px;
+  border-radius: 5px;
+  font-weight: 500;
+}
+
+.infos-perfil {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-left: 1px solid #eee;
+  padding-left: 20px;
+}
+
+.infos-perfil img {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.texto p {
+  margin: 0;
+  line-height: 1.2;
+}
+
+.texto .email {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+main {
+  background-color: #e0e0e0;
+  padding: 40px 20px;
+  min-height: calc(100vh - 150px);
+}
+
+.card-agenda {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.card-agenda h2 {
+  width: 100%;
+  max-width: 1200px;
+  text-align: left;
+  margin-bottom: 25px;
+  color: #333;
+  font-size: 1.8rem;
+}
+
+.lista-cards {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+@media (max-width: 1000px) {
   .cabecalho {
-    padding: 0 50px;
+    padding: 20px;
+    justify-content: center;
+  }
+
+  .config-perfil {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .infos {
+    align-items: center;
+    text-align: center;
+  }
+
+  .acoes {
+    width: 100%;
     display: flex;
-    justify-content: space-between;
-    min-height: 150px;
-    align-items: center;
-    background-color: white;
-    flex-wrap: wrap;
-    gap: 20px;
+    justify-content: flex-start;
   }
+}
 
-  .dias { display: flex; margin-top: 8px; flex-wrap: wrap; gap: 5px; }
-  .dias .botao-dia {
-    text-decoration: none;
-    padding: 6px 12px;
-    border: 1px solid #a0a0a0;
-    color: #a0a0a0;
-    border-radius: 5px;
-    font-size: 14px;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-  .dias .botao-dia:hover { cursor: pointer; border-color: #128093; background-color: white; color: #128093; }
-
-  .config-perfil { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-  .config .botao-disponibilidade {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    background-color: #128093;
-    color: white;
-    padding: 10px 18px;
-    border-radius: 5px;
-    font-weight: 500;
-  }
-
+@media (max-width: 600px) {
   .infos-perfil {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border-left: 1px solid #eee;
-    padding-left: 20px;
-  }
-  .infos-perfil img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
-  .texto p { margin: 0; line-height: 1.2; }
-  .texto .email { color: #666; font-size: 0.85rem; }
-
-  main {
-    background-color: #e0e0e0;
-    padding: 40px 20px;
-    min-height: calc(100vh - 150px);
+    border-left: none;
+    padding-left: 0;
   }
 
-  .card-agenda {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
+  .dias {
+    justify-content: center;
   }
 
-  .card-agenda h2 {
-    width: 100%;
-    max-width: 1200px;
-    text-align: left;
-    margin-bottom: 25px;
-    color: #333;
-    font-size: 1.8rem;
+  .botao-disponibilidade span {
+    display: none;
   }
 
-  .lista-cards {
-    width: 100%;
-    max-width: 1200px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+  .cabecalho {
+    padding: 15px;
   }
-
-  @media (max-width: 1000px) {
-    .cabecalho { padding: 20px; justify-content: center; }
-    .config-perfil { justify-content: center; width: 100%; }
-    .infos { align-items: center; text-align: center; }
-    .acoes {
-      width: 100%; /* Faz o botão ocupar a linha toda em cima no mobile */
-      display: flex;
-      justify-content: flex-start;
-    }
-  }
-
-  @media (max-width: 600px) {
-    .infos-perfil { border-left: none; padding-left: 0; }
-    .dias { justify-content: center; }
-    .botao-disponibilidade span { display: none; }
-    .cabecalho { padding: 15px; }
-  }
+}
 </style>

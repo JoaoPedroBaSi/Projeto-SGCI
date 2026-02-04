@@ -14,21 +14,18 @@ const api = axios.create({
   },
 });
 
-// Interceptador de Requisição
 api.interceptors.request.use((config) => {
-  // CORREÇÃO: Busca a chave certa 'auth_token'
   const token = localStorage.getItem('auth_token');
-  
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  
+
   return config;
 }, (error) => {
   return Promise.reject(error);
 });
 
-// Interceptador de Erro (Debug)
 api.interceptors.response.use(
   (response) => response,
   (error) => {

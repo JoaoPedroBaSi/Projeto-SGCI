@@ -15,37 +15,34 @@ const fetchSalas = async () => {
     listaAtendimentos: Atendimento[],
     listaSalas: Sala[],
     listaProfissionais: Profissional[]
-): (Atendimento & DadosAnexadosSala & DadosAnexadosProfissional)[] => {
+  ): (Atendimento & DadosAnexadosSala & DadosAnexadosProfissional)[] => {
 
     return listaAtendimentos.map(atendimento => {
 
-        // Assumindo que a interface Atendimento possui salaId
-        const sala = listaSalas.find(s => s.id === atendimento.salaId);
+      const sala = listaSalas.find(s => s.id === atendimento.salaId);
 
-        const profissional = listaProfissionais.find(s => s.id === atendimento.profissionalId);
+      const profissional = listaProfissionais.find(s => s.id === atendimento.profissionalId);
 
-        return {
-            ...atendimento,
-            // O TypeScript agora sabe que o objeto retornado contém 'nomeSala'
-            nomeSala: sala ? sala.nome : 'Sala Indefinida',
-            nomeProfissional: profissional ? profissional.nome : 'Profissional indefinido'
-        };
+      return {
+        ...atendimento,
+        nomeSala: sala ? sala.nome : 'Sala Indefinida',
+        nomeProfissional: profissional ? profissional.nome : 'Profissional indefinido'
+      };
     });
-};
+  };
 
   try {
-  const [atendimentoResponse, salaResponse, profissionalResponse] = await Promise.all([
-    api.get<Atendimento[]>('/atendimento'),
-    api.get<Sala[]>('/sala'),
-    api.get<Profissional[]>('/profissional')
-  ]);
+    const [atendimentoResponse, salaResponse, profissionalResponse] = await Promise.all([
+      api.get<Atendimento[]>('/atendimento'),
+      api.get<Sala[]>('/sala'),
+      api.get<Profissional[]>('/profissional')
+    ]);
 
-  const listaAtendimentos = atendimentoResponse.data;
-  const listaSalas = salaResponse.data;
-  const listaProfissionais = profissionalResponse.data;
+    const listaAtendimentos = atendimentoResponse.data;
+    const listaSalas = salaResponse.data;
+    const listaProfissionais = profissionalResponse.data;
 
-  // Assumindo que a função combinarDados agora aceita apenas atendimentos e salas
-  atendimentos.value = combinarDados(listaAtendimentos, listaSalas, listaProfissionais);
+    atendimentos.value = combinarDados(listaAtendimentos, listaSalas, listaProfissionais);
 
   } catch (error) {
     console.error("Erro ao buscar salas:", error);
@@ -55,7 +52,7 @@ const fetchSalas = async () => {
 
   type DadosAnexadosSala = {
     nomeSala: string;
-}
+  }
 
   type DadosAnexadosProfissional = {
     nomeProfissional: string;
@@ -98,13 +95,15 @@ onMounted(() => {
     </div>
     <div class="infos-usuario">
       <div class="foto">
-        <img src="https://plus.unsplash.com/premium_photo-1689568126014-06fea9d5d341?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8cGVyZmlsfGVufDB8fDB8fHww" alt="">
+        <img
+          src="https://plus.unsplash.com/premium_photo-1689568126014-06fea9d5d341?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8cGVyZmlsfGVufDB8fDB8fHww"
+          alt="">
       </div>
       <div class="credenciais">
         <p class="nome">Nome do usuário</p>
         <p class="email">usuario@gmail.com</p>
       </div>
-      </div>
+    </div>
   </header>
   <main>
 
@@ -114,32 +113,39 @@ onMounted(() => {
 </template>
 
 <style lang="css" scoped>
-*, html {
+*,
+html {
   color: rgb(74, 74, 74);
 }
+
 header {
   margin: 30px;
   display: flex;
   justify-content: space-between;
 }
+
 img {
-    width: 65px;
-    height: 65px;
-    border-radius: 50%;
-    object-fit: cover;
-    margin: auto;
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: auto;
 }
+
 .infos-usuario {
   margin: 10px;
   display: flex;
 }
+
 .infos-usuario .credenciais {
   margin-top: 15px;
 }
+
 .infos-usuario .credenciais p {
   margin: 0 10px;
   padding-bottom: 1px;
 }
+
 .infos-usuario .credenciais .nome {
   font-weight: bold;
 }
@@ -147,9 +153,11 @@ img {
 main {
   margin: 50px 30px;
 }
-h1{
+
+h1 {
   color: #128093;
 }
+
 .botoes-visualizacao button {
   margin-right: 30px;
   border-radius: 30px;
@@ -169,5 +177,4 @@ h1{
   border: 1.4px solid blue;
   color: blue;
 }
-
 </style>

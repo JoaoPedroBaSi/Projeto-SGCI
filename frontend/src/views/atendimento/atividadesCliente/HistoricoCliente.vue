@@ -11,7 +11,6 @@ const error = ref<string | null>(null);
 const paginaAtual = ref(1);
 const itensPorPagina = 10;
 
-// Captura o ID do usuário logado (Cliente)
 const usuarioLogado = JSON.parse(localStorage.getItem('user') || '{}');
 const clienteLogadoId = usuarioLogado.id;
 
@@ -33,8 +32,6 @@ const fetchSalas = async () => {
     const mapaFuncoes: Record<number, string> = {};
     funcaoRes.data.forEach(f => mapaFuncoes[f.id] = f.nome);
 
-    // --- MUDANÇA AQUI: Não filtre novamente no Frontend ---
-    // O backend já mandou apenas os atendimentos do usuário logado!
     const dadosVindosDoBack = atendimentoRes.data;
 
     atendimentos.value = dadosVindosDoBack.map(atend => {

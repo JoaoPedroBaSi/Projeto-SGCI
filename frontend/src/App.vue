@@ -7,16 +7,14 @@ import { RouterView } from 'vue-router'
 </template>
 
 <style>
-/* Reset e Estilos Globais Unificados */
-body { 
-  margin: 0; 
-  padding: 0; 
+body {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
-  font-family: 'Montserrat', sans-serif; /* Trazido da Main */
-  background-color: #f4f6f8; /* Trazido da Main */
+  font-family: 'Montserrat', sans-serif;
+  background-color: #f4f6f8;
 }
 
-/* Garante que tudo use a fonte correta */
 *, html {
   font-family: 'Montserrat', sans-serif;
   color: rgb(74, 74, 74);

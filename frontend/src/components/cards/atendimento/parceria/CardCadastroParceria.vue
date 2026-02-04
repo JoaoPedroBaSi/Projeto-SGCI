@@ -9,7 +9,6 @@ const form = ref({
 
 const cadastrar = () => {
   console.log("Dados da parceria:", form.value);
-  // Sua lógica de API aqui
 };
 </script>
 
@@ -102,7 +101,7 @@ const cadastrar = () => {
   width: 100%;
   max-width: 900px;
   border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   border: 1px solid #eee;
 }
@@ -114,12 +113,24 @@ const cadastrar = () => {
   text-align: center;
 }
 
-.header-card h2 { margin: 0; color: #1e293b; }
-.header-card p { margin: 5px 0 0; color: #64748b; font-size: 0.9rem; }
+.header-card h2 {
+  margin: 0;
+  color: #1e293b;
+}
 
-.form-grid { padding: 30px; }
+.header-card p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
 
-.form-section { margin-bottom: 25px; }
+.form-grid {
+  padding: 30px;
+}
+
+.form-section {
+  margin-bottom: 25px;
+}
 
 .section-title {
   font-size: 0.85rem;
@@ -144,8 +155,13 @@ const cadastrar = () => {
   min-width: 180px;
 }
 
-.flex-2 { flex: 2; }
-.flex-small { flex: 0.4; }
+.flex-2 {
+  flex: 2;
+}
+
+.flex-small {
+  flex: 0.4;
+}
 
 label {
   font-size: 0.85rem;
@@ -154,7 +170,8 @@ label {
   margin-bottom: 6px;
 }
 
-input, select {
+input,
+select {
   padding: 10px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
@@ -191,5 +208,7 @@ input:focus {
   box-shadow: 0 5px 15px rgba(19, 126, 0, 0.2);
 }
 
-.mt-2 { margin-top: 10px; }
+.mt-2 {
+  margin-top: 10px;
+}
 </style>

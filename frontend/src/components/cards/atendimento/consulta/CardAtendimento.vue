@@ -6,12 +6,10 @@ const props = defineProps<{
   consulta: Atendimento
 }>();
 
-// Formatações Reutilizáveis
 const dataHoraFormatada = computed(() => {
   const dataBruta = props.consulta?.dataHoraInicio;
   if (!dataBruta) return 'Data não disponível';
 
-  // Divide e garante que temos a parte da data
   const dataParte = dataBruta.split('T')[0];
   if (!dataParte) return 'Data inválida';
 
@@ -23,22 +21,18 @@ const horaFormatada = computed(() => {
   const dataBruta = props.consulta?.dataHoraInicio;
   if (!dataBruta) return '--:--';
 
-  // Divide a string e pega a segunda parte (após o T)
   const partes = dataBruta.split('T');
-  const horaParte = partes[1]; // Aqui o TS ainda acha que pode ser undefined
+  const horaParte = partes[1];
 
-  // Verificação explícita para o TypeScript
   if (!horaParte) return '--:--';
 
   return horaParte.substring(0, 5);
 });
 
 const valorFormatado = computed(() => {
-  // Converte para Number, garantindo que mesmo se vier String, funcione
   const v = Number(props.consulta.valor);
 
-  // Verifica se o resultado é um número válido e não zero/nulo
-  if (!v || isNaN(v)) return 'R$ 0,00'; // Ou return null se preferir esconder
+  if (!v || isNaN(v)) return 'R$ 0,00';
 
   return v.toLocaleString('pt-BR', {
     style: 'currency',
@@ -46,7 +40,6 @@ const valorFormatado = computed(() => {
   });
 });
 
-// Lógica de Cores para Badges
 const getStatusClass = (status: string) => {
   const s = status?.toLowerCase();
   if (s === 'concluido') return 'status-verde';
@@ -72,11 +65,8 @@ const getPagamentoClass = (status: string) => {
 
     <div class="card-content">
       <header class="perfil-section">
-        <img
-          src="https://plus.unsplash.com/premium_photo-1689568126014-06fea9d5d341?fm=jpg&q=60&w=300"
-          alt="Foto do Profissional"
-          class="foto-profissional"
-        >
+        <img src="https://plus.unsplash.com/premium_photo-1689568126014-06fea9d5d341?fm=jpg&q=60&w=300"
+          alt="Foto do Profissional" class="foto-profissional">
         <div class="perfil-infos">
           <div class="badges-row">
             <span class="info-tag">{{ dataHoraFormatada }}</span>
@@ -117,7 +107,6 @@ const getPagamentoClass = (status: string) => {
 </template>
 
 <style scoped>
-/* Estrutura Principal */
 .card {
   width: 100%;
   max-width: 500px;
@@ -145,7 +134,6 @@ const getPagamentoClass = (status: string) => {
   padding: 20px;
 }
 
-/* Seção Perfil */
 .perfil-section {
   display: flex;
   align-items: center;
@@ -183,7 +171,6 @@ const getPagamentoClass = (status: string) => {
   color: #475569;
 }
 
-/* Grid de Detalhes */
 .detalhes-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -221,7 +208,6 @@ const getPagamentoClass = (status: string) => {
   font-size: 0.9rem;
 }
 
-/* Badges de Status */
 .badge-status {
   display: inline-block;
   padding: 4px 12px;
@@ -232,13 +218,31 @@ const getPagamentoClass = (status: string) => {
   width: fit-content;
 }
 
-.status-verde { background: #dcfce7; color: #166534; }
-.status-azul { background: #dbeafe; color: #1e40af; }
-.status-laranja { background: #ffedd5; color: #9a3412; }
-.status-vermelho { background: #fee2e2; color: #991b1b; }
-.status-padrao { background: #f1f5f9; color: #475569; }
+.status-verde {
+  background: #dcfce7;
+  color: #166534;
+}
 
-/* Rodapé e Botão */
+.status-azul {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-laranja {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.status-vermelho {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-padrao {
+  background: #f1f5f9;
+  color: #475569;
+}
+
 .card-footer {
   padding: 15px 20px;
   background: #f8fafc;

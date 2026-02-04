@@ -11,7 +11,6 @@ const props = defineProps({
 
 const emit = defineEmits(['atualizar']);
 
-// Estados para o Modal
 const mostrarModalValor = ref(false);
 const valorConsulta = ref<number | null>(null);
 const salasDisponiveis = ref<any[]>([]);
@@ -24,11 +23,9 @@ const formatarData = (data: string | Date) => {
 
 const formatarHora = (data: string) => {
   if (!data) return '';
-  // Divide a string no 'T' e pega a parte do tempo: "10:30:00"
   const parteHora = data.split('T')[1];
   if (!parteHora) return '';
 
-  // Retorna apenas HH:mm
   return parteHora.substring(0, 5);
 };
 
@@ -48,7 +45,6 @@ const aprovarConsulta = async (id: number) => {
   }
 
   try {
-    // Enviamos o valor E a salaId para o backend
     await api.patch(`/atendimento/${id}/aprovar`, {
       valor: valorConsulta.value,
       sala_id: salaSelecionada.value
@@ -75,14 +71,11 @@ const recusarConsulta = async (id: number) => {
 const buscarSalasReservadas = async () => {
   try {
     const token = localStorage.getItem('auth_token');
-    // Buscamos as salas (ou reservas) do profissional logado
-    // Ajuste a rota conforme seu backend, ex: /sala/reservadas ou /sala
     const res = await api.get('/sala', {
       headers: { Authorization: `Bearer ${token}` }
     });
     salasDisponiveis.value = res.data;
 
-    // Se o atendimento já veio com uma sala sugerida, pré-selecionamos
     if (props.atendimento.salaId) {
       salaSelecionada.value = props.atendimento.salaId;
     }
@@ -179,12 +172,12 @@ onMounted(buscarSalasReservadas);
   background-color: #fff;
   cursor: pointer;
   color: #444;
-  appearance: none; /* Remove a seta padrão do sistema para maior controle */
+  appearance: none;
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23128093' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 10px center;
   background-size: 1em;
-  padding-right: 40px; /* Espaço para a setinha personalizada */
+  padding-right: 40px;
 }
 
 .input-container label {
@@ -192,93 +185,114 @@ onMounted(buscarSalasReservadas);
   color: #128093;
   font-size: 13px;
   margin-bottom: 4px;
-  text-align: left; /* Alinhado à esquerda como um formulário padrão */
+  text-align: left;
 }
 
-/* Garante que o select ocupe a largura total disponível */
-.select-estilizado, .input-container input {
+.select-estilizado,
+.input-container input {
   width: 100%;
   box-sizing: border-box;
 }
-  /* --- SEUS ESTILOS ORIGINAIS PRESERVADOS --- */
-  p, h3 { margin: 0; }
-  p { font-size: 14px; margin-bottom: 8px; }
 
-  .card {
-    margin: 0;
-    padding: 20px 24px;
-    width: 100%;
-    max-width: 400px;
-    border-radius: 15px;
-    background-color: #fff;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    gap: 16px;
-  }
+p,
+h3 {
+  margin: 0;
+}
 
-  .cabecalho {
-    display: flex;
-    justify-content: center;
-    border-bottom: 2px solid #128093;
-    padding-bottom: 8px;
-  }
+p {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
 
-  .cabecalho h3 { color: #128093; }
+.card {
+  margin: 0;
+  padding: 20px 24px;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 15px;
+  background-color: #fff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 16px;
+}
 
-  .rodape {
-    display: flex;
-    justify-content: space-around;
-    padding-top: 8px;
-  }
+.cabecalho {
+  display: flex;
+  justify-content: center;
+  border-bottom: 2px solid #128093;
+  padding-bottom: 8px;
+}
 
-  button {
-    background-color: transparent;
-    border-radius: 10px;
-    padding: 8px 20px;
-    font-weight: bold;
-    transition: all 0.2s;
-    cursor: pointer;
-  }
+.cabecalho h3 {
+  color: #128093;
+}
 
-  .botao-recusar button { color: red; border: 2px solid red; }
-  .botao-confirmar button { color: green; border: 2px solid green; }
+.rodape {
+  display: flex;
+  justify-content: space-around;
+  padding-top: 8px;
+}
 
-  button:hover { filter: brightness(0.9); background-color: rgba(0, 0, 0, 0.02); }
-  button:active { transform: scale(0.98); }
+button {
+  background-color: transparent;
+  border-radius: 10px;
+  padding: 8px 20px;
+  font-weight: bold;
+  transition: all 0.2s;
+  cursor: pointer;
+}
 
-  /* --- AJUSTES PARA O MODAL SE COMPORTAR COMO O CARD --- */
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(18, 128, 147, 0.2); /* Um tom do seu azul com transparência */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 999;
-  }
+.botao-recusar button {
+  color: red;
+  border: 2px solid red;
+}
 
-  .modal-card {
-    border: 2px solid #128093; /* Destaque sutil para o modal */
-  }
+.botao-confirmar button {
+  color: green;
+  border: 2px solid green;
+}
 
-  .input-container {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 10px;
-  }
+button:hover {
+  filter: brightness(0.9);
+  background-color: rgba(0, 0, 0, 0.02);
+}
 
-  .input-container input {
-    padding: 10px;
-    border: 1px solid #128093;
-    border-radius: 10px;
-    outline: none;
-    font-size: 16px;
-    text-align: center;
-  }
+button:active {
+  transform: scale(0.98);
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(18, 128, 147, 0.2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal-card {
+  border: 2px solid #128093;
+}
+
+.input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.input-container input {
+  padding: 10px;
+  border: 1px solid #128093;
+  border-radius: 10px;
+  outline: none;
+  font-size: 16px;
+  text-align: center;
+}
 </style>

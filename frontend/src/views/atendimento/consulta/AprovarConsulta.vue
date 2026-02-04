@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import api from '@/services/api' // Ajuste o caminho do seu axios
+import api from '@/services/api'
 import CardAprovacao from '@/components/cards/atendimento/consulta/CardAprovacao.vue'
 import CardBarraNavegacao from '@/components/barra/CardBarraNavegacao.vue'
 
@@ -64,22 +64,21 @@ onMounted(() => {
   h1 {
     color: #128093;
     font-size: 1.8rem;
-    margin-bottom: 40px; /* Espaço maior para o primeiro título */
+    margin-bottom: 40px;
     font-weight: 700;
   }
 
   h2 {
-    color: #444; /* Cor levemente mais suave que o h1 para hierarquia */
+    color: #444;
     font-size: 1.2rem;
     margin-bottom: 25px;
     padding-left: 5px;
-    border-left: 4px solid #128093; /* Detalhe lateral para elegância */
+    border-left: 4px solid #128093;
   }
 
   .grid-atendimentos {
     display: grid;
     gap: 25px;
-    /* Grid inteligente: se ajusta sozinho entre 1, 2 ou 3 colunas */
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     align-items: start;
   }
@@ -91,7 +90,6 @@ onMounted(() => {
     font-style: italic;
   }
 
-  /* Ajuste para telas pequenas */
   @media (max-width: 768px) {
     h1 { font-size: 1.5rem; }
     .grid-atendimentos {

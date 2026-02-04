@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-// CORREÇÃO: Usando api configurada em vez de axios puro
 import api from '@/services/api';
 
 const router = useRouter();
 
-// Variáveis
 const email = ref('');
 const loading = ref(false);
 
@@ -19,16 +17,13 @@ const enviarSolicitacao = async () => {
     loading.value = true;
 
     try {
-        // CORREÇÃO: Chamada limpa usando api.post
-        // O backend vai receber, gerar o token e enviar o e-mail
         await api.post('/esqueci-senha', {
             email: email.value
         });
 
         alert("Se o e-mail estiver cadastrado, você receberá um link em breve!");
-        
-        // Redireciona para o login para o usuário aguardar o e-mail
-        router.push('/'); 
+
+        router.push('/');
 
     } catch (error: any) {
         console.error(error);
@@ -42,7 +37,7 @@ const enviarSolicitacao = async () => {
 
 <template>
     <div class="page-layout">
-        
+
         <div class="lado-esquerdo">
             <img src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?q=80&w=2080&auto=format&fit=crop" alt="Médica" />
             <div class="filtro-verde"></div>
@@ -50,17 +45,17 @@ const enviarSolicitacao = async () => {
 
         <div class="lado-direito">
             <div class="card-esqueci">
-                
+
                 <h2 class="titulo">Esqueceu a senha?</h2>
 
                 <form @submit.prevent="enviarSolicitacao">
                     <div class="campo">
                         <label>E-mail</label>
-                        <input 
-                            type="email" 
-                            v-model="email" 
-                            placeholder="Digite o e-mail vinculado à sua conta" 
-                            required 
+                        <input
+                            type="email"
+                            v-model="email"
+                            placeholder="Digite o e-mail vinculado à sua conta"
+                            required
                         />
                     </div>
 
@@ -84,7 +79,6 @@ const enviarSolicitacao = async () => {
 </template>
 
 <style scoped>
-/* === LAYOUT GERAL (IGUAL AO REDEFINIR SENHA) === */
 .page-layout {
     display: flex;
     height: 100vh;
@@ -116,18 +110,17 @@ const enviarSolicitacao = async () => {
 
 .lado-direito {
     flex: 1;
-    background-color: #0e7490; /* Fundo Verde Teal */
+    background-color: #0e7490;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
 }
 
-/* === CARD CENTRAL === */
 .card-esqueci {
     width: 100%;
     max-width: 450px;
-    background-color: #2197ac; /* Cor do card igual ao Figma */
+    background-color: #2197ac;
     border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 2.5rem;
     border-radius: 16px;
@@ -145,7 +138,6 @@ const enviarSolicitacao = async () => {
     color: white;
 }
 
-/* === CAMPOS === */
 .campo {
     margin-bottom: 1rem;
     text-align: left;
@@ -182,7 +174,6 @@ input::placeholder {
     font-size: 0.9rem;
 }
 
-/* TEXTO PEQUENO */
 .texto-auxiliar {
     text-align: left;
     font-size: 0.85rem;
@@ -191,7 +182,6 @@ input::placeholder {
     line-height: 1.4;
 }
 
-/* === BOTÃO === */
 .btn-enviar {
     width: 100%;
     padding: 16px;
@@ -217,7 +207,6 @@ input::placeholder {
     cursor: not-allowed;
 }
 
-/* === LINKS === */
 .links {
     margin-top: 20px;
 }
@@ -233,7 +222,6 @@ input::placeholder {
     text-decoration: underline;
 }
 
-/* RESPONSIVIDADE */
 @media (max-width: 768px) {
     .page-layout { flex-direction: column; }
     .lado-esquerdo { display: none; }

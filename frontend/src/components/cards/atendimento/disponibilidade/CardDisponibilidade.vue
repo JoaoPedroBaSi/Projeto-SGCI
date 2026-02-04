@@ -7,26 +7,23 @@ const route = useRoute();
 
 const carregando = ref<Record<string, boolean>>({});
 
-// Iniciamos como null para buscar no onMounted ou dentro da função de forma segura
 const usuarioLogado = ref<any>(null);
 
 const diasDaSemana = ref([
   { nome: 'Segunda', inicio: '10:00', fim: '18:00' },
-  { nome: 'Terça',   inicio: '10:00', fim: '18:00' },
-  { nome: 'Quarta',  inicio: '10:00', fim: '18:00' },
-  { nome: 'Quinta',  inicio: '10:00', fim: '18:00' },
-  { nome: 'Sexta',   inicio: '10:00', fim: '18:00' },
-  { nome: 'Sábado',  inicio: '10:00', fim: '14:00' },
+  { nome: 'Terça', inicio: '10:00', fim: '18:00' },
+  { nome: 'Quarta', inicio: '10:00', fim: '18:00' },
+  { nome: 'Quinta', inicio: '10:00', fim: '18:00' },
+  { nome: 'Sexta', inicio: '10:00', fim: '18:00' },
+  { nome: 'Sábado', inicio: '10:00', fim: '14:00' },
 ]);
 
-// Função para extrair o ID independente da estrutura do objeto salvo
 const extrairIdProfissional = () => {
   const userRaw = localStorage.getItem('user_data');
   if (!userRaw) return null;
 
   try {
     const user = JSON.parse(userRaw);
-    // Tenta pegar o ID direto, ou de dentro de uma propriedade 'user' (comum no Adonis)
     return user.id || user.user?.id || user.id_usuario;
   } catch (e) {
     return null;
@@ -40,14 +37,11 @@ const getProximaData = (nomeDia: string, horarioStr: string) => {
   };
 
   const hoje = new Date();
-  // Usamos o || 0 apenas para o TS não reclamar,
-  // mas como o seu array 'diasDaSemana' é controlado, ele sempre achará o valor.
   const diaSemanaAlvo = diasSemanaMap[nomeDia] ?? 0;
   const diaSemanaAtual = hoje.getDay();
 
   let diferenca = diaSemanaAlvo - diaSemanaAtual;
 
-  // Se for hoje ou dia passado, pula para a próxima semana
   if (diferenca <= 0) {
     diferenca += 7;
   }
@@ -59,7 +53,6 @@ const getProximaData = (nomeDia: string, horarioStr: string) => {
   const mes = String(dataResultado.getMonth() + 1).padStart(2, '0');
   const dia = String(dataResultado.getDate()).padStart(2, '0');
 
-  // Retorna a string formatada localmente
   return `${ano}-${mes}-${dia}T${horarioStr}:00`;
 };
 const criarDisponibilidade = async (dia: any) => {
@@ -138,19 +131,18 @@ const formatarHora = (dataIso: string) => {
               </div>
 
               <div class="acao-dia">
-                <button
-  class="btn-add-small"
-  @click="criarDisponibilidade(dia)"
-  :disabled="carregando[dia.nome]"
->
-  <template v-if="!carregando[dia.nome]">
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7v14"/></svg>
-    Adicionar
-  </template>
-  <template v-else>
-    Gerando...
-  </template>
-</button>
+                <button class="btn-add-small" @click="criarDisponibilidade(dia)" :disabled="carregando[dia.nome]">
+                  <template v-if="!carregando[dia.nome]">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M5 12h14m-7-7v14" />
+                    </svg>
+                    Adicionar
+                  </template>
+                  <template v-else>
+                    Gerando...
+                  </template>
+                </button>
               </div>
             </div>
           </div>
@@ -181,7 +173,7 @@ const formatarHora = (dataIso: string) => {
   background: white;
   width: 900px;
   border-radius: 24px;
-  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
   padding: 60px;
   box-sizing: border-box;
 }
@@ -206,7 +198,10 @@ const formatarHora = (dataIso: string) => {
   border-radius: 10px;
 }
 
-.subtitle { color: var(--text-muted); font-size: 1rem; }
+.subtitle {
+  color: var(--text-muted);
+  font-size: 1rem;
+}
 
 .section-title {
   font-size: 0.9rem;
@@ -219,10 +214,17 @@ const formatarHora = (dataIso: string) => {
   font-weight: 700;
 }
 
-.section-title.danger { color: var(--danger); border-color: #fee2e2; }
+.section-title.danger {
+  color: var(--danger);
+  border-color: #fee2e2;
+}
 
-/* Lista de Dias */
-.list-dias { display: flex; flex-direction: column; gap: 12px; margin-bottom: 50px; }
+.list-dias {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 50px;
+}
 
 .config-dia-row {
   display: flex;
@@ -235,9 +237,16 @@ const formatarHora = (dataIso: string) => {
   transition: all 0.2s ease;
 }
 
-.config-dia-row:hover { border-color: var(--primary); background: #fff; }
+.config-dia-row:hover {
+  border-color: var(--primary);
+  background: #fff;
+}
 
-.nome-dia { font-weight: 700; color: var(--text-main); min-width: 120px; }
+.nome-dia {
+  font-weight: 700;
+  color: var(--text-main);
+  min-width: 120px;
+}
 
 .periodo-inputs {
   display: flex;
@@ -245,8 +254,18 @@ const formatarHora = (dataIso: string) => {
   gap: 15px;
 }
 
-.input-field { display: flex; flex-direction: column; gap: 4px; }
-.input-field label { font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; }
+.input-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.input-field label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 700;
+}
 
 .time-input {
   padding: 8px 12px;
@@ -257,7 +276,11 @@ const formatarHora = (dataIso: string) => {
   outline: none;
 }
 
-.seta-intervalo { color: var(--text-muted); font-size: 0.8rem; font-weight: 500; }
+.seta-intervalo {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
 
 .btn-add-small {
   background: #137e00;
@@ -274,9 +297,11 @@ const formatarHora = (dataIso: string) => {
   transition: all 0.2s;
 }
 
-.btn-add-small:hover { background: #0f6600; transform: scale(1.05); }
+.btn-add-small:hover {
+  background: #0f6600;
+  transform: scale(1.05);
+}
 
-/* Seção de Falta */
 .falta-section {
   background: #fff5f5;
   padding: 30px;
@@ -291,8 +316,17 @@ const formatarHora = (dataIso: string) => {
   margin-bottom: 25px;
 }
 
-.field-group { display: flex; flex-direction: column; gap: 8px; }
-.field-group label { font-weight: 600; font-size: 0.9rem; color: var(--text-main); }
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-group label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
 
 .main-input {
   padding: 14px;
@@ -319,11 +353,25 @@ const formatarHora = (dataIso: string) => {
   box-shadow: 0 8px 20px rgba(190, 0, 0, 0.2);
 }
 
-.btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 @media (max-width: 850px) {
-  .booking-card { padding: 30px; width: 95%; }
-  .config-dia-row { flex-direction: column; gap: 15px; text-align: center; }
-  .falta-grid { grid-template-columns: 1fr; }
+  .booking-card {
+    padding: 30px;
+    width: 95%;
+  }
+
+  .config-dia-row {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+
+  .falta-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
