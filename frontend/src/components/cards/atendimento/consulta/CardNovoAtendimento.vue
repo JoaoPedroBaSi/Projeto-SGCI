@@ -171,8 +171,7 @@ watch(() => [formulario.data, formulario.profissional_id], () => {
             <label for="hora">Horário Disponível</label>
             <select v-model="formulario.hora" id="hora" :disabled="!horariosDisponiveis.length" required>
               <option value="" disabled>
-                {{ !formulario.data ? 'Aguardando data...' : (horariosDisponiveis.length ? 'Horário' : 'Nenhum horário
-                livre') }}
+                {{ !formulario.data ? 'Aguardando data...' : (horariosDisponiveis.length ? 'Horário' : 'Nenhum horário livre') }}
               </option>
               <option v-for="horario in horariosDisponiveis" :key="horario.id" :value="horario.horaFormatada">
                 {{ horario.horaFormatada }}
