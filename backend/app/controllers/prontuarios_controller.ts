@@ -3,11 +3,15 @@ import Atendimento from '#models/atendimento'
 import Prontuario from '#models/prontuario'
 import Profissional from '#models/profissional'
 import Parceria from '#models/parceria'
+import User from '#models/user' // Adicionado import
 
 export default class ProntuariosController {
 
   public async index({ auth, response }: HttpContext) {
-    const usuarioLogado = auth.user!
+    /**
+     * CORREÇÃO: Cast para User para acessar a propriedade 'id'.
+     */
+    const usuarioLogado = auth.user as unknown as User
 
     const profissional = await Profissional.findBy('id', usuarioLogado.id)
 
@@ -44,7 +48,10 @@ export default class ProntuariosController {
       'parceriaId'
     ])
 
-    const profissionalLogadoId = auth.user?.id
+    /**
+     * CORREÇÃO: Cast no auth.user para acessar o 'id'.
+     */
+    const profissionalLogadoId = (auth.user as unknown as User)?.id
     if (!profissionalLogadoId) {
       return response.unauthorized({ message: "Acesso não autorizado." })
     }

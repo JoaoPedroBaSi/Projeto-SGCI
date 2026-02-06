@@ -9,7 +9,6 @@ import { TransacaoService } from '#services/transacao_service'
 import db from '@adonisjs/lucid/services/db'
 import Disponibilidade from '#models/disponibilidade'
 import Reserva from '#models/reserva'
-import Transacao from '#models/transacao'
 import User from '#models/user' // IMPORTANTE: Importação do Model User
 
 @inject()

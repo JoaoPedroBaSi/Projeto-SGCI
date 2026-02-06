@@ -5,8 +5,7 @@ import Cliente from '#models/cliente'
 import Profissional from '#models/profissional'
 import { registerValidator } from '#validators/register'
 import db from '@adonisjs/lucid/services/db'
-import crypto from 'node:crypto'
-import mail from '@adonisjs/mail/services/main'
+
 
 export default class AuthController {
   

@@ -6,9 +6,11 @@ import Profissional from '#models/profissional'
 export default class UsersController {
   
   public async index({ auth, response }: HttpContext) {
-    const usuario = auth.user!
+    /**
+     * CORREÇÃO: Cast duplo para o TypeScript reconhecer as propriedades do seu Model User.
+     */
+    const usuario = auth.user as unknown as User
 
-    // CORREÇÃO: perfil_tipo -> perfilTipo
     if (usuario.perfilTipo !== 'admin') {
       return response.forbidden({ message: 'Acesso negado. Apenas administradores.' })
     }
@@ -18,10 +20,9 @@ export default class UsersController {
   }
 
   public async show({ auth, params, response }: HttpContext) {
-    const usuarioLogado = auth.user!
+    const usuarioLogado = auth.user as unknown as User
     const idSolicitado = Number(params.id)
 
-    // CORREÇÃO: perfil_tipo -> perfilTipo
     if (usuarioLogado.perfilTipo !== 'admin' && usuarioLogado.id !== idSolicitado) {
       return response.forbidden({ message: 'Você não tem permissão para visualizar estes dados.' })
     }
@@ -33,7 +34,6 @@ export default class UsersController {
         return response.badRequest({ message: 'Usuário inativo ou suspenso.' })
       }
 
-      // CORREÇÃO: perfil_tipo -> perfilTipo
       if (targetUser.perfilTipo === 'cliente') {
         const cliente = await Cliente.query().where('id', targetUser.id).firstOrFail()
         return response.ok(cliente)

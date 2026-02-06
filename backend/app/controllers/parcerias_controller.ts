@@ -1,5 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import Parceria from '#models/parceria'
+import User from '#models/user' // Importação necessária para o cast
 import { storeParceriaValidator, updateParceriaValidator } from '#validators/validator_parceria'
 
 export default class ParceriasController {
@@ -19,9 +20,12 @@ export default class ParceriasController {
   }
 
   public async store({ auth, request, response }: HttpContext) {
-    const usuarioLogado = auth.user
+    /**
+     * CORREÇÃO: Cast duplo para que o TypeScript reconheça 'perfilTipo'.
+     * O auth.user por padrão é tratado como LucidRow genérico no Adonis 6.
+     */
+    const usuarioLogado = auth.user as unknown as User
 
-    // CORREÇÃO: perfil_tipo -> perfilTipo
     if (usuarioLogado?.perfilTipo !== 'admin') {
       return response.forbidden({ message: 'Apenas administradores podem cadastrar parcerias.' })
     }
@@ -29,9 +33,8 @@ export default class ParceriasController {
     try {
       const dados = await request.validateUsing(storeParceriaValidator)
 
-      // CORREÇÃO: status_parceria -> statusParceria e data_inicio -> dataInicio
       if (dados.statusParceria === 'EM NEGOCIACAO') {
-        dados.dataInicio = undefined // No TypeScript/Adonis use undefined para campos opcionais
+        dados.dataInicio = undefined 
       }
 
       const parceria = await Parceria.create(dados)

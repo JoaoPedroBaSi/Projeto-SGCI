@@ -1,7 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import { inject } from '@adonisjs/core'
 import db from '@adonisjs/lucid/services/db'
-import { DateTime } from 'luxon'
 import Reserva from '#models/reserva'
 import Sala from '#models/sala'
 import User from '#models/user' // Certifique-se de que o import do Model User está aqui

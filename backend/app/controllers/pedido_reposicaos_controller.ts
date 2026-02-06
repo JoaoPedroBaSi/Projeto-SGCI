@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import PedidoReposicao from '#models/pedido_reposicao'
 import Profissional from '#models/profissional'
+import User from '#models/user' // Importação necessária para o cast
 
 export default class PedidoReposicaosController {
   
@@ -19,7 +20,11 @@ export default class PedidoReposicaosController {
   }
 
   public async store({ request, response, auth }: HttpContext) {
-    const user = auth.user!
+    /**
+     * CORREÇÃO: Aplicando cast para que 'user.id' seja reconhecido.
+     * Sem isso, o build no Render falha com erro TS2339.
+     */
+    const user = auth.user as unknown as User
 
     try {
       const perfilProfissional = await Profissional.find(user.id)

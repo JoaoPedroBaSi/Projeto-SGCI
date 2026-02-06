@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import { inject } from '@adonisjs/core'
 import Transacao from '#models/transacao'
+import User from '#models/user' // Adicionado import
 import { storeTransacaoValidator } from '#validators/validator_transacao'
 import { PagamentoService } from '#services/pagamento_service'
 
@@ -24,7 +25,8 @@ export default class TransacoesController {
   }
 
   public async store({ auth, request, response }: HttpContext) {
-    const usuarioLogado = auth.user!
+    // Aplicando cast para reconhecer perfilTipo
+    const usuarioLogado = auth.user as unknown as User
     
     if (usuarioLogado.perfilTipo !== 'admin') {
       return response.forbidden({ message: 'Apenas administradores podem registrar transações manuais.' })
@@ -41,7 +43,8 @@ export default class TransacoesController {
   }
 
   public async realizarPagamento({ auth, request, response }: HttpContext) {
-    const cliente = auth.user!
+    // Aplicando cast para reconhecer o ID do cliente
+    const cliente = auth.user as unknown as User
     const { profissionalId, valor, formaPagamento } = request.only(['profissionalId', 'valor', 'formaPagamento'])
 
     if (!profissionalId || !valor || !formaPagamento) {
@@ -70,7 +73,8 @@ export default class TransacoesController {
   }
 
   public async contarSaldo({ auth, response }: HttpContext) {
-    const user = await auth.authenticate()
+    // No Adonis 6, mesmo com authenticate(), o TS pode precisar do cast
+    const user = (await auth.authenticate()) as unknown as User
     let saldoTotal = 0
 
     try {

@@ -11,7 +11,10 @@ import { updateProfissionalValidator } from '#validators/validator_profissional'
 export default class ProfissionaisController {
 
   public async index({ auth, response }: HttpContext) {
-    const userLogado = auth.user!
+    /**
+     * CORREÇÃO: Aplicando cast para User para acessar perfilTipo e id.
+     */
+    const userLogado = auth.user as unknown as User
 
     const profissionais = await Profissional.query()
       .preload('user')

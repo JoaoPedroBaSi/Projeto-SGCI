@@ -1,8 +1,7 @@
 /* eslint-disable prettier/prettier */
 import router from '@adonisjs/core/services/router'
 import { middleware } from './kernel.js'
-import User from '#models/user'
-import hash from '@adonisjs/core/services/hash'
+
 
 // --- ROTA RAIZ ---
 router.get('/', async () => {
