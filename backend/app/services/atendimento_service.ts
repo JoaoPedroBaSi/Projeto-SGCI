@@ -5,7 +5,6 @@ import { DateTime } from 'luxon'
 import Atendimento from '#models/atendimento'
 import Disponibilidade from '#models/disponibilidade'
 import Sala from '#models/sala'
-import User from '#models/user'
 import { TransacaoService } from './transacao_service.js'
 
 @inject()
@@ -20,7 +19,6 @@ export class AtendimentoService {
     dados: { profissionalId: number; clienteId: number; observacoes?: string; formaPagamento: string },
     dataHoraInicioLuxon: DateTime,
     disponibilidade: Disponibilidade,
-    usuarioLogado?: User // <--- Adicionado aqui
   ) {
     await db.transaction(async (trx) => {
       
@@ -42,14 +40,12 @@ export class AtendimentoService {
 
       await Atendimento.create(atendimentoData, { client: trx })
       
-      // Se precisar registrar quem criou o atendimento no log, você usaria o 'usuarioLogado' aqui.
     })
   }
 
   public async atualizarAtendimento(
     dados: any, 
     atendimento: Atendimento, 
-    usuarioLogado: User
   ) {
     let disponibilidadeSlotNovo: Disponibilidade | null = null
     const dadosParaUpdate: any = { ...dados }
