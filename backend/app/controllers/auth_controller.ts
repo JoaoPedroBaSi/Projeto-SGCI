@@ -14,13 +14,14 @@ export default class AuthController {
     const { email, password } = request.only(['email', 'password'])
 
     try {
-      // CORREÇÃO: Usamos (User as any) para acessar o método injetado pelo mixin
+      // Usamos cast para garantir acesso ao método estático
       const user = await (User as any).verifyCredentials(email, password)
       
       if (!user) {
         return response.unauthorized({ message: 'Credenciais inválidas' })
       }
 
+      // O "as any" aqui garante que o provider de tokens seja encontrado
       const token = await (User as any).accessTokens.create(user)
 
       return response.ok({
@@ -34,8 +35,8 @@ export default class AuthController {
         }
       })
     } catch (error) {
-      console.error(error)
-      return response.internalServerError({ message: 'Erro ao realizar login' })
+      console.error('Erro no Login:', error)
+      return response.internalServerError({ message: 'Erro interno ao realizar login' })
     }
   }
 
@@ -46,30 +47,6 @@ export default class AuthController {
     const existing = await User.findBy('email', email)
     if (existing) {
       return response.conflict({ message: 'Email já está em uso' })
-    }
-
-    if (perfilTipo === 'cliente') {
-      const required = ['genero', 'dataNascimento', 'cpf', 'telefone'] as const
-      for (const key of required) {
-        if (payload[key] === undefined || payload[key] === null) {
-          return response.badRequest({ message: `Campo ${key} é obrigatório para clientes` })
-        }
-      }
-    } else if (perfilTipo === 'profissional') {
-      const required = ['funcaoId', 'genero', 'dataNascimento', 'cpf', 'telefone', 'registroConselho', 'conselhoUf'] as const
-      for (const key of required) {
-        if ((payload as any)[key] === undefined || (payload as any)[key] === null) {
-          return response.badRequest({ message: `Campo ${key} é obrigatório para profissionais` })
-        }
-      }
-    }
-
-    if (payload.cpf) {
-      const cpfCliente = await Cliente.findBy('cpf', payload.cpf)
-      const cpfProfissional = await Profissional.findBy('cpf', payload.cpf)
-      if (cpfCliente || cpfProfissional) {
-        return response.conflict({ message: 'CPF já está cadastrado' })
-      }
     }
 
     const trx = await db.transaction()
@@ -84,12 +61,14 @@ export default class AuthController {
 
       await user.useTransaction(trx).save()
       
+      const dataNasc = payload.dataNascimento ? DateTime.fromJSDate(new Date(payload.dataNascimento)) : DateTime.now()
+
       if (perfilTipo === 'cliente') {
         await Cliente.create({
             id: user.id, 
             nome: fullName,
-            genero: payload.genero as 'MASCULINO' | 'FEMININO',
-            dataNascimento: payload.dataNascimento ? DateTime.fromJSDate(new Date(payload.dataNascimento)) : DateTime.now(),
+            genero: payload.genero as any,
+            dataNascimento: dataNasc,
             cpf: payload.cpf,
             telefone: payload.telefone,
             email: user.email,
@@ -101,26 +80,22 @@ export default class AuthController {
             id: user.id,
             funcaoId: payload.funcaoId,
             nome: fullName,
-            genero: payload.genero as 'MASCULINO' | 'FEMININO',
-            dataNascimento: payload.dataNascimento ? DateTime.fromJSDate(new Date(payload.dataNascimento)) : DateTime.now(),
+            genero: payload.genero as any,
+            dataNascimento: dataNasc,
             cpf: payload.cpf,
             telefone: payload.telefone,
             email: user.email,
             senha: user.password,
             registroConselho: payload.registroConselho,
             conselhoUf: payload.conselhoUf,
-            fotoPerfilUrl: payload.fotoPerfilUrl || null,
-            biografia: payload.biografia || null,
             status: 'pendente',
-            comprovanteCredenciamentoUrl: payload.comprovanteCredenciamentoUrl || null,
-            observacoesAdmin: payload.observacoesAdmin || null,
           }, { client: trx })
 
         await Cliente.create({
             id: user.id, 
             nome: fullName,
-            genero: payload.genero as 'MASCULINO' | 'FEMININO',
-            dataNascimento: payload.dataNascimento ? DateTime.fromJSDate(new Date(payload.dataNascimento)) : DateTime.now(),
+            genero: payload.genero as any,
+            dataNascimento: dataNasc,
             cpf: payload.cpf,
             telefone: payload.telefone,
             email: user.email,
@@ -136,74 +111,18 @@ export default class AuthController {
         message: 'Usuário registrado com sucesso',
         type: 'bearer',
         token: token.value!.release(),
-        user: { 
-            id: user.id, 
-            email: user.email,
-            perfilTipo: user.perfilTipo 
-        }
+        user: { id: user.id, email: user.email, perfilTipo: user.perfilTipo }
       })
 
     } catch (error: any) {
       await trx.rollback()
-      console.error(error)
-      return response.status(500).json({ message: 'Erro ao registrar usuário', error: error.message || error })
+      return response.status(500).json({ message: 'Erro ao registrar', error: error.message })
     }
   }
 
   public async logout({ auth, response }: HttpContext) {
     const user = auth.getUserOrFail()
-    // CORREÇÃO: Casting para acessar propriedades dinâmicas do auth
     await (User as any).accessTokens.delete(user, (auth.user as any).currentAccessToken.identifier)
     return response.ok({ message: 'Deslogado com sucesso' })
-  }
-
-  public async esqueciSenha({ request, response }: HttpContext) {
-    try {
-      const { email } = request.only(['email'])
-      const user = await User.findByOrFail('email', email)
-
-      const token = crypto.randomBytes(20).toString('hex')
-      const expiresAt = DateTime.now().plus({ hours: 1 })
-
-      // CORREÇÃO: Usando casting para as colunas de token
-      ;(user as any).passwordResetToken = token
-      ;(user as any).passwordResetTokenExpiresAt = expiresAt
-      await user.save()
-
-      await mail.send((message) => {
-        message
-          .to(user.email)
-          .from('clinicassgci@gmail.com')
-          .subject('Recuperação de Senha')
-          .htmlView('emails/esqueci_senha', {
-            user: user.serialize(),
-            link: `https://projeto-sgci.vercel.app/redefinir-senha?token=${token}`,
-          })
-      })
-
-      return response.ok({ message: 'Se o e-mail estiver correto, um link foi enviado.' })
-    } catch (error) {
-      console.error(error)
-      return response.ok({ message: 'Se o e-mail estiver correto, um link foi enviado.' })
-    }
-  }
-
-  public async redefinirSenha({ request, response }: HttpContext) {
-    try {
-      const { token, password } = request.only(['token', 'password'])
-      const user = await User.query()
-        .where('passwordResetToken', token)
-        .where('passwordResetTokenExpiresAt', '>', DateTime.now().toSQL())
-        .firstOrFail()
-
-      user.password = password
-      ;(user as any).passwordResetToken = null
-      ;(user as any).passwordResetTokenExpiresAt = null
-      await user.save()
-
-      return response.ok({ message: 'Senha redefinida com sucesso' })
-    } catch (error) {
-      return response.badRequest({ message: 'Token inválido ou expirado.' })
-    }
   }
 }

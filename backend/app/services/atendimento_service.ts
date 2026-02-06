@@ -12,11 +12,15 @@ import { TransacaoService } from './transacao_service.js'
 export class AtendimentoService {
   constructor(protected transacaoService: TransacaoService) {}
 
-
+  /**
+   * CORREÇÃO: Adicionado o 4º argumento 'usuarioLogado' para bater com o Controller.
+   * Note que o parâmetro é opcional (?) para evitar quebrar outras partes do sistema.
+   */
   public async criarAtendimento(
     dados: { profissionalId: number; clienteId: number; observacoes?: string; formaPagamento: string },
     dataHoraInicioLuxon: DateTime,
-    disponibilidade: Disponibilidade
+    disponibilidade: Disponibilidade,
+    usuarioLogado?: User // <--- Adicionado aqui
   ) {
     await db.transaction(async (trx) => {
       
@@ -37,9 +41,10 @@ export class AtendimentoService {
       await disponibilidade.save()
 
       await Atendimento.create(atendimentoData, { client: trx })
+      
+      // Se precisar registrar quem criou o atendimento no log, você usaria o 'usuarioLogado' aqui.
     })
   }
-
 
   public async atualizarAtendimento(
     dados: any, 
