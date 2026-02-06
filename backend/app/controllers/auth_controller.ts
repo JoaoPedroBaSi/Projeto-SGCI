@@ -12,22 +12,13 @@ export default class AuthController {
     const { email, password } = request.only(['email', 'password'])
 
     try {
-      /**
-       * ALTERAÇÃO: Mudamos de 'verifyCredentials' para 'autenticar'
-       * para bater com o nome que definimos no seu Model User.
-       */
       const user = await User.autenticar(email, password)
       
       if (!user) {
         return response.unauthorized({ message: 'Credenciais inválidas' })
       }
 
-      /**
-       * O Adonis 6 exige que o acesso ao provider de tokens seja feito 
-       * via propriedade estática do Model. O cast 'as any' resolve a 
-       * teimosia do TS aqui.
-       */
-      const token = await (User as any).accessTokens.create(user)
+      const token = await User.accessTokens.create(user)
 
       return response.ok({
         type: 'bearer',
@@ -39,9 +30,12 @@ export default class AuthController {
             name: user.fullName
         }
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro no Login:', error)
-      return response.internalServerError({ message: 'Erro interno ao realizar login' })
+      return response.internalServerError({ 
+        message: 'Erro interno ao realizar login',
+        debug: error.message 
+      })
     }
   }
 
@@ -66,7 +60,9 @@ export default class AuthController {
 
       await user.useTransaction(trx).save()
       
-      const dataNasc = payload.dataNascimento ? DateTime.fromJSDate(new Date(payload.dataNascimento)) : DateTime.now()
+      const dataNasc = payload.dataNascimento 
+        ? DateTime.fromJSDate(new Date(payload.dataNascimento)) 
+        : DateTime.now()
 
       if (perfilTipo === 'cliente') {
         await Cliente.create({
@@ -110,8 +106,7 @@ export default class AuthController {
 
       await trx.commit()
 
-      // Criando token após registro
-      const token = await (User as any).accessTokens.create(user)
+      const token = await User.accessTokens.create(user)
 
       return response.created({
         message: 'Usuário registrado com sucesso',
@@ -127,13 +122,22 @@ export default class AuthController {
   }
 
   public async logout({ auth, response }: HttpContext) {
-    const user = auth.getUserOrFail()
-    
     /**
-     * CORREÇÃO: Casting correto para deletar o token atual no logout
+     * CORREÇÃO TS(2345):
+     * Aplicamos o cast 'as unknown as User' para que o método delete
+     * reconheça o usuário como uma instância válida de User.
+     */
+    const user = auth.user as unknown as User
+    
+    if (!user) {
+      return response.unauthorized({ message: 'Não autenticado' })
+    }
+
+    /**
+     * Capturamos o identificador do token atual através do cast em auth.user
      */
     const currentTokenId = (auth.user as any).currentAccessToken.identifier
-    await (User as any).accessTokens.delete(user, currentTokenId)
+    await User.accessTokens.delete(user, currentTokenId)
     
     return response.ok({ message: 'Deslogado com sucesso' })
   }

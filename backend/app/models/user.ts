@@ -1,15 +1,12 @@
 import { DateTime } from 'luxon'
-import hash from '@adonisjs/core/services/hash' // Correção: Import default
+import hash from '@adonisjs/core/services/hash'
 import { BaseModel, column, hasOne } from '@adonisjs/lucid/orm'
 import type { HasOne } from '@adonisjs/lucid/types/relations'
 import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
+import { DbAccessTokensProvider } from '@adonisjs/auth/access_tokens' // Adicionado
 import Cliente from '#models/cliente'
 import Profissional from '#models/profissional'
 
-/**
- * 1. Corrigimos a factory de hash passando o cast 'as any' para evitar
- * o erro de propriedades privadas do HashService.
- */
 const AuthFinder = withAuthFinder(() => hash as any, {
   uids: ['email'],
   passwordColumnName: 'password',
@@ -59,16 +56,20 @@ export default class User extends AuthFinder(BaseModel) {
   declare profissional: HasOne<typeof Profissional>
 
   /**
-   * 2. RESOLUÇÃO DO ERRO TS2417:
-   * O mixin já injeta um 'verifyCredentials' automaticamente.
-   * Para evitar o erro de compatibilidade, mudamos o nome do nosso
-   * método manual ou deixamos o do mixin agir. 
-   * Vou renomear para 'autenticar' para você usar no Controller sem conflitos.
+   * ESTA É A PEÇA QUE FALTA:
+   * Definimos explicitamente o provedor de tokens que o AuthConfig procura.
+   * Isso resolve o erro de 'accessTokens' ser undefined.
    */
+  static accessTokens = DbAccessTokensProvider.forModel(User, {
+    expiresIn: '30 days',
+    prefix: 'oat_',
+    table: 'auth_access_tokens',
+    type: 'auth_token',
+  })
+
   static async autenticar(email: string, password: string) {
     const user = await this.findBy('email', email)
     if (!user) return null
-    
     const isValid = await hash.verify(user.password, password)
     return isValid ? user : null
   }
