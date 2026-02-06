@@ -3,18 +3,22 @@ import { BaseModel, column, hasOne } from '@adonisjs/lucid/orm'
 import type { HasOne } from '@adonisjs/lucid/types/relations'
 import { compose } from '@adonisjs/core/helpers'
 import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
-import hash from '@adonisjs/core/services/hash' // Importa o serviço do core
 import Cliente from '#models/cliente'
 import Profissional from '#models/profissional'
 
-// Definimos o authFinder passando o serviço de hash diretamente.
-// O cast 'as unknown as any' é necessário apenas se o TS ainda reclamar de membros privados.
-const authFinder = withAuthFinder(() => hash as any, {
+/**
+ * No AdonisJS 6, usamos o 'withAuthFinder' dentro do helper 'compose'.
+ * Isso injeta os métodos necessários para o Token Provider funcionar online.
+ */
+// `withAuthFinder` retorna um mixin que recebe uma superclasse e retorna
+// uma subclasse. Forçar o tipo aqui evita erros de compatibilidade do
+// TypeScript ao usar `compose` abaixo.
+const AuthUser = (withAuthFinder as any)(BaseModel, {
   uids: ['email'],
   passwordColumnName: 'password',
-})
+}) as unknown as (superclass: typeof BaseModel) => typeof BaseModel
 
-export default class User extends compose(BaseModel, authFinder) {
+export default class User extends compose(BaseModel, AuthUser) {
   @column({ isPrimary: true })
   declare id: number
 
