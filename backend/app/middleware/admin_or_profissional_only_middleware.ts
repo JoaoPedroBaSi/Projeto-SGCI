@@ -1,8 +1,9 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import User from '#models/user'
 
 export default class AdminOrProfissionalOnlyMiddleware {
   async handle({ auth, response }: HttpContext, next: () => Promise<void>) {
-    const user = auth.user
+    const user = auth.user as unknown as User
 
     if (!user) {
       return response.unauthorized({ message: 'Usuário não autenticado.' })

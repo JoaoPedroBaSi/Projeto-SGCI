@@ -1,8 +1,10 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import User from '#models/user'
 
 export default class AdminOnlyMiddleware {
   async handle({ auth, response }: HttpContext, next: () => Promise<void>) {
-    const user = auth.user
+    // Cast duplo para o TS reconhecer as propriedades do seu Model User
+    const user = auth.user as unknown as User
 
     if (!user) {
       return response.unauthorized({
