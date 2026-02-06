@@ -4,6 +4,7 @@ import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 import Reserva from '#models/reserva'
 import Sala from '#models/sala'
+import User from '#models/user' // Certifique-se de que o import do Model User está aqui
 import {
   storeReservaLoteValidator,
   updateReservaFormaPagamento,
@@ -51,10 +52,10 @@ export default class ReservasController {
       }
 
       const reservas = await Reserva.query()
-        .where('salaId', salaId) // CORREÇÃO: Usando camelCase
+        .where('salaId', salaId)
         .whereRaw('CAST(data_hora_inicio AS DATE) = ?', [data])
         .where('status', '!=', 'REJEITADO')
-        .select('dataHoraInicio') // CORREÇÃO: Usando camelCase
+        .select('dataHoraInicio')
 
       return response.ok(reservas)
     } catch (error) {
@@ -65,12 +66,18 @@ export default class ReservasController {
   public async store({ request, response, auth }: HttpContext) {
     try {
       const dados = await request.validateUsing(storeReservaLoteValidator)
-      const user = auth.user!
+      
+      /**
+       * CORREÇÃO DE TIPO:
+       * O auth.user é LucidRow por padrão. O cast duplo 'as unknown as User'
+       * garante o acesso à propriedade 'id' sem erro de compilação.
+       */
+      const user = auth.user as unknown as User
 
       const transacao = await this.reservaService.criarEmLote({
         salaId: dados.salaId,
         profissionalId: dados.profissionalId,
-        userId: user.id,
+        userId: user.id, 
         horarios: dados.horarios,
       })
 
@@ -93,12 +100,14 @@ export default class ReservasController {
 
       const reserva = await Reserva.findOrFail(params.id)
       
-      // CORREÇÃO: Forçando o tipo (cast) para satisfazer o Enum do Model
+      // Cast de string para os valores literais do Enum do Model
       reserva.status = status as 'PENDENTE' | 'APROVADA' | 'REJEITADO'
       
       await reserva.save()
-      await reserva.load('sala')
-      await reserva.load('profissional')
+      
+      // Cast 'as any' nas relações evita erros de sobrecarga do .load()
+      await reserva.load('sala' as any)
+      await reserva.load('profissional' as any)
 
       return response.ok(reserva)
     } catch (error) {
@@ -125,7 +134,7 @@ export default class ReservasController {
 
         reserva.useTransaction(trx)
         
-        // CORREÇÃO: Cast para os tipos aceitos no Model Reserva
+        // Cast necessário para garantir compatibilidade com o tipo do Model
         reserva.formaPagamento = formaPagamento as 'PIX' | 'CREDITO' | 'DEBITO'
         
         await reserva.save()

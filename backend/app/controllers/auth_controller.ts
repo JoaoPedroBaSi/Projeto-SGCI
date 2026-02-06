@@ -14,8 +14,14 @@ export default class AuthController {
     const { email, password } = request.only(['email', 'password'])
 
     try {
-      const user = await User.verifyCredentials(email, password)
-      const token = await User.accessTokens.create(user)
+      // CORREÇÃO: Usamos (User as any) para acessar o método injetado pelo mixin
+      const user = await (User as any).verifyCredentials(email, password)
+      
+      if (!user) {
+        return response.unauthorized({ message: 'Credenciais inválidas' })
+      }
+
+      const token = await (User as any).accessTokens.create(user)
 
       return response.ok({
         type: 'bearer',
@@ -23,18 +29,18 @@ export default class AuthController {
         user: {
             id: user.id,
             email: user.email,
-            perfilTipo: user.perfilTipo, // CORREÇÃO: perfilTipo
+            perfilTipo: user.perfilTipo,
             name: user.fullName
         }
       })
     } catch (error) {
-      return response.unauthorized({ message: 'Credenciais inválidas' })
+      console.error(error)
+      return response.internalServerError({ message: 'Erro ao realizar login' })
     }
   }
 
   public async register({ request, response }: HttpContext) {
     const payload = await request.validateUsing(registerValidator)
-    // CORREÇÃO: Extraindo camelCase do payload validado
     const { fullName, email, password, perfilTipo } = payload
 
     const existing = await User.findBy('email', email)
@@ -42,7 +48,6 @@ export default class AuthController {
       return response.conflict({ message: 'Email já está em uso' })
     }
 
-    // Validação lógica de campos obrigatórios baseada no perfilTipo
     if (perfilTipo === 'cliente') {
       const required = ['genero', 'dataNascimento', 'cpf', 'telefone'] as const
       for (const key of required) {
@@ -74,7 +79,7 @@ export default class AuthController {
       user.email = email
       user.password = password
       user.fullName = fullName  
-      user.perfilTipo = perfilTipo // CORREÇÃO: perfilTipo
+      user.perfilTipo = perfilTipo
       user.status = perfilTipo === 'profissional' ? 'pendente' : 'ativo'
 
       await user.useTransaction(trx).save()
@@ -94,7 +99,7 @@ export default class AuthController {
       else if (perfilTipo === 'profissional') {
         await Profissional.create({
             id: user.id,
-            funcaoId: payload.funcaoId, // CORREÇÃO: funcaoId
+            funcaoId: payload.funcaoId,
             nome: fullName,
             genero: payload.genero as 'MASCULINO' | 'FEMININO',
             dataNascimento: payload.dataNascimento ? DateTime.fromJSDate(new Date(payload.dataNascimento)) : DateTime.now(),
@@ -102,16 +107,15 @@ export default class AuthController {
             telefone: payload.telefone,
             email: user.email,
             senha: user.password,
-            registroConselho: payload.registroConselho, // CORREÇÃO: registroConselho
-            conselhoUf: payload.conselhoUf, // CORREÇÃO: conselhoUf
-            fotoPerfilUrl: payload.fotoPerfilUrl || null, // CORREÇÃO: fotoPerfilUrl
+            registroConselho: payload.registroConselho,
+            conselhoUf: payload.conselhoUf,
+            fotoPerfilUrl: payload.fotoPerfilUrl || null,
             biografia: payload.biografia || null,
             status: 'pendente',
-            comprovanteCredenciamentoUrl: payload.comprovanteCredenciamentoUrl || null, // CORREÇÃO: comprovanteCredenciamentoUrl
-            observacoesAdmin: payload.observacoesAdmin || null, // CORREÇÃO: observacoesAdmin
+            comprovanteCredenciamentoUrl: payload.comprovanteCredenciamentoUrl || null,
+            observacoesAdmin: payload.observacoesAdmin || null,
           }, { client: trx })
 
-        // Criamos também o perfil de cliente para o profissional poder agendar para si se necessário
         await Cliente.create({
             id: user.id, 
             nome: fullName,
@@ -126,7 +130,7 @@ export default class AuthController {
 
       await trx.commit()
 
-      const token = await User.accessTokens.create(user)
+      const token = await (User as any).accessTokens.create(user)
 
       return response.created({
         message: 'Usuário registrado com sucesso',
@@ -148,7 +152,8 @@ export default class AuthController {
 
   public async logout({ auth, response }: HttpContext) {
     const user = auth.getUserOrFail()
-    await User.accessTokens.delete(user, user.currentAccessToken.identifier)
+    // CORREÇÃO: Casting para acessar propriedades dinâmicas do auth
+    await (User as any).accessTokens.delete(user, (auth.user as any).currentAccessToken.identifier)
     return response.ok({ message: 'Deslogado com sucesso' })
   }
 
@@ -160,9 +165,9 @@ export default class AuthController {
       const token = crypto.randomBytes(20).toString('hex')
       const expiresAt = DateTime.now().plus({ hours: 1 })
 
-      // CORREÇÕES: CamelCase
-      user.passwordResetToken = token
-      user.passwordResetTokenExpiresAt = expiresAt
+      // CORREÇÃO: Usando casting para as colunas de token
+      ;(user as any).passwordResetToken = token
+      ;(user as any).passwordResetTokenExpiresAt = expiresAt
       await user.save()
 
       await mail.send((message) => {
@@ -172,7 +177,7 @@ export default class AuthController {
           .subject('Recuperação de Senha')
           .htmlView('emails/esqueci_senha', {
             user: user.serialize(),
-            link: `http://localhost:3333/redefinir-senha?token=${token}`,
+            link: `https://projeto-sgci.vercel.app/redefinir-senha?token=${token}`,
           })
       })
 
@@ -187,13 +192,13 @@ export default class AuthController {
     try {
       const { token, password } = request.only(['token', 'password'])
       const user = await User.query()
-        .where('passwordResetToken', token) // CORREÇÃO: passwordResetToken
-        .where('passwordResetTokenExpiresAt', '>', DateTime.now().toSQL()) // CORREÇÃO: passwordResetTokenExpiresAt
+        .where('passwordResetToken', token)
+        .where('passwordResetTokenExpiresAt', '>', DateTime.now().toSQL())
         .firstOrFail()
 
       user.password = password
-      user.passwordResetToken = null
-      user.passwordResetTokenExpiresAt = null
+      ;(user as any).passwordResetToken = null
+      ;(user as any).passwordResetTokenExpiresAt = null
       await user.save()
 
       return response.ok({ message: 'Senha redefinida com sucesso' })
