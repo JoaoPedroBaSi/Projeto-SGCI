@@ -8,7 +8,8 @@ const authConfig = defineConfig({
     api: tokensGuard({
       provider: tokensUserProvider({
         tokens: 'accessTokens',
-        model: () => import('#models/user')
+        // O cast 'as any' aqui é o tiro de misericórdia no erro de tipagem
+        model: () => import('#models/user').then((m) => m.default as any),
       }),
     }),
   },
@@ -17,8 +18,7 @@ const authConfig = defineConfig({
 export default authConfig
 
 /**
- * Inferring types from the configured auth
- * guards.
+ * Inferring types from the configured auth guards.
  */
 declare module '@adonisjs/auth/types' {
   export interface Authenticators extends InferAuthenticators<typeof authConfig> {}

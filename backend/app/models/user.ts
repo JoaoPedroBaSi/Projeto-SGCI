@@ -1,24 +1,18 @@
 import { DateTime } from 'luxon'
 import { BaseModel, column, hasOne } from '@adonisjs/lucid/orm'
 import type { HasOne } from '@adonisjs/lucid/types/relations'
-import { compose } from '@adonisjs/core/helpers'
 import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
+import hash from '@adonisjs/core/services/hash'
 import Cliente from '#models/cliente'
 import Profissional from '#models/profissional'
 
-/**
- * No AdonisJS 6, usamos o 'withAuthFinder' dentro do helper 'compose'.
- * Isso injeta os métodos necessários para o Token Provider funcionar online.
- */
-// `withAuthFinder` retorna um mixin que recebe uma superclasse e retorna
-// uma subclasse. Forçar o tipo aqui evita erros de compatibilidade do
-// TypeScript ao usar `compose` abaixo.
-const AuthUser = (withAuthFinder as any)(BaseModel, {
+
+const AuthFinder = withAuthFinder(() => hash as any, {
   uids: ['email'],
   passwordColumnName: 'password',
-}) as unknown as (superclass: typeof BaseModel) => typeof BaseModel
+})
 
-export default class User extends compose(BaseModel, AuthUser) {
+export default class User extends AuthFinder(BaseModel) {
   @column({ isPrimary: true })
   declare id: number
 
@@ -39,6 +33,12 @@ export default class User extends compose(BaseModel, AuthUser) {
 
   @column()
   declare status: 'ativo' | 'inativo' | 'pendente'
+
+  @column()
+  declare passwordResetToken: string | null
+
+  @column.dateTime()
+  declare passwordResetTokenExpiresAt: DateTime | null
 
   @column({ serializeAs: null })
   declare rememberMeToken: string | null
