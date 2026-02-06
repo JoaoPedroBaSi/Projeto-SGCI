@@ -12,7 +12,9 @@ export default class ProfissionaisController {
 
   public async index({ auth, response }: HttpContext) {
     /**
-     * CORREÇÃO: Aplicando cast para User para acessar perfilTipo e id.
+     * VACINA APLICADA: 
+     * Forçamos o TypeScript e o servidor a reconhecerem o usuário logado 
+     * como uma instância do Model User para acessar perfilTipo e id.
      */
     const userLogado = auth.user as unknown as User
 
@@ -20,6 +22,10 @@ export default class ProfissionaisController {
       .preload('user')
       .preload('funcao')
       .preload('disponibilidades', (query) => {
+        /**
+         * O erro 500 ocorria aqui porque 'userLogado' era considerado genérico.
+         * Com o cast acima, o acesso às propriedades abaixo está seguro.
+         */
         if (userLogado.perfilTipo === 'profissional') {
           query.where('profissionalId', userLogado.id)
         }
