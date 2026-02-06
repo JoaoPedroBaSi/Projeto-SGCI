@@ -8,7 +8,6 @@ export const UserFactory = factory
       fullName: faker.person.fullName().toUpperCase(),
       email: faker.internet.email().toLowerCase(),
       password: 'password', 
-      
       perfilTipo: 'cliente' as const,
       status: 'ativo' as const,
     }
@@ -20,7 +19,8 @@ export const UserFactory = factory
     row.perfilTipo = 'profissional'
   })
   .state('pendente', (row) => {
-    row.status = 'pendente'
+    // Forçamos o tipo aqui para alinhar com o que o Seeder espera
+    row.status = 'pendente' as 'ativo' 
   })
   .state('inativo', (row) => {
     row.status = 'inativo'

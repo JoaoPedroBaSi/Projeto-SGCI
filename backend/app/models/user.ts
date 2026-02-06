@@ -1,10 +1,20 @@
 import { DateTime } from 'luxon'
 import { BaseModel, column, hasOne } from '@adonisjs/lucid/orm'
 import type { HasOne } from '@adonisjs/lucid/types/relations'
+import { compose } from '@adonisjs/core/helpers'
+import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
+import hash from '@adonisjs/core/services/hash' // Importa o serviço do core
 import Cliente from '#models/cliente'
 import Profissional from '#models/profissional'
 
-export default class User extends BaseModel {
+// Definimos o authFinder passando o serviço de hash diretamente.
+// O cast 'as unknown as any' é necessário apenas se o TS ainda reclamar de membros privados.
+const authFinder = withAuthFinder(() => hash as any, {
+  uids: ['email'],
+  passwordColumnName: 'password',
+})
+
+export default class User extends compose(BaseModel, authFinder) {
   @column({ isPrimary: true })
   declare id: number
 
@@ -23,9 +33,8 @@ export default class User extends BaseModel {
   @column()
   declare perfilTipo: 'admin' | 'profissional' | 'cliente'
 
-  // ADICIONE ESTA LINHA:
   @column()
-  declare status: 'ativo' | 'inativo'
+  declare status: 'ativo' | 'inativo' | 'pendente'
 
   @column({ serializeAs: null })
   declare rememberMeToken: string | null
