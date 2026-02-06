@@ -20,7 +20,6 @@ export default class AtendimentosController {
   ) {}
 
   public async index({ auth, request }: HttpContext) {
-    // Cast duplo para o TypeScript reconhecer as propriedades do seu Model
     const user = auth.user as unknown as User
     const statusFiltrado = request.input('status')
 

@@ -5,20 +5,19 @@ import { DateTime } from 'luxon'
 import Atendimento from '#models/atendimento'
 import Disponibilidade from '#models/disponibilidade'
 import Sala from '#models/sala'
+import User from '#models/user'
 import { TransacaoService } from './transacao_service.js'
 
 @inject()
 export class AtendimentoService {
   constructor(protected transacaoService: TransacaoService) {}
 
-  /**
-   * CORREÇÃO: Adicionado o 4º argumento 'usuarioLogado' para bater com o Controller.
-   * Note que o parâmetro é opcional (?) para evitar quebrar outras partes do sistema.
-   */
+
   public async criarAtendimento(
     dados: { profissionalId: number; clienteId: number; observacoes?: string; formaPagamento: string },
     dataHoraInicioLuxon: DateTime,
     disponibilidade: Disponibilidade,
+    _usuarioLogado?: User //
   ) {
     await db.transaction(async (trx) => {
       
@@ -39,13 +38,16 @@ export class AtendimentoService {
       await disponibilidade.save()
 
       await Atendimento.create(atendimentoData, { client: trx })
-      
     })
   }
 
+  /**
+   * CORREÇÃO: Adicionado o 3º argumento '_usuarioLogado' para bater com o Controller.
+   */
   public async atualizarAtendimento(
     dados: any, 
     atendimento: Atendimento, 
+    _usuarioLogado?: User //
   ) {
     let disponibilidadeSlotNovo: Disponibilidade | null = null
     const dadosParaUpdate: any = { ...dados }
