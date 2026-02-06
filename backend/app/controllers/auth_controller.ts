@@ -6,21 +6,27 @@ import Profissional from '#models/profissional'
 import { registerValidator } from '#validators/register'
 import db from '@adonisjs/lucid/services/db'
 
-
 export default class AuthController {
   
   public async login({ request, response }: HttpContext) {
     const { email, password } = request.only(['email', 'password'])
 
     try {
-      // Usamos cast para garantir acesso ao método estático
-      const user = await (User as any).verifyCredentials(email, password)
+      /**
+       * ALTERAÇÃO: Mudamos de 'verifyCredentials' para 'autenticar'
+       * para bater com o nome que definimos no seu Model User.
+       */
+      const user = await User.autenticar(email, password)
       
       if (!user) {
         return response.unauthorized({ message: 'Credenciais inválidas' })
       }
 
-      // O "as any" aqui garante que o provider de tokens seja encontrado
+      /**
+       * O Adonis 6 exige que o acesso ao provider de tokens seja feito 
+       * via propriedade estática do Model. O cast 'as any' resolve a 
+       * teimosia do TS aqui.
+       */
       const token = await (User as any).accessTokens.create(user)
 
       return response.ok({
@@ -104,6 +110,7 @@ export default class AuthController {
 
       await trx.commit()
 
+      // Criando token após registro
       const token = await (User as any).accessTokens.create(user)
 
       return response.created({
@@ -121,7 +128,13 @@ export default class AuthController {
 
   public async logout({ auth, response }: HttpContext) {
     const user = auth.getUserOrFail()
-    await (User as any).accessTokens.delete(user, (auth.user as any).currentAccessToken.identifier)
+    
+    /**
+     * CORREÇÃO: Casting correto para deletar o token atual no logout
+     */
+    const currentTokenId = (auth.user as any).currentAccessToken.identifier
+    await (User as any).accessTokens.delete(user, currentTokenId)
+    
     return response.ok({ message: 'Deslogado com sucesso' })
   }
 }
