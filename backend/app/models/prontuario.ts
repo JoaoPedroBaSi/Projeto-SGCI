@@ -7,31 +7,33 @@ import Profissional from '#models/profissional'
 import Parceria from '#models/parceria'
 
 export default class Prontuario extends BaseModel {
+  public static table = 'prontuarios'
+
   @column({ isPrimary: true })
   declare id: number
 
-  @column({ columnName: 'atendimento_id' }) // <-- Mapeamento explícito
+  @column({ columnName: 'atendimento_id' })
   declare atendimentoId: number
 
-  @column({ columnName: 'cliente_id' }) // <-- Mapeamento explícito
-  declare clienteId: number
+  @column({ columnName: 'cliente_id' })
+  declare clienteId: number | null
 
-  @column({ columnName: 'profissional_id' }) // <-- Mapeamento explícito
+  @column({ columnName: 'profissional_id' })
   declare profissionalId: number
 
-  @column({ columnName: 'parceria_id' }) // <-- Mapeamento explícito
+  @column({ columnName: 'parceria_id' })
   declare parceriaId: number | null
 
   @column()
   declare diagnostico: string
 
-  @column({ columnName: 'medicamentos_prescritos' }) // <-- Mapeamento explícito
+  @column({ columnName: 'medicamentos_prescritos' })
   declare medicamentosPrescritos: string | null
 
   @column()
   declare recomendacoes: string | null
 
-  @column({ columnName: 'caminho_anexo' }) // <-- Mapeamento explícito
+  @column({ columnName: 'caminho_anexo' })
   declare caminhoAnexo: string | null
 
   @column()
@@ -44,14 +46,14 @@ export default class Prontuario extends BaseModel {
   declare updatedAt: DateTime
 
   @belongsTo(() => Atendimento)
-  declare public atendimento: BelongsTo<typeof Atendimento>
+  declare atendimento: BelongsTo<typeof Atendimento>
 
   @belongsTo(() => Cliente)
-  declare public cliente: BelongsTo<typeof Cliente>
+  declare cliente: BelongsTo<typeof Cliente>
 
   @belongsTo(() => Profissional)
-  declare public profissional: BelongsTo<typeof Profissional>
+  declare profissional: BelongsTo<typeof Profissional>
 
   @belongsTo(() => Parceria)
-  declare public parceria: BelongsTo<typeof Parceria>
+  declare parceria: BelongsTo<typeof Parceria>
 }

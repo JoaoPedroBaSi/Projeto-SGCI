@@ -5,41 +5,53 @@ import db from '@adonisjs/lucid/services/db'
 
 export default class VerificarReservasExpiradas extends BaseCommand {
   static commandName = 'verificar:reservas-expiradas'
-  static description = 'Libera salas de reservas expiradas'
+  static description = 'Finaliza reservas expiradas e libera as salas automaticamente'
 
-  // A CORREÇÃO ESTÁ AQUI:
-  // Dizemos ao Adonis para iniciar a App (e o Banco de Dados) antes de rodar.
   static options: CommandOptions = {
     startApp: true
   }
 
   async run() {
-    this.logger.info('Iniciando verificação (Modo Query Builder)...')
+    this.logger.info('Iniciando varredura de reservas expiradas...')
 
-    try {
-      // Agora o 'db' vai funcionar porque a App iniciou!
+    await db.transaction(async (trx) => {
       const reservasExpiradas = await db
         .from('reservas')
         .where('status', 'APROVADA')
-        .where('data_hora_fim', '<=', DateTime.now().toSQL())
-        .select('id', 'sala_id')
+        .where('data_hora_fim', '<=', DateTime.now().toSQL()!) 
+        .select('id', 'sala_id', 'data_hora_fim')
+        .useTransaction(trx) 
 
-      this.logger.info(`Encontradas ${reservasExpiradas.length} reservas expiradas.`)
+      if (reservasExpiradas.length === 0) {
+        this.logger.info('Nenhuma reserva expirada encontrada.')
+        return
+      }
+
+      this.logger.info(`Processando ${reservasExpiradas.length} reservas...`)
 
       for (const reserva of reservasExpiradas) {
         await db
+          .from('reservas')
+          .where('id', reserva.id)
+          .update({ 
+            status: 'CONCLUIDA',
+            updated_at: DateTime.now().toSQL()
+          })
+          .useTransaction(trx)
+
+        await db
           .from('salas')
           .where('id', reserva.sala_id)
-          .update({ status: 'DISPONIVEL' })
-          
-        this.logger.info(`Sala ${reserva.sala_id} liberada (Reserva ${reserva.id})`)
+          .update({ 
+            status: 'DISPONIVEL',
+            updated_at: DateTime.now().toSQL()
+          })
+          .useTransaction(trx)
+
+        this.logger.info(`[Reserva #${reserva.id}] Finalizada -> Sala #${reserva.sala_id} Liberada.`)
       }
+    })
 
-      this.logger.info('Processo finalizado.')
-
-    } catch (error) {
-      this.logger.error(`Erro: ${error.message}`)
-      console.error(error)
-    }
+    this.logger.success('Varredura concluída com sucesso.')
   }
 }

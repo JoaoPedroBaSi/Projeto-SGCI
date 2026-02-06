@@ -2,6 +2,8 @@ import Sala from '#models/sala'
 import Reserva from '#models/reserva'
 import Transacao from '#models/transacao'
 import { DateTime } from 'luxon'
+import db from '@adonisjs/lucid/services/db'
+import { inject } from '@adonisjs/core'
 
 interface HorarioDTO {
   inicio: string
@@ -15,89 +17,83 @@ interface CriarReservaLoteDTO {
   horarios: HorarioDTO[]
 }
 
+@inject()
 export default class ReservaService {
+  
+  private readonly ENTIDADE_SISTEMA_ID = 1
+  private readonly DESTINATARIO_ADMIN_ID = 1 
+
   public async criarEmLote({ salaId, profissionalId, userId, horarios }: CriarReservaLoteDTO) {
-    // Busca a Sala
-    const sala = await Sala.findOrFail(salaId)
+    return await db.transaction(async (trx) => {
+      
+      const sala = await Sala.findOrFail(salaId, { client: trx })
 
-    const reservasParaCriar: any[] = []
-    let valorTotalGeral = 0
+      const reservasParaCriar: Partial<Reserva>[] = []
+      let valorTotalGeral = 0
 
-    // Loop de Validação e Cálculo
-    for (const horario of horarios) {
-      const inicio = DateTime.fromISO(horario.inicio)
-      const fim = DateTime.fromISO(horario.fim)
+      for (const horario of horarios) {
+        const inicio = DateTime.fromISO(horario.inicio)
+        const fim = DateTime.fromISO(horario.fim)
 
-      console.log(
-        `Verificando conflito para: ${inicio.toFormat('yyyy-MM-dd HH:mm')} até ${fim.toFormat('HH:mm')}`
-      )
-
-      if (inicio >= fim) {
-        throw new Error('A data de início deve ser anterior ao fim.')
-      }
-
-      // Checa conflito no banco
-      const conflito = await Reserva.query()
-        .where('sala_id', salaId)
-        .where('status', '!=', 'REJEITADO') // Ignora rejeitadas
-        .where((query) => {
-          query
-            .where('data_hora_inicio', '<', fim.toSQL())
-            .andWhere('data_hora_fim', '>', inicio.toSQL())
-        })
-        .first()
-
-      if (conflito) {
-        console.error('!!! CONFLITO DETECTADO !!!')
-        console.error('Tentativa:', inicio.toString(), 'até', fim.toString())
-        console.error('Ocupado por Reserva ID:', conflito.id)
-        console.error('Status da Reserva:', conflito.status)
-        console.error('Horário Ocupado:', conflito.dataHoraInicio, 'até', conflito.dataHoraFim)
-
-        throw {
-          status: 409,
-          message: `O horário das ${inicio.toFormat('HH:mm')} já está ocupado.`,
+        if (!inicio.isValid || !fim.isValid) {
+          throw new Error('Datas fornecidas são inválidas.')
         }
+
+        if (inicio >= fim) {
+          throw new Error('A data de início deve ser anterior ao fim.')
+        }
+
+        const conflito = await Reserva.query({ client: trx })
+          .where('sala_id', salaId)
+          .where('status', '!=', 'REJEITADO') 
+          .where((query) => {
+            query
+              .where('data_hora_inicio', '<', fim.toSQL())
+              .andWhere('data_hora_fim', '>', inicio.toSQL())
+          })
+          .first()
+
+        if (conflito) {
+          throw new Error(`Conflito de horário: O período das ${inicio.toFormat('HH:mm')} já está ocupado.`)
+        }
+
+        const duracaoHoras = fim.diff(inicio, 'hours').hours
+        const precoSlot = Number(sala.precoAluguel) * duracaoHoras
+        valorTotalGeral += precoSlot
+
+        reservasParaCriar.push({
+          salaId,
+          profissionalId,
+          dataHoraInicio: inicio,
+          dataHoraFim: fim,
+          status: 'PENDENTE',
+          valorTotal: precoSlot,
+          pagamentoEfetuado: false,
+          formaPagamento: 'PENDENTE' 
+        })
       }
 
-      // Calcula preço deste horário
-      const duracao = fim.diff(inicio, 'hours').hours
-      const precoSlot = Number(sala.precoAluguel) * duracao
-      valorTotalGeral += precoSlot
-
-      // Adiciona na lista temporária
-      reservasParaCriar.push({
-        salaId,
-        profissionalId,
-        dataHoraInicio: inicio,
-        dataHoraFim: fim,
+      const transacao = await Transacao.create({
+        userId: userId,
+        entidadeOrigem: 'SISTEMA',
+        entidadeId: this.ENTIDADE_SISTEMA_ID,
+        destinatarioTipo: 'ADMIN', 
+        destinatarioId: this.DESTINATARIO_ADMIN_ID,
+        valor: valorTotalGeral,
+        tipo: 'ENTRADA', 
+        finalidade: 'RESERVA_SALA',
         status: 'PENDENTE',
-        valorTotal: precoSlot,
-      })
-    }
+        descricao: `Reserva em lote de ${reservasParaCriar.length} horários.`
+      }, { client: trx }) 
 
-    //  Cria a TRANSAÇÃO PAI
-    // TROCAR IDS FIXOS DE ADMIN E EMPRESA DEPOIS, POIS SERÃO FIXOS
-    const transacao = await Transacao.create({
-      userId: userId,
-      entidadeOrigem: 'SISTEMA',
-      entidadeId: 1, // Exemplo
-      destinatarioTipo: 'ADMIN',
-      destinatarioId: 1, // Exemplo: ID da empresa
-      valor: valorTotalGeral,
-      tipo: 'ENTRADA',
-      finalidade: 'RESERVA_SALA',
-      status: 'PENDENTE',
+      for (const res of reservasParaCriar) {
+        await Reserva.create({
+          ...res,
+          transacaoId: transacao.id,
+        }, { client: trx }) 
+      }
+
+      return transacao
     })
-
-    // 4Cria as Reservas vinculadas à Transação
-    for (const res of reservasParaCriar) {
-      await Reserva.create({
-        ...res,
-        transacaoId: transacao.id,
-      })
-    }
-
-    return transacao
   }
 }

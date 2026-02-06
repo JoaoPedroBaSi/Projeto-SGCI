@@ -5,11 +5,11 @@ import Atendimento from '#models/atendimento'
 import User from '#models/user'
 
 export default class Cliente extends BaseModel {
-  // O ID não é gerado aqui — é fornecido pela tabela `users` (não auto-increment).
+  // O ID é o mesmo da tabela `users` (Relacionamento 1:1 com chave compartilhada)
   @column({ isPrimary: true })
   declare id: number
 
-  @column({ columnName: 'nome' }) 
+  @column() 
   declare nome: string
 
   @column()
@@ -36,10 +36,9 @@ export default class Cliente extends BaseModel {
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 
-  // --- RELACIONAMENTOS ---
 
   @belongsTo(() => User, {
-    foreignKey: 'id', // A chave estrangeira é o próprio ID
+    foreignKey: 'id', 
     localKey: 'id'
   })
   declare user: BelongsTo<typeof User>

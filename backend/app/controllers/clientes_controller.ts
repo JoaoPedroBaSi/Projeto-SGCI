@@ -4,23 +4,21 @@ import { DateTime } from 'luxon'
 import { storeClienteValidator, updateClienteValidator } from '#validators/validator_cliente'
 
 export default class ClientesController {
-  // Lista todos os clientes
+  
   public async index({ auth, response }: HttpContext) {
-  const user = await auth.authenticate()
+    const user = await auth.authenticate()
 
-  // Se o usuário logado for um CLIENTE, ele vê apenas o próprio perfil
-  if (user.perfil_tipo === 'cliente') {
-    const cliente = await Cliente.query().where('id', user.id).first()
-    if (!cliente) return response.notFound({ message: 'Perfil não encontrado' })
-    return response.ok(cliente)
+    // CORREÇÃO: perfil_tipo -> perfilTipo
+    if (user.perfilTipo === 'cliente') {
+      const cliente = await Cliente.query().where('id', user.id).first()
+      if (!cliente) return response.notFound({ message: 'Perfil não encontrado' })
+      return response.ok(cliente)
+    }
+
+    const clientes = await Cliente.all()
+    return response.ok(clientes)
   }
 
-  // Se for PROFISSIONAL ou ADMIN, ele pode ver a lista de clientes para o Dashboard
-  const clientes = await Cliente.all()
-  return response.ok(clientes)
-}
-
-  // Retorna um cliente específico com os atendimentos associados
   public async show({ params, response }: HttpContext) {
     try {
       const cliente = await Cliente.query()
@@ -29,61 +27,72 @@ export default class ClientesController {
         .preload('atendimentos')
         .firstOrFail()
 
-      return response.status(200).send(cliente)
+      return response.ok(cliente)
     } catch {
-      return response.status(404).send({ message: 'Cliente não encontrado' })
+      return response.notFound({ message: 'Cliente não encontrado' })
     }
   }
 
-  // Cria um novo cliente
   public async store({ request, auth, response }: HttpContext) {
     try {
       const payload = await request.validateUsing(storeClienteValidator)
 
-      // Converte o campo dataNascimento de Date para DateTime antes de criar
+      // CORREÇÃO: Tratamento da data para evitar conflito de tipos
+      const dataNascimento = payload.dataNascimento 
+        ? (payload.dataNascimento instanceof Date 
+            ? DateTime.fromJSDate(payload.dataNascimento) 
+            : payload.dataNascimento)
+        : undefined
+
       const cliente = await Cliente.create({
         ...payload,
         id: auth.user!.id,
-        dataNascimento: DateTime.fromJSDate(payload.dataNascimento),
+        dataNascimento: dataNascimento as any,
       })
 
-      return response.status(201).send(cliente)
-    } catch (error) {
-      console.log(error)
-      return response.status(400).send({ message: 'Não foi possível criar o cliente', error })
+      return response.created(cliente)
+    } catch (error: any) {
+      return response.badRequest({ 
+        message: 'Não foi possível criar o cliente', 
+        error: error.message || error 
+      })
     }
   }
 
-  // Atualiza os dados de um cliente existente
   public async update({ request, params, response }: HttpContext) {
     try {
       const cliente = await Cliente.findOrFail(params.id)
       const payload = await request.validateUsing(updateClienteValidator)
 
-      // Converte a data se ela existir no payload
+      // CORREÇÃO: Tratamento seguro da data no merge
+      const dataNascimento = payload.dataNascimento 
+        ? (payload.dataNascimento instanceof Date 
+            ? DateTime.fromJSDate(payload.dataNascimento) 
+            : payload.dataNascimento)
+        : cliente.dataNascimento
+
       cliente.merge({
         ...payload,
-        dataNascimento: payload.dataNascimento
-          ? DateTime.fromJSDate(payload.dataNascimento)
-          : cliente.dataNascimento,
+        dataNascimento: dataNascimento as any,
       })
 
       await cliente.save()
-      return response.status(200).send(cliente)
-    } catch (error) {
-      console.log(error)
-      return response.status(400).send({ message: 'Não foi possível atualizar o cliente', error })
+      return response.ok(cliente)
+    } catch (error: any) {
+      return response.badRequest({ 
+        message: 'Não foi possível atualizar o cliente', 
+        error: error.message || error 
+      })
     }
   }
 
-  // Exclui um cliente existente
   public async destroy({ params, response }: HttpContext) {
     try {
       const cliente = await Cliente.findOrFail(params.id)
       await cliente.delete()
-      return response.status(200).send(cliente)
+      return response.ok(cliente)
     } catch {
-      return response.status(404).send({ message: 'Cliente não encontrado' })
+      return response.notFound({ message: 'Cliente não encontrado' })
     }
   }
 }

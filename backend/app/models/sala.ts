@@ -4,6 +4,8 @@ import type { ManyToMany } from '@adonisjs/lucid/types/relations'
 import Profissional from '#models/profissional'
 
 export default class Sala extends BaseModel {
+  public static table = 'salas'
+
   @column({ isPrimary: true })
   declare id: number
 
@@ -13,7 +15,6 @@ export default class Sala extends BaseModel {
   @column()
   declare status: 'DISPONIVEL' | 'OCUPADO' | 'MANUTENÇÃO'
 
-  // Mapeamento correto com o banco (snake_case -> camelCase)
   @column({ columnName: 'capacidade_pacientes' })
   declare capacidadePacientes: number
 
@@ -26,10 +27,7 @@ export default class Sala extends BaseModel {
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 
-  // ===========================================
-  // 🔗 RELACIONAMENTOS
-  // ===========================================
-
+  
   @manyToMany(() => Profissional, {
     pivotTable: 'reservas',
     pivotColumns: ['data_hora_inicio', 'data_hora_fim', 'status', 'pagamento_efetuado'],

@@ -4,7 +4,6 @@ import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import Profissional from '#models/profissional'
 
 export default class Disponibilidade extends BaseModel {
-  //atributos
   @column({ isPrimary: true })
   declare id: number
 
@@ -12,7 +11,7 @@ export default class Disponibilidade extends BaseModel {
   declare profissionalId: number
 
   @column()
-  declare status: "LIVRE" | "OCUPADO" | "BLOQUEADO" | "FINALIZADO" | "RESERVADO"
+  declare status: 'LIVRE' | 'OCUPADO' | 'BLOQUEADO' | 'FINALIZADO' | 'RESERVADO'
 
   @column.dateTime()
   declare dataHoraInicio: DateTime
@@ -20,13 +19,12 @@ export default class Disponibilidade extends BaseModel {
   @column.dateTime()
   declare dataHoraFim: DateTime
 
-  //relacionamentos
-  @belongsTo(() => Profissional)
-  declare profissional: BelongsTo<typeof Profissional>
-
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
+
+  @belongsTo(() => Profissional)
+  declare profissional: BelongsTo<typeof Profissional>
 }

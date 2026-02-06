@@ -3,45 +3,60 @@ import Sala from '#models/sala'
 import { storeSalaValidator, updateSalaValidator } from '#validators/validator_sala'
 
 export default class SalasController {
-  // Testado
-  // Lista todas as salas
-  public async index({}: HttpContext) {
-    return await Sala.all()
+  
+  public async index({ response }: HttpContext) {
+    const salas = await Sala.all()
+    return response.ok(salas)
   }
 
-  // Testado
-  // Retorna uma sala específica com o profissional associado
-  // Se não encontrar, retorna 404
   public async show({ params, response }: HttpContext) {
-    const sala = await Sala.query().where({ id: params.id })
-    if (sala) return sala
-    else return response.status(404).send({ message: 'Sala não encontrada' })
+    try {
+      const sala = await Sala.findOrFail(params.id)
+      return response.ok(sala)
+    } catch {
+      return response.notFound({ message: 'Sala não encontrada.' })
+    }
   }
 
-  // Testado
-  // Cria uma nova sala e valida os dados de entrada
   public async store({ request, response }: HttpContext) {
-    const payload = await request.validateUsing(storeSalaValidator)
-    const sala = await Sala.create(payload)
-    return response.status(201).send(sala)
+    try {
+      const payload = await request.validateUsing(storeSalaValidator)
+      const sala = await Sala.create(payload)
+      
+      return response.created(sala)
+    } catch (error: any) {
+      return response.badRequest({ 
+        message: 'Não foi possível cadastrar a sala.', 
+        error: error.message || error 
+      })
+    }
   }
 
-  // Testado
-  // Atualiza uma sala existente após validar os dados de entrada
   public async update({ params, request, response }: HttpContext) {
-    const payload = await request.validateUsing(updateSalaValidator)
+    try {
+      const sala = await Sala.findOrFail(params.id)
+      const payload = await request.validateUsing(updateSalaValidator)
 
-    const sala = await Sala.findOrFail(params.id)
-    sala.merge(payload)
-    await sala.save()
-    return response.status(200).send(sala)
+      sala.merge(payload)
+      await sala.save()
+      
+      return response.ok(sala)
+    } catch (error: any) {
+      return response.badRequest({ 
+        message: 'Não foi possível atualizar a sala.',
+        error: error.message || error
+      })
+    }
   }
 
-  // Testado
-  // Exclui uma sala específica
-  public async destroy({ params }: HttpContext) {
-    const sala = await Sala.findOrFail(params.id)
-    await sala.delete()
-    return sala
+  public async destroy({ params, response }: HttpContext) {
+    try {
+      const sala = await Sala.findOrFail(params.id)
+      await sala.delete()
+      
+      return response.ok({ message: 'Sala removida com sucesso.', data: sala })
+    } catch {
+      return response.notFound({ message: 'Sala não encontrada.' })
+    }
   }
 }

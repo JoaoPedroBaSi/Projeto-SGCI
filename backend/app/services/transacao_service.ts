@@ -1,72 +1,70 @@
 import Atendimento from '#models/atendimento'
-import Cliente from '#models/cliente'
 import Transacao from '#models/transacao'
 import User from '#models/user'
 import db from '@adonisjs/lucid/services/db'
-import { TransactionClientContract } from '@adonisjs/lucid/types/database'
+
+interface DadosTransacaoAtendimento {
+  atendimentoId: number
+  userId: number 
+  clienteId: number
+  profissionalId: number
+  valor: number
+  referenciaExterna?: string
+}
+
 export class TransacaoService {
+  
   public async processarConclusaoAtendimento(
     atendimento: Atendimento,
     usuarioLogado: User,
     valorPagamento: number
   ): Promise<'CONCLUIDO'> {
-    // Retorna o status de sucesso
-
     try {
-      // Busca do Cliente (transferida do Controller)
-      const cliente = await Cliente.query().where('id', atendimento.clienteId).first()
-      if (!cliente) {
-        // Lança um erro que será pego pelo catch no Controller
-        throw new Error('Não foi possível encontrar o cliente para registrar a transação.')
+      
+      if (!atendimento.clienteId) {
+        throw new Error('Atendimento não possui um cliente vinculado.')
       }
 
-      // O Service sabe quem está registrando (usuarioLogado.id), quem é o cliente (cliente.id) e o valor.
-      await this.criarTransacaoAtendimento(
-        usuarioLogado.id,
-        cliente.id,
-        atendimento.profissionalId,
-        valorPagamento,
-        atendimento.id
-      )
-      return 'CONCLUIDO' // Retorna o status de sucesso
+      await this.criarTransacaoAtendimento({
+        atendimentoId: atendimento.id,
+        userId: usuarioLogado.id,
+        clienteId: atendimento.clienteId,
+        profissionalId: atendimento.profissionalId,
+        valor: valorPagamento,
+        referenciaExterna: 'MANUAL_SISTEMA' 
+      })
+
+      return 'CONCLUIDO'
+
     } catch (error) {
-      // O erro deve ser logado e depois relançado
-      //console.error('Falha ao criar Transação ou Enviar Recibo:', error)
-
-      // Se houver falha, você pode registrar uma transação com status 'FALHOU' aqui se quiser manter o histórico de tentativas.
-      // ...this.criarTransacaoFalha(...)
-
-      // Lança a exceção para que o Controller a pegue e defina o status_pagamento = 'NEGADO'
-      throw error // Relança a exceção
+      console.error('Falha ao registrar transação de atendimento:', error)
+      throw error 
     }
   }
-  public async criarTransacaoAtendimento(
-    atendimentoId: Number,
-    userId: Number,
-    clienteId: Number,
-    profissionalId: Number,
-    valorPagamento: Number
-  ) {
-    await db.transaction(async (trx: TransactionClientContract) => {
-      //Independente do status de pagamento após o gateway, faz a inserção na tabela de Transacoes
-      const dadosTransacao = {
-        atendimentoId: Number(atendimentoId),
-        userId: Number(userId),
+
+
+  private async criarTransacaoAtendimento(dados: DadosTransacaoAtendimento) {
+    await db.transaction(async (trx) => {
+      
+      const novaTransacao = {
+        atendimentoId: dados.atendimentoId,
+        userId: dados.userId,
+        
         entidadeOrigem: 'clientes',
-        entidadeId: Number(clienteId),
+        entidadeId: dados.clienteId,
+        
         destinatarioTipo: 'profissionais',
-        destinatarioId: Number(profissionalId),
-        valor: Number(valorPagamento),
-        tipo: 'ENTRADA' as const,
+        destinatarioId: dados.profissionalId,
+        
+        valor: dados.valor,
+        tipo: 'ENTRADA' as const, 
         finalidade: 'PAGAMENTO_ATENDIMENTO',
-        //Coloquei um valor genérico no 'status' para testar. O status que será
-        //passado, será o status após o processo do gateway
-        //status: 'CONCLUIDA' as const,
-        status: 'CONCLUIDA' as const,
-        referenciaExterna: 'TESTE', //gateway.id
+        status: 'CONCLUIDA' as const, 
+        
+        referenciaExterna: dados.referenciaExterna || null
       }
 
-      await Transacao.create(dadosTransacao, { client: trx })
+      await Transacao.create(novaTransacao, { client: trx })
     })
   }
 }

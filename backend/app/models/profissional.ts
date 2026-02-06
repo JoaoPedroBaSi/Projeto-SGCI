@@ -9,10 +9,8 @@ import Sala from '#models/sala'
 import Atendimento from '#models/atendimento'
 
 export default class Profissional extends BaseModel {
-  // Define o nome da tabela explicitamente (boa prática)
   public static table = 'profissionais'
 
-  // ID é fornecido externamente (ex: vem da tabela `users`), não é gerado automaticamente
   @column({ isPrimary: true })
   declare id: number
 
@@ -23,7 +21,7 @@ export default class Profissional extends BaseModel {
   declare nome: string
 
   @column()
-  declare genero: 'MASCULINO' | 'FEMININO'
+  declare genero: 'MASCULINO' | 'FEMININO' | 'OUTRO' // Adicionado OUTRO para consistência
 
   @column.date()
   declare dataNascimento: DateTime 
@@ -40,26 +38,26 @@ export default class Profissional extends BaseModel {
   @column()
   declare senha: string
 
-  @column()
-  declare registro_conselho: string | null
-
-  @column()
-  declare conselho_uf: string | null
-
-  @column()
-  declare foto_perfil_url: string | null
+  @column({ columnName: 'foto_perfil_url' })
+  declare fotoPerfilUrl: string | null
 
   @column()
   declare biografia: string | null
 
+  @column({ columnName: 'registro_conselho' })
+  declare registroConselho: string | null
+
+  @column({ columnName: 'conselho_uf' })
+  declare conselhoUf: string | null
+
+  @column({ columnName: 'comprovante_credenciamento_url' })
+  declare comprovanteCredenciamentoUrl: string | null
+
   @column()
   declare status: 'pendente' | 'aprovado' | 'rejeitado' | null
 
-  @column()
-  declare comprovante_credenciamento_url: string | null
-
-  @column()
-  declare observacoes_admin: string | null
+  @column({ columnName: 'observacoes_admin' })
+  declare observacoesAdmin: string | null
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -67,13 +65,12 @@ export default class Profissional extends BaseModel {
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 
-  // --- RELACIONAMENTOS ---
 
   @belongsTo(() => Funcao)
   declare funcao: BelongsTo<typeof Funcao>
 
   @belongsTo(() => User, {
-    foreignKey: 'id', // A chave estrangeira é o próprio ID
+    foreignKey: 'id', 
     localKey: 'id'
   })
   declare user: BelongsTo<typeof User>
@@ -86,7 +83,6 @@ export default class Profissional extends BaseModel {
   @hasMany(() => Disponibilidade)
   declare disponibilidades: HasMany<typeof Disponibilidade>
 
-  // Relação com salas via reservas
   @manyToMany(() => Sala, {
     pivotTable: 'reservas',
     pivotColumns: ['data_hora_inicio', 'data_hora_fim', 'status', 'pagamento_efetuado'],

@@ -1,57 +1,53 @@
-import { HttpContext } from '@adonisjs/core/http'
+import type { HttpContext } from '@adonisjs/core/http'
 import PedidoReposicao from '#models/pedido_reposicao'
 import Profissional from '#models/profissional'
 
 export default class PedidoReposicaosController {
+  
   public async index({ response }: HttpContext) {
     try {
-      const consulta = await PedidoReposicao.query()
+      const pedidos = await PedidoReposicao.query()
         .preload('inventario')
-        .orderBy('created_at', 'desc')
-      return response.status(200).send(consulta)
+        .orderBy('createdAt', 'desc') 
+
+      return response.ok(pedidos)
     } catch (error) {
-      console.error('Erro ao listar pedidos:', error)
-      return response.status(500).send({
-        message: 'Erro ao listar os pedidos',
-        error: error instanceof Error ? error.message : 'Erro desconhecido',
+      return response.badRequest({
+        message: 'Erro ao listar os pedidos de reposição.',
       })
     }
   }
 
   public async store({ request, response, auth }: HttpContext) {
-    try {
-      const user = auth.user
-      if (!user) {
-        return response.unauthorized({ message: 'Acesso negado.' })
-      }
+    const user = auth.user!
 
-      // Busca o profissional pelo ID do usuário
+    try {
       const perfilProfissional = await Profissional.find(user.id)
 
       if (!perfilProfissional) {
         return response.forbidden({
-          message: 'Apenas profissionais podem solicitar reposição',
+          message: 'Apenas profissionais podem solicitar reposição.',
         })
       }
+      const { inventarioId, quantidade } = request.only(['inventarioId', 'quantidade'])
 
-      // 1. AJUSTE AQUI: Mude os nomes para bater com o Model
-      const dados = await request.only(['inventarioId', 'idInventario', 'quantidade'])
+      if (!inventarioId || !quantidade) {
+        return response.badRequest({ message: 'Dados incompletos.' })
+      }
 
-      // 2. AJUSTE AQUI: Use profissionalId e inventarioId
       const novoPedido = await PedidoReposicao.create({
-        // Se vier como inventarioId use ele, se não, tente idInventario
-        inventarioId: dados.inventarioId || dados.idInventario,
-        quantidade: dados.quantidade,
+        inventarioId: Number(inventarioId),
+        quantidade: Number(quantidade),
         profissionalId: perfilProfissional.id,
-        status: 'pendente',
+        status: 'PENDENTE', 
       })
 
       return response.created(novoPedido)
-    } catch (error) {
-      console.error('ERRO AO CRIAR PEDIDO:', error)
-      return response.status(500).send({
-        message: 'Erro ao criar um novo pedido',
-        debug: error.message,
+
+    } catch (error: any) {
+      return response.badRequest({
+        message: 'Erro ao criar solicitação de reposição.',
+        error: error.message || error,
       })
     }
   }

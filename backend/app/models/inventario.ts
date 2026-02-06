@@ -3,6 +3,7 @@ import { BaseModel, column } from '@adonisjs/lucid/orm'
 
 export default class Inventario extends BaseModel {
   public static table = 'inventario'
+
   @column({ isPrimary: true })
   declare id: number
 
@@ -12,14 +13,8 @@ export default class Inventario extends BaseModel {
   @column()
   declare tipo: 'MEDICAMENTO' | 'EQUIPAMENTO' | 'MATERIAL_ESCRITORIO' | 'MATERIAL_LIMPEZA'
 
-  @column()
-  declare quantidade: number
-
   @column({ columnName: 'unidade_medida' })
   declare unidadeMedida: string
-
-  @column()
-  declare validade: DateTime
 
   @column()
   declare lote: string | null
@@ -27,8 +22,14 @@ export default class Inventario extends BaseModel {
   @column()
   declare fornecedor: string | null
 
+  @column()
+  declare quantidade: number
+
   @column({ columnName: 'ponto_reposicao' })
   declare pontoReposicao: number
+
+  @column.date() 
+  declare validade: DateTime
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime

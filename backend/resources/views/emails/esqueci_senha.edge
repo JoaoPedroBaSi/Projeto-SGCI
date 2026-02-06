@@ -3,51 +3,41 @@
 <head>
   <meta charset="utf-8">
   <title>Recuperação de Senha</title>
-  <style>
-    body { font-family: 'Montserrat', sans-serif; padding: 20px; background-color: #f4f4f4; }
-    .container { 
-      max-width: 600px; 
-      margin: auto; 
-      background-color: #0e7490; 
-      color: white; 
-      padding: 40px; 
-      border-radius: 12px; 
-      text-align: center;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    }
-    h1 { color: #2dd4bf; margin-bottom: 20px; }
-    p { font-size: 16px; line-height: 1.6; color: #ccfbf1; }
-    .button-container { margin: 30px 0; }
-    a.button { 
-      display: inline-block; 
-      padding: 15px 30px; 
-      background-color: #2dd4bf; 
-      color: #0f766e; 
-      text-decoration: none; 
-      border-radius: 25px; 
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .footer { margin-top: 30px; font-size: 12px; color: #5eead4; opacity: 0.8; }
-  </style>
 </head>
-<body>
-  <div class="container">
-    <h1>Olá, {{ user.fullName || 'Usuário' }}!</h1>
+<body style="font-family: 'Montserrat', Arial, sans-serif; padding: 20px; background-color: #f4f4f4; margin: 0;">
+  
+  <div style="max-width: 600px; margin: 0 auto; background-color: #0e7490; color: white; padding: 40px; border-radius: 12px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+    
+    <h1 style="color: #2dd4bf; margin-bottom: 20px; font-size: 24px;">Olá, {{ user.fullName || 'Usuário' }}!</h1>
 
-    <p>Recebemos uma solicitação para redefinir a senha da sua conta em nosso sistema.</p>
-    <p>Clique no botão abaixo para criar uma nova senha. <strong>Este link é válido por 1 hora.</strong></p>
+    <p style="font-size: 16px; line-height: 1.6; color: #ccfbf1;">
+      Recebemos uma solicitação para redefinir a senha da sua conta em nosso sistema.
+    </p>
+    
+    <p style="font-size: 16px; line-height: 1.6; color: #ccfbf1;">
+      Clique no botão abaixo para criar uma nova senha. <br>
+      <strong>Este link é válido por 1 hora.</strong>
+    </p>
 
-    <div class="button-container">
-      <a href="{{ link }}" class="button">Redefinir Minha Senha</a>
+    <div style="margin: 30px 0;">
+      <a href="{{ link }}" target="_blank" style="display: inline-block; padding: 15px 30px; background-color: #2dd4bf; color: #0f766e; text-decoration: none; border-radius: 25px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; font-size: 14px;">
+        Redefinir Minha Senha
+      </a>
     </div>
 
-    <p>Se você não solicitou isso, por favor, ignore este e-mail.</p>
+    <p style="font-size: 16px; line-height: 1.6; color: #ccfbf1;">
+      Se você não solicitou isso, por favor, ignore este e-mail.
+    </p>
+
+    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+      <p style="font-size: 12px; color: #5eead4; margin-bottom: 5px;">Ou copie e cole o link abaixo no seu navegador:</p>
+      <a href="{{ link }}" style="font-size: 11px; color: #99f6e4; word-break: break-all;">{{ link }}</a>
+    </div>
     
-    <div class="footer">
+    <div style="margin-top: 30px; font-size: 12px; color: #5eead4; opacity: 0.8;">
       <p>Atenciosamente,<br><strong>Equipe SGCI</strong></p>
     </div>
+
   </div>
 </body>
 </html>

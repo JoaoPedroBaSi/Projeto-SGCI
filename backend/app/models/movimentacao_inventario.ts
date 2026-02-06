@@ -6,13 +6,15 @@ import User from '#models/user'
 
 export default class MovimentacaoInventario extends BaseModel {
   public static table = 'movimentacao_inventario'
+
   @column({ isPrimary: true })
   declare id: number
+
   @column({ columnName: 'inventario_id' })
   declare inventarioId: number
 
-  @column({ columnName: 'profissional_id' })
-  declare profissionalId: number
+  @column({ columnName: 'user_id' })
+  declare userId: number
 
   @column()
   declare tipo: 'ENTRADA' | 'SAIDA'
@@ -29,14 +31,14 @@ export default class MovimentacaoInventario extends BaseModel {
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 
-  // Chaves estrangeiras
+
   @belongsTo(() => Inventario, {
     foreignKey: 'inventarioId',
   })
-  declare public inventario: BelongsTo<typeof Inventario>
+  declare inventario: BelongsTo<typeof Inventario>
 
   @belongsTo(() => User, {
-    foreignKey: 'profissionalId',
+    foreignKey: 'userId', 
   })
-  declare public usuario: BelongsTo<typeof User>
+  declare user: BelongsTo<typeof User>
 }

@@ -1,110 +1,119 @@
 import { BaseSeeder } from '@adonisjs/lucid/seeders'
 import Inventario from '#models/inventario'
+import { DateTime } from 'luxon'
 
 export default class extends BaseSeeder {
   public async run() {
-    // Verifica se já tem dados para não duplicar
-    const total = await Inventario.query().count('* as total')
-    if (BigInt(total[0].$extras.total) > 0) {
-      console.log('O inventário já possui dados. Pulando seed.')
+    // CORREÇÃO: Pegando o total de forma mais segura para o TS
+    const resultado = await Inventario.query().count('* as total').firstOrFail()
+    const total = Number(resultado.$extras.total)
+
+    if (total > 0) {
+      // CORREÇÃO: Usando console.log ou apenas retornando, já que 'this.command' costuma dar erro de tipagem
+      console.info('O inventário já possui dados. Pulando seed.')
       return
     }
 
     await Inventario.createMany([
-      // === EQUIPAMENTOS (EPIs e Descartáveis) ===
       {
-        nome: 'Luva Látex (Tam. M)',
-        tipo: 'EQUIPAMENTO', // Baseado no Enum da sua migration
-        unidadeMedida: 'Caixa 100un',
+        nome: 'LUVA LÁTEX (TAM. M)',
+        tipo: 'EQUIPAMENTO', 
+        unidadeMedida: 'CAIXA 100UN',
         lote: 'L-2901',
-        quantidade: 5, // Quantidade crítica (vai aparecer vermelho no front)
+        quantidade: 5, 
         pontoReposicao: 20,
-        fornecedor: 'LuvasBrasil'
+        fornecedor: 'LUVAS BRASIL',
+        validade: DateTime.now().plus({ years: 2 }) 
       },
       {
-        nome: 'Luva Látex (Tam. G)',
+        nome: 'LUVA LÁTEX (TAM. G)',
         tipo: 'EQUIPAMENTO',
-        unidadeMedida: 'Caixa 100un',
+        unidadeMedida: 'CAIXA 100UN',
         lote: 'L-2902',
         quantidade: 50,
         pontoReposicao: 20,
-        fornecedor: 'LuvasBrasil'
+        fornecedor: 'LUVAS BRASIL',
+        validade: DateTime.now().plus({ years: 2 })
       },
       {
-        nome: 'Máscara Cirúrgica N95',
+        nome: 'MÁSCARA CIRÚRGICA N95',
         tipo: 'EQUIPAMENTO',
-        unidadeMedida: 'Unidade',
+        unidadeMedida: 'UNIDADE',
         lote: 'M-1102',
-        quantidade: 12, // Baixo estoque (amarelo)
+        quantidade: 12, 
         pontoReposicao: 15,
-        fornecedor: '3M'
+        fornecedor: '3M',
+        validade: DateTime.now().plus({ years: 5 }) 
       },
       {
-        nome: 'Seringa 5ml Descartável',
+        nome: 'SERINGA 5ML DESCARTÁVEL',
         tipo: 'EQUIPAMENTO',
-        unidadeMedida: 'Pacote 50un',
+        unidadeMedida: 'PACOTE 50UN',
         lote: 'S-8821',
-        quantidade: 4, // Crítico
+        quantidade: 4, 
         pontoReposicao: 10,
-        fornecedor: 'BD'
+        fornecedor: 'BD',
+        validade: DateTime.now().plus({ months: 8 })
       },
       {
-        nome: 'Papel Lençol Hospitalar',
+        nome: 'PAPEL LENÇOL HOSPITALAR',
         tipo: 'EQUIPAMENTO',
-        unidadeMedida: 'Rolo 50m',
+        unidadeMedida: 'ROLO 50M',
         lote: 'P-3321',
-        quantidade: 8, // Baixo
+        quantidade: 8, 
         pontoReposicao: 10,
-        fornecedor: 'Melhoramentos'
+        fornecedor: 'MELHORAMENTOS',
+        // Validade opcional removida aqui para seguir seu modelo original
       },
-
-      // === MEDICAMENTOS ===
       {
-        nome: 'Dipirona Sódica 500mg/ml',
+        nome: 'DIPIRONA SÓDICA 500MG/ML',
         tipo: 'MEDICAMENTO',
-        unidadeMedida: 'Frasco 10ml',
+        unidadeMedida: 'FRASCO 10ML',
         lote: 'DP-2023',
         quantidade: 100,
         pontoReposicao: 20,
-        fornecedor: 'Medley'
+        fornecedor: 'MEDLEY',
+        validade: DateTime.now().plus({ months: 1 }) 
       },
       {
-        nome: 'Paracetamol 750mg',
+        nome: 'PARACETAMOL 750MG',
         tipo: 'MEDICAMENTO',
-        unidadeMedida: 'Caixa 20cp',
+        unidadeMedida: 'CAIXA 20CP',
         lote: 'PA-990',
         quantidade: 30,
         pontoReposicao: 10,
-        fornecedor: 'EMS'
+        fornecedor: 'EMS',
+        validade: DateTime.now().plus({ months: 12 })
       },
       {
-        nome: 'Soro Fisiológico 0,9%',
+        nome: 'SORO FISIOLÓGICO 0,9%',
         tipo: 'MEDICAMENTO',
-        unidadeMedida: 'Frasco 500ml',
+        unidadeMedida: 'FRASCO 500ML',
         lote: 'SF-500',
         quantidade: 15,
         pontoReposicao: 20,
-        fornecedor: 'Eurofarma'
+        fornecedor: 'EUROFARMA',
+        validade: DateTime.now().plus({ months: 6 })
       },
-
-      // === MATERIAL DE LIMPEZA / OUTROS ===
       {
-        nome: 'Álcool 70%',
+        nome: 'ÁLCOOL 70%',
         tipo: 'MATERIAL_LIMPEZA',
-        unidadeMedida: 'Frasco 1L',
+        unidadeMedida: 'FRASCO 1L',
         lote: 'AL-7070',
-        quantidade: 2, // Crítico
+        quantidade: 2, 
         pontoReposicao: 10,
-        fornecedor: 'Tupi'
+        fornecedor: 'TUPI',
+        validade: DateTime.now().plus({ years: 1 })
       },
       {
-        nome: 'Clorexidina Degermante',
+        nome: 'CLOREXIDINA DEGERMANTE',
         tipo: 'MATERIAL_LIMPEZA',
-        unidadeMedida: 'Frasco 100ml',
+        unidadeMedida: 'FRASCO 100ML',
         lote: 'C-1234',
         quantidade: 25,
         pontoReposicao: 5,
-        fornecedor: 'Rioquimica'
+        fornecedor: 'RIOQUIMICA',
+        validade: DateTime.now().plus({ months: 18 })
       }
     ])
   }

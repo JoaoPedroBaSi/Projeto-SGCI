@@ -12,103 +12,91 @@ export default class extends BaseSeeder {
   public async run() {
     console.log('--- 🛠️ INICIANDO SEED TÉCNICO BLINDADO ---')
 
-    // DEFINIÇÃO DAS SENHAS
-    const senhaPura = 'senha123' // Para o User (que tem hook automático)
-    const senhaHash = await hash.make(senhaPura) // Para Profissional/Cliente (que não têm hook)
+    const senhaPura = 'senha123' 
+    const senhaHash = await hash.make(senhaPura) 
 
-    // ---------------------------------------------------------
-    // 1. SUPER ADMINISTRADOR
-    // ---------------------------------------------------------
+    // 1. Criar Admin
     const userAdmin = await User.updateOrCreate(
       { email: 'admin@teste.com' },
       { 
-        fullName: 'Administrador Principal',
-        password: senhaPura, // <--- Manda pura, o Model User criptografa
-        perfil_tipo: 'admin', 
+        fullName: 'ADMINISTRADOR PRINCIPAL',
+        password: senhaPura, 
+        perfilTipo: 'admin', 
         status: 'ativo' 
       }
     )
 
-    // ---------------------------------------------------------
-    // 2. UTILIZADORES PADRÃO
-    // ---------------------------------------------------------
+    // 2. Criar Usuário Cliente
     const userCliente = await User.updateOrCreate(
       { email: 'cliente@teste.com' },
       { 
-        fullName: 'Cliente Exemplo',
-        password: senhaPura, // <--- Manda pura
-        perfil_tipo: 'cliente', 
+        fullName: 'CLIENTE EXEMPLO', 
+        password: senhaPura,
+        perfilTipo: 'cliente', 
         status: 'ativo' 
       }
     )
 
+    // 3. Criar Usuário Profissional
     const userProfissional = await User.updateOrCreate(
       { email: 'medico@teste.com' },
       { 
-        fullName: 'Doutor João',
-        password: senhaPura, // <--- Manda pura
-        perfil_tipo: 'profissional', 
+        fullName: 'DOUTOR JOÃO',
+        password: senhaPura,
+        perfilTipo: 'profissional', 
         status: 'ativo' 
       }
     )
 
-    // ---------------------------------------------------------
-    // 3. VINCULAR PERFIS
-    // ---------------------------------------------------------
-    
-    // Perfil Cliente
+    // CORREÇÃO: Usando o operador "!" para garantir que fullName não é nulo
     const cliente = await Cliente.updateOrCreate(
       { id: userCliente.id },
       {
-        nome: userCliente.fullName ?? 'Cliente Exemplo', 
+        nome: userCliente.fullName!, // Operador ! resolve o erro ts(2322)
         cpf: '111.111.111-11',
         telefone: '11999999999',
         email: userCliente.email,
-        senha: senhaHash, // <--- Manda Hash, pois tabela Clientes não tem hook
+        senha: senhaHash, 
         dataNascimento: DateTime.fromISO('1990-01-01'),
         genero: 'MASCULINO'
       }
     )
 
-    // Função do Médico
-    let funcaoMedico = await Funcao.firstOrCreate(
+    const funcaoMedico = await Funcao.firstOrCreate(
       { nome: 'MEDICO' },
       { nome: 'MEDICO' }
     )
 
-    // Perfil Profissional
     const profissional = await Profissional.updateOrCreate(
       { id: userProfissional.id },
       {
         funcaoId: funcaoMedico.id,
-        nome: userProfissional.fullName ?? 'Doutor João',
+        nome: userProfissional.fullName!, // Operador ! resolve o erro ts(2322)
         cpf: '222.222.222-22',
         telefone: '11888888888',
         genero: 'MASCULINO',
         dataNascimento: DateTime.fromISO('1985-05-20'),
         email: userProfissional.email,
-        senha: senhaHash, // <--- Manda Hash, pois tabela Profissionais não tem hook
-        status: 'aprovado',
-        registro_conselho: 'CRM-12345',
-        conselho_uf: 'SP'
+        senha: senhaHash, 
+        status: 'aprovado' as any, // Cast para evitar erro de Enum se houver
+        registroConselho: 'CRM-12345',
+        conselhoUf: 'SP'
       }
     )
-
-    // ---------------------------------------------------------
-    // 4. CRIAR DADOS DE AGENDA E CONSULTA
-    // ---------------------------------------------------------
     
-    const dataTeste = DateTime.fromISO('2026-01-25T14:00:00')
+    // Configuração de Atendimento para Teste
+    const dataInicio = DateTime.now().plus({ days: 1 }).set({ hour: 14, minute: 0, second: 0, millisecond: 0 })
+    const dataFim = dataInicio.plus({ minutes: 30 })
 
     const disponibilidade = await Disponibilidade.updateOrCreate(
       { 
         profissionalId: profissional.id, 
-        dataHoraInicio: dataTeste 
+        dataHoraInicio: dataInicio 
       }, 
       {
         profissionalId: profissional.id, 
-        dataHoraInicio: dataTeste, 
-        dataHoraFim: dataTeste.plus({ minutes: 30 }),
+        dataHoraInicio: dataInicio,
+        dataHoraFim: dataFim,
         status: 'OCUPADO'
       }
     )
@@ -116,20 +104,22 @@ export default class extends BaseSeeder {
     await Atendimento.updateOrCreate(
       { 
         profissionalId: profissional.id,
-        dataHoraInicio: dataTeste
+        dataHoraInicio: dataInicio 
       },
       {
         clienteId: cliente.id,
         disponibilidadeId: disponibilidade.id,
         valor: 150.00,
-        dataHoraFim: disponibilidade.dataHoraFim,
-        formaPagamento: 'PIX',
-        status: 'CONFIRMADO',
-        statusPagamento: 'PAGO'
+        dataHoraFim: dataFim,
+        formaPagamento: 'PIX' as any,
+        status: 'CONFIRMADO' as any,
+        statusPagamento: 'PAGO' as any
       }
     )
 
     console.log('--- ✅ SEEDERS CONCLUÍDOS ---')
     console.log(`👑 Admin: ${userAdmin.email} | Senha: ${senhaPura}`)
+    console.log(`🩺 Médico: ${userProfissional.email} | Senha: ${senhaPura}`)
+    console.log(`👤 Cliente: ${userCliente.email} | Senha: ${senhaPura}`)
   }
 }

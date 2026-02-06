@@ -1,246 +1,188 @@
-/* eslint-disable prettier/prettier */
 import type { HttpContext } from '@adonisjs/core/http'
 import db from '@adonisjs/lucid/services/db'
-import { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import Disponibilidade from '#models/disponibilidade'
-import { storeDisponibilidadeValidator } from '#validators/validator_disponibilidade'
-import { updateDisponibilidadeValidator } from '#validators/validator_disponibilidade'
+import { storeDisponibilidadeValidator, updateDisponibilidadeValidator } from '#validators/validator_disponibilidade'
 import { DateTime } from 'luxon'
 
 export default class DisponibilidadesController {
-    //Lista todas as disponibilidades
-    public async index({}: HttpContext){
-        return await Disponibilidade.all()
-    }
-    //Lista um registro de disponibilidade especificado pelo id
-    public async show({params}: HttpContext){
-        return await Disponibilidade.query().where('id', params.id)
-    }
-    //Cria uma nova disponibilidade
-public async store({ request, response }: HttpContext) {
-  const DURACAO_SLOT_MINUTOS = 30
-
-  try {
-    const dados = await request.validateUsing(storeDisponibilidadeValidator)
-
-    const inicioLimpo = dados.data_hora_inicio.substring(0, 16)
-    const fimLimpo = dados.data_hora_fim.substring(0, 16)
-
-    const inicioSolicitado = DateTime.fromISO(inicioLimpo, { zone: 'America/Sao_Paulo' })
-    const fimSolicitado = DateTime.fromISO(fimLimpo, { zone: 'America/Sao_Paulo' })
-
-    const agoraBrasil = DateTime.now().setZone('America/Sao_Paulo')
-
-    const limiteAbertura = inicioSolicitado.set({ hour: 7, minute: 0, second: 0, millisecond: 0 })
-    const limiteFechamento = inicioSolicitado.set({ hour: 21, minute: 0, second: 0, millisecond: 0 })
-
-    if (inicioSolicitado < limiteAbertura || fimSolicitado > limiteFechamento) {
-      return response.status(400).send({
-        message: `A clínica só funciona das 07:00 às 21:00. Você tentou: ${inicioSolicitado.toFormat('HH:mm')} até ${fimSolicitado.toFormat('HH:mm')}`
-      })
-    }
-
-    if (inicioSolicitado <= agoraBrasil) {
-      return response.status(400).send({ message: 'Não é possível criar horários no passado.' })
-    }
-
-    const sobreposicao = await Disponibilidade.query()
-      .where('profissional_id', dados.profissional_id)
-      .where((q) => {
-        // Importante: toSQL() aqui garante a comparação correta no banco
-        q.where('data_hora_inicio', '<', fimSolicitado.toSQL()!)
-         .andWhere('data_hora_fim', '>', inicioSolicitado.toSQL()!)
-      })
-      .first()
-
-    if (sobreposicao) {
-      return response.status(400).send({ message: 'Já existem horários neste intervalo.' })
-    }
-
-    const novosSlots: any[] = []
-    let ponteiroSlot = inicioSolicitado
-
-    while (ponteiroSlot < fimSolicitado) {
-      const fimSlot = ponteiroSlot.plus({ minutes: DURACAO_SLOT_MINUTOS })
-      if (fimSlot > fimSolicitado) break
-
-      novosSlots.push({
-        profissionalId: dados.profissional_id,
-        dataHoraInicio: ponteiroSlot.toSQL({ includeOffset: false })!,
-        dataHoraFim: fimSlot.toSQL({ includeOffset: false })!,
-        status: 'LIVRE' as const,
-      })
-      ponteiroSlot = fimSlot
-    }
-
-    await Disponibilidade.createMany(novosSlots)
-    return response.created({ message: 'Disponibilidade criada com sucesso!' })
-
-  } catch (error: any) {
-    return response.status(error.status || 500).send({ message: error.message })
+  
+  public async index({ response }: HttpContext) {
+    const disponibilidades = await Disponibilidade.all()
+    return response.ok(disponibilidades)
   }
-}
-public async update({ request, response }: HttpContext) { // Incluindo os argumentos
-  const PRIMEIRO_ATENDIMENTO = '07:00:00'
-  const ULTIMO_ATENDIMENTO = '21:00:00'
-  const DURACAO_SLOT_MINUTOS = 30
 
-  try{
-      //O findOrFail só seria útil se estivesse editando o registro principal de disponibilidade
-      //const disponibilidade = await Disponibilidade.findOrFail(params.id)
+  public async show({ params, response }: HttpContext) {
+    const disponibilidade = await Disponibilidade.query().where('id', params.id).first()
+    
+    if (!disponibilidade) {
+      return response.notFound({ message: 'Disponibilidade não encontrada' })
+    }
+    
+    return response.ok(disponibilidade)
+  }
 
+  public async store({ request, response }: HttpContext) {
+    const DURACAO_SLOT_MINUTOS = 30
+
+    try {
+      const dados = await request.validateUsing(storeDisponibilidadeValidator)
+
+      // CORREÇÃO: dados agora usa camelCase e já vem como DateTime
+      const inicioSolicitado = dados.dataHoraInicio.setZone('America/Sao_Paulo')
+      const fimSolicitado = dados.dataHoraFim.setZone('America/Sao_Paulo')
+      const agoraBrasil = DateTime.now().setZone('America/Sao_Paulo')
+
+      const limiteAbertura = inicioSolicitado.set({ hour: 7, minute: 0, second: 0, millisecond: 0 })
+      const limiteFechamento = inicioSolicitado.set({ hour: 21, minute: 0, second: 0, millisecond: 0 })
+
+      if (inicioSolicitado < limiteAbertura || fimSolicitado > limiteFechamento) {
+        return response.badRequest({
+          message: `A clínica só funciona das 07:00 às 21:00.`
+        })
+      }
+
+      if (inicioSolicitado <= agoraBrasil) {
+        return response.badRequest({ message: 'Não é possível criar horários no passado.' })
+      }
+
+      const sobreposicao = await Disponibilidade.query()
+        .where('profissionalId', dados.profissionalId) // CORREÇÃO: profissionalId
+        .where((q) => {
+          q.where('dataHoraInicio', '<', fimSolicitado.toSQL()!) // CORREÇÃO: dataHoraInicio
+           .andWhere('dataHoraFim', '>', inicioSolicitado.toSQL()!)
+        })
+        .first()
+
+      if (sobreposicao) {
+        return response.conflict({ message: 'Já existem horários criados neste intervalo.' })
+      }
+
+      const novosSlots: any[] = []
+      let ponteiroSlot = inicioSolicitado
+
+      while (ponteiroSlot < fimSolicitado) {
+        const fimSlot = ponteiroSlot.plus({ minutes: DURACAO_SLOT_MINUTOS })
+        if (fimSlot > fimSolicitado) break
+
+        novosSlots.push({
+          profissionalId: dados.profissionalId,
+          dataHoraInicio: ponteiroSlot, // O Lucid lida com DateTime direto
+          dataHoraFim: fimSlot,
+          status: 'LIVRE',
+        })
+        ponteiroSlot = fimSlot
+      }
+
+      await Disponibilidade.createMany(novosSlots)
+      return response.created({ message: 'Disponibilidade criada com sucesso!' })
+
+    } catch (error: any) {
+      return response.badRequest({ message: error.message || 'Erro ao criar disponibilidade' })
+    }
+  }
+
+  public async update({ request, response }: HttpContext) {
+    const PRIMEIRO_ATENDIMENTO = '07:00'
+    const ULTIMO_ATENDIMENTO = '21:00'
+    const DURACAO_SLOT_MINUTOS = 30
+
+    try {
       const dados = await request.validateUsing(updateDisponibilidadeValidator)
 
-      //Certifique-se de que 'profissional_id' está nos 'dados' ou no 'params'
+      let inicioSlot = dados.dataHoraInicio.setZone('America/Sao_Paulo')
+      const dataHoraFimTotal = dados.dataHoraFim.setZone('America/Sao_Paulo')
 
-      if (!dados.data_hora_inicio || !dados.data_hora_fim || !dados.profissional_id){
-          throw new Error('Dados incompletos para atualização.')
+      if (inicioSlot <= DateTime.now().setZone('America/Sao_Paulo')) {
+        return response.badRequest({ message: 'O horário informado é retroativo.' })
       }
 
-      let inicioSlot = DateTime.fromISO(dados.data_hora_inicio, { zone: 'utc' })
-      const dataHoraFimTotal =  DateTime.fromISO(dados.data_hora_fim, { zone: 'utc' })
+      const inicioFormatado = inicioSlot.toFormat('HH:mm')
+      const fimFormatado = dataHoraFimTotal.toFormat('HH:mm')
 
-      const horarioUltrapassado = inicioSlot <= DateTime.now()
-      if (horarioUltrapassado){
-          throw new Error('O horário informado é ultrapassado.')
+      if (inicioFormatado < PRIMEIRO_ATENDIMENTO || fimFormatado > ULTIMO_ATENDIMENTO) {
+         return response.badRequest({ message: 'Horário fora do funcionamento da clínica.' })
       }
 
-      const profissionalId = dados.profissional_id // Definindo aqui para uso no Map/Query
+      const novosSlots: any[] = []
+      
+      const almocoInicio = inicioSlot.set({ hour: 12, minute: 0, second: 0, millisecond: 0 })
+      const almocoFim = inicioSlot.set({ hour: 13, minute: 0, second: 0, millisecond: 0 })
 
-      //Verificação de Horário de Funcionamento
-      const dataHoraInicioFormatado = inicioSlot.toFormat('HH:mm')
-      const dataHoraFimFormatado = dataHoraFimTotal.toFormat('HH:mm')
-      const foraDoHorarioFuncionamento = dataHoraInicioFormatado < PRIMEIRO_ATENDIMENTO || dataHoraFimFormatado > ULTIMO_ATENDIMENTO
-
-      if (foraDoHorarioFuncionamento){
-          throw new Error('O horário está fora do horário de funcionamento da clínica.')
-      }
-
-      //Inicialização do array de slots gerados
-      const novosSlots = [] as {
-          profissionalId: number,
-          dataHoraInicio: DateTime,
-          dataHoraFim: DateTime,
-          status: 'LIVRE' | 'OCUPADO' | 'BLOQUEADO'
-      }[]
-
-      //Horário de almoço, no qual não é possível ter disponibilidade
-      const ALMOCO_INICIO = inicioSlot.set({ hour: 12, minute: 0, second: 0, millisecond: 0 })
-      const ALMOCO_FIM = inicioSlot.set({ hour: 13, minute: 0, second: 0, millisecond: 0 })
-
-      //Percorre do começo ao fim do horário de atendimento informado
       while (inicioSlot < dataHoraFimTotal) {
+        const fimSlot = inicioSlot.plus({ minutes: DURACAO_SLOT_MINUTOS })
 
-          const fimSlot = inicioSlot.plus({ minutes: DURACAO_SLOT_MINUTOS })
+        if (inicioSlot >= almocoInicio && inicioSlot < almocoFim) {
+          inicioSlot = almocoFim
+          continue
+        }
 
-          //Lógica de Almoço (Pular o tempo)
-          const estaEmHorarioAlmoco = (inicioSlot >= ALMOCO_INICIO && inicioSlot < ALMOCO_FIM)
-          if (estaEmHorarioAlmoco) {
-              inicioSlot = ALMOCO_FIM;
-              continue;
-          }
+        if (fimSlot > dataHoraFimTotal) break
 
-          //Checagem de Ultrapassagem
-          if (fimSlot > dataHoraFimTotal) {
-              break
-          }
+        novosSlots.push({
+          profissionalId: dados.profissionalId,
+          dataHoraInicio: inicioSlot,
+          dataHoraFim: fimSlot,
+          status: 'LIVRE',
+        })
 
-          //Validade
-          if (!inicioSlot.isValid || !fimSlot.isValid) {
-              throw new Error('Erro interno: Uma data de slot gerada é inválida.')
-          }
-
-          //ADICIONAR O PUSH AO ARRAY
-          novosSlots.push({
-              profissionalId: profissionalId,
-              dataHoraInicio: inicioSlot,
-              dataHoraFim: fimSlot,
-              status: 'LIVRE',
-          })
-
-          //Avança para o próximo slot
-          inicioSlot = fimSlot
+        inicioSlot = fimSlot
       }
 
       if (novosSlots.length > 0) {
+        const dataAlvo = novosSlots[0].dataHoraInicio.toISODate()!
 
-          //A data alvo para a exclusão (o dia inteiro)
-          const dataAlvo = inicioSlot.startOf('day').toSQLDate()
-
-          //Database.transaction e uso correto do DisponibilidadeSlot**
-      await db.transaction(async (trx: TransactionClientContract) => {
+        await db.transaction(async (trx) => {
           const slotsExistentes = await Disponibilidade.query({ client: trx })
-              .where('profissional_id', profissionalId)
-              .where(db.rawQuery(`DATE(data_hora_inicio) = ?`, [dataAlvo]))
-              .select('data_hora_inicio', 'status')
+            .where('profissionalId', dados.profissionalId!) // CORREÇÃO: profissionalId
+            .whereRaw('DATE(data_hora_inicio) = ?', [dataAlvo])
+            .select('data_hora_inicio', 'status')
 
-          //Cria um Map para consulta rápida de slots Ocupados
-          const slotsOcupadosMap = new Map(
-              slotsExistentes
-                  .filter(slot => slot.status === 'OCUPADO')
-                  .map(slot => [slot.dataHoraInicio.toSQL(), slot.status])
+          const ocupadosSet = new Set(
+            slotsExistentes
+              .filter(s => s.status === 'OCUPADO')
+              .map(s => s.dataHoraInicio.toSQL())
           )
 
-          //Cria o payload de sincronização final
-          const payloadFinal = novosSlots.map(novoSlot => {
-              const dataInicioSQL = novoSlot.dataHoraInicio.toSQL()
+          const payloadFinal = novosSlots.map(novo => {
+            const inicioSQL = novo.dataHoraInicio.toSQL()
+            const slotData: any = {
+              profissionalId: novo.profissionalId,
+              dataHoraInicio: novo.dataHoraInicio,
+              dataHoraFim: novo.dataHoraFim,
+              status: novo.status
+            }
 
-              const jaOcupado = slotsOcupadosMap.has(dataInicioSQL)
+            if (ocupadosSet.has(inicioSQL)) {
+              delete slotData.status
+            }
 
-              let slotData: any = {
-                  profissionalId: novoSlot.profissionalId,
-                  dataHoraInicio: novoSlot.dataHoraInicio,
-                  dataHoraFim: novoSlot.dataHoraFim,
-                  status: novoSlot.status, // Por padrão, 'livre'
-              }
-
-              if (jaOcupado) {
-                  // Se já estiver ocupado, removemos o 'status' para PROTEGÊ-LO.
-                  delete slotData.status;
-              }
-
-              return slotData
+            return slotData
           })
 
-          // A. Sincronização (Merge / Upsert)
           await Disponibilidade.updateOrCreateMany(
-              ['profissionalId', 'dataHoraInicio'],
-              payloadFinal,
-              { client: trx }
+            ['profissionalId', 'dataHoraInicio'],
+            payloadFinal,
+            { client: trx }
           )
 
-          //Limpeza (Deletar slots que foram removidos)
-          const datasIniciosNovosSlots: string[] = novosSlots.map(slot => slot.dataHoraInicio.toISO()!)
-
+          const datasNovosSlots = novosSlots.map(s => s.dataHoraInicio.toISO()!)
+          
           await Disponibilidade.query({ client: trx })
-              .where('profissional_id', profissionalId)
-              .where(db.rawQuery(`DATE(data_hora_inicio) = ?`, [dataAlvo]))
-              .whereNotIn('data_hora_inicio', datasIniciosNovosSlots)
-              .whereNot('status', 'OCUPADO') // Protege slots agendados
-              .delete()
+            .where('profissionalId', dados.profissionalId!)
+            .whereRaw('DATE(data_hora_inicio) = ?', [dataAlvo])
+            .whereNotIn('data_hora_inicio', datasNovosSlots)
+            .whereNot('status', 'OCUPADO') 
+            .delete()
+        })
+      }
 
-        }) // Fim da Transação
+      return response.ok({ message: 'Disponibilidade atualizada e sincronizada com sucesso.' })
+
+    } catch (error: any) {
+      return response.badRequest({ 
+        message: 'Erro ao atualizar disponibilidade.', 
+        error: error.message || error 
+      })
     }
-
-    return response.created({ message: 'Disponibilidade atualizada e slots sincronizados com sucesso!' })
-
-  } catch (error){
-    let message = 'Não foi possível atualizar os dados da disponibilidade. Tente novamente.'
-    let status = 500
-
-  if (error.message === 'Erro interno: Uma data de slot gerada é inválida.') {
-    message = 'Uma falha interna aconteceu. Tente novamente'
-    status = 400
-    } else if (error.message === 'Dados incompletos para atualização.') {
-            message = 'Dados incompletos para atualização. Tente novamente.'
-    } else if (error.message === 'O horário informado é ultrapassado.') {
-            message = 'O horário é ultrapassado. Tente novamente.'
-    } else if (error.message === 'O horário está fora do horário de funcionamento da clínica.') {
-            message = 'O horário está fora do horário de funcionamento. Tente novamente.'
-    }
-
-    console.error(error)
-    return response.status(status).send({ message })
   }
-}
 }

@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { DateTime } from 'luxon'
 import { BaseModel, column, belongsTo, hasOne } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasOne } from '@adonisjs/lucid/types/relations'
@@ -8,7 +7,6 @@ import Sala from '#models/sala'
 import Prontuario from '#models/prontuario'
 
 export default class Atendimento extends BaseModel {
-  //atributos
   @column({ isPrimary: true })
   declare id: number
 
@@ -34,6 +32,9 @@ export default class Atendimento extends BaseModel {
   declare observacoes: string | null
 
   @column()
+  declare justificativaFalta: string | null
+
+  @column()
   declare valor: number
 
   @column()
@@ -45,27 +46,21 @@ export default class Atendimento extends BaseModel {
   @column()
   declare statusPagamento: 'PENDENTE' | 'EM_ANALISE' | 'PAGO' | 'NEGADO' | 'CANCELADO' | 'ESTORNADO' | 'CONTESTADO'
 
-  @column()
-  declare justificativaFalta: string | null
-
-  //relacionamentos
-  @belongsTo(() => Profissional)
-  declare profissional: BelongsTo<typeof Profissional>
-
-  @belongsTo(() => Cliente)
-  declare cliente: BelongsTo<typeof Cliente>
-  
-  @hasOne(() => Prontuario, {
-    foreignKey: 'atendimentoId'
-  })
-  declare prontuario: HasOne<typeof Prontuario>
-
-  @belongsTo(() => Sala)
-  declare sala: BelongsTo<typeof Sala>
-
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
+
+  @belongsTo(() => Profissional)
+  declare profissional: BelongsTo<typeof Profissional>
+
+  @belongsTo(() => Cliente)
+  declare cliente: BelongsTo<typeof Cliente>
+
+  @belongsTo(() => Sala)
+  declare sala: BelongsTo<typeof Sala>
+  
+  @hasOne(() => Prontuario)
+  declare prontuario: HasOne<typeof Prontuario>
 }

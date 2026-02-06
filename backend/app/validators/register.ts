@@ -1,61 +1,71 @@
-/* eslint-disable prettier/prettier */
 import vine from '@vinejs/vine'
+import { DateTime } from 'luxon'
 
-// Regra: calcula a idade com base na data de nascimento
+/**
+ * Regra customizada para validar idade mínima (18 anos) e datas futuras
+ */
 const dataNascimentoRule = vine.createRule((value, _, field) => {
-  if (!value) return;
+  if (!value) return
 
-  const nascimento = new Date(value as string | number | Date)
-  const hoje = new Date()
+  const nascimento = DateTime.fromJSDate(value as Date)
+  const hoje = DateTime.now()
 
-  const idade =
-    hoje.getFullYear() -
-    nascimento.getFullYear() -
-    (hoje < new Date(hoje.getFullYear(), nascimento.getMonth(), nascimento.getDate()) ? 1 : 0)
-
-  if (Number.isNaN(nascimento.getTime())) {
+  if (!nascimento.isValid) {
     field.report('Data de nascimento inválida', 'validation', field)
-  } else if (nascimento > hoje) {
+    return
+  }
+
+  if (nascimento > hoje) {
     field.report('A data de nascimento não pode ser futura', 'validation', field)
-  } else if (idade < 18) {
-    field.report('O cliente deve ter no mínimo 18 anos', 'validation', field)
+    return
+  }
+
+  const idade = hoje.diff(nascimento, 'years').years
+
+  if (idade < 18) {
+    field.report('Você deve ter no mínimo 18 anos para se cadastrar', 'validation', field)
   } else if (idade > 120) {
-    field.report('Idade máxima permitida é 120 anos', 'validation', field)
+    field.report('Data de nascimento inválida (idade excessiva)', 'validation', field)
   }
 })
 
+/**
+ * Validador de Registro de Usuários
+ * Define quais campos o sistema aceita na criação de conta
+ */
 export const registerValidator = vine.compile(
   vine.object({
-    // AJUSTE 1: Diminui o tamanho mínimo do nome para aceitar nomes curtos
-    fullName: vine.string().trim().minLength(5).maxLength(40).toUpperCase(),
+    // Dados básicos de login
+    fullName: vine.string().trim().minLength(3).maxLength(100).toUpperCase(),
     email: vine.string().trim().email().toLowerCase(),
-    password: vine.string().minLength(8).maxLength(255),
-    perfil_tipo: vine.enum(['cliente', 'profissional', 'admin']),
+    password: vine.string().minLength(8).maxLength(30),
+    perfilTipo: vine.enum(['cliente', 'profissional', 'admin']),
+    
+    // Dados de perfil comum
+    genero: vine.enum(['MASCULINO', 'FEMININO', 'OUTRO']).optional(),
+    
+    dataNascimento: vine.date({ formats: ['YYYY-MM-DD'] })
+      .use(dataNascimentoRule())
+      .optional(),
 
-    funcao_id: vine.number().positive().optional(),
-    
-    // Obs: Garanta que o front manda "MASCULINO" ou "FEMININO"
-    genero: vine.enum(['MASCULINO', 'FEMININO']).optional(),
-    
-    dataNascimento: vine.date().use(dataNascimentoRule()).optional(),
-    
-    // AJUSTE 2: Adicionei um transform para remover pontos e traços caso o front envie
-    // Isso garante que chegue apenas números para o regex validar
-cpf: vine
-      .string()
+    cpf: vine.string()
       .trim()
       .regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/)
-      .transform((value) => value.replace(/\D/g, ''))
+      .transform((value) => value.replace(/\D/g, '')) // Limpa pontos e traços
       .optional(),
 
     telefone: vine.string().trim().minLength(10).maxLength(15).optional(),
 
-    registro_conselho: vine.string().trim().maxLength(50).optional(),
-    conselho_uf: vine.string().trim().fixedLength(2).optional(),
-    foto_perfil_url: vine.string().url().optional(),
-    biografia: vine.string().maxLength(400).optional(),
+    // Campos específicos para Profissionais
+    funcaoId: vine.number().positive().optional(),
+    registroConselho: vine.string().trim().maxLength(50).optional(),
+    conselhoUf: vine.string().trim().fixedLength(2).toUpperCase().optional(),
+    biografia: vine.string().maxLength(500).trim().optional(),
+    fotoPerfilUrl: vine.string().url().optional(),
+    comprovanteCredenciamentoUrl: vine.string().url().optional(),
+    
+    // Campos de Administração (Essenciais para o Controller não dar erro)
+    observacoesAdmin: vine.string().trim().maxLength(1000).optional(),
     status: vine.enum(['ativo', 'pendente', 'inativo']).optional(),
-    comprovante_credenciamento_url: vine.string().url().optional(),
-    observacoes_admin: vine.string().trim().maxLength(400).optional(),
-  }),
+  })
 )

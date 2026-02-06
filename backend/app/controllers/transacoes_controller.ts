@@ -1,96 +1,100 @@
-/* eslint-disable prettier/prettier */
-import Transacao from '#models/transacao'
 import type { HttpContext } from '@adonisjs/core/http'
+import { inject } from '@adonisjs/core'
+import Transacao from '#models/transacao'
 import { storeTransacaoValidator } from '#validators/validator_transacao'
-
-// IMPORTAÇÃO CORRETA DO ARQUIVO DOS SEUS COLEGAS
 import { PagamentoService } from '#services/pagamento_service'
 
+@inject()
 export default class TransacoesController {
+  
+  constructor(protected pagamentoService: PagamentoService) {}
 
-    // --- MÉTODOS EXISTENTES (MANTIDOS) ---
-    public async index ({ } : HttpContext) {
-        return await Transacao.all()
-    }
-
-    public async show ({ params } : HttpContext) {
-      return await Transacao.query().where('id', params.id)
-    }
-
-    public async store ({ auth, request, response } : HttpContext) {
-      try{
-        const usuarioLogado = auth.user!;
-        const dados = await request.validateUsing(storeTransacaoValidator)
-        const adminLogado = usuarioLogado.perfil_tipo === 'admin'
-        if (!adminLogado) throw new Error()
-        await Transacao.create(dados)
-        return response.status(200).send('Transação registrada com sucesso!')
-        } catch (error) {
-          return response.status(500).send('Erro ao registrar transação.')
-        }
-    }
-
-    // --- SEU NOVO MÉTODO (INTEGRAÇÃO) ---
-    public async realizarPagamento({ auth, request, response }: HttpContext) {
-        // 1. Pega o usuário logado (que é o Cliente pagador)
-        const cliente = auth.user!
-
-        // 2. Recebe os dados do formulário
-        const dados = request.only(['profissionalId', 'valor', 'formaPagamento'])
-
-        // Validação básica
-        if (!dados.profissionalId || !dados.valor || !dados.formaPagamento) {
-            return response.badRequest({ message: 'Dados incompletos para pagamento.' })
-        }
-
-        // 3. Instancia o serviço que seus colegas criaram
-        const service = new PagamentoService()
-
-        try {
-            // 4. Chama o método que JÁ EXISTE para processar e salvar
-            const transacao = await service.iniciarCobranca(
-                dados.profissionalId,
-                cliente.id,    // O ID do cliente vem do token de quem está logado
-                dados.valor,
-                dados.formaPagamento
-            )
-
-            return response.ok({
-                message: 'Processamento de pagamento iniciado!',
-                transacao: transacao
-            })
-
-        } catch (error) {
-            console.error(error)
-            return response.badRequest({ message: 'Erro ao processar pagamento.' })
-        }
-    }
-
-public async contarSaldo({ auth }: HttpContext) {
-  const user = await auth.authenticate()
-
-  let saldoTotal = 0
-
-  if (user.perfil_tipo === 'cliente') {
-    // Para o CLIENTE: Soma o que ele PAGOU (onde ele é a entidadeOrigem ou entidadeId)
-    const resultado = await Transacao.query()
-      .where('entidade_id', user.id)
-      .where('status', 'CONCLUIDA')
-      .sum('valor as total')
-      .first()
-
-    saldoTotal = resultado?.$extras.total || 0
-  } else {
-    // Para o PROFISSIONAL: Soma o que ele RECEBEU
-    const resultado = await Transacao.query()
-      .where('destinatario_id', user.id)
-      .where('status', 'CONCLUIDA')
-      .sum('valor as total')
-      .first()
-
-    saldoTotal = resultado?.$extras.total || 0
+  public async index({ response }: HttpContext) {
+    const transacoes = await Transacao.all()
+    return response.ok(transacoes)
   }
 
-  return { saldoTotal: Number(saldoTotal) }
-}
+  public async show({ params, response }: HttpContext) {
+    try {
+      const transacao = await Transacao.findOrFail(params.id)
+      return response.ok(transacao)
+    } catch {
+      return response.notFound({ message: 'Transação não encontrada.' })
+    }
+  }
+
+  public async store({ auth, request, response }: HttpContext) {
+    const usuarioLogado = auth.user!
+    
+    if (usuarioLogado.perfilTipo !== 'admin') {
+      return response.forbidden({ message: 'Apenas administradores podem registrar transações manuais.' })
+    }
+
+    try {
+      const dados = await request.validateUsing(storeTransacaoValidator)
+      const transacao = await Transacao.create(dados)
+      
+      return response.created({ message: 'Transação registrada com sucesso!', data: transacao })
+    } catch (error: any) {
+      return response.badRequest({ message: 'Erro ao registrar transação.', error: error.message || error })
+    }
+  }
+
+  public async realizarPagamento({ auth, request, response }: HttpContext) {
+    const cliente = auth.user!
+    const { profissionalId, valor, formaPagamento } = request.only(['profissionalId', 'valor', 'formaPagamento'])
+
+    if (!profissionalId || !valor || !formaPagamento) {
+        return response.badRequest({ message: 'Dados incompletos (profissionalId, valor, formaPagamento são obrigatórios).' })
+    }
+
+    try {
+        const transacao = await this.pagamentoService.iniciarCobranca(
+            profissionalId,
+            cliente.id,
+            valor,
+            formaPagamento
+        )
+
+        return response.ok({
+            message: 'Processamento de pagamento iniciado!',
+            transacao: transacao
+        })
+
+    } catch (error: any) {
+        return response.badRequest({ 
+          message: 'Erro ao processar pagamento.', 
+          error: error.message || error 
+        })
+    }
+  }
+
+  public async contarSaldo({ auth, response }: HttpContext) {
+    const user = await auth.authenticate()
+    let saldoTotal = 0
+
+    try {
+      if (user.perfilTipo === 'cliente') {
+        const resultado = await Transacao.query()
+          .where('entidadeId', user.id) 
+          .where('status', 'CONCLUIDA')
+          .sum('valor as total')
+          .first()
+
+        saldoTotal = resultado?.$extras.total || 0
+      } else {
+        const resultado = await Transacao.query()
+          .where('destinatarioId', user.id) 
+          .where('status', 'CONCLUIDA')
+          .sum('valor as total')
+          .first()
+
+        saldoTotal = resultado?.$extras.total || 0
+      }
+
+      return response.ok({ saldoTotal: Number(saldoTotal) })
+    } catch (error) {
+      return response.badRequest({ message: 'Erro ao calcular saldo.' })
+    }
+  }
 }

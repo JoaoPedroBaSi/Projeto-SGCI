@@ -1,17 +1,26 @@
-
-import Reserva from "#models/reserva";
+import Reserva from "#models/reserva"
+import { DateTime } from 'luxon'
 
 export default class AtualizarStatusSala {
-//     Lógica: 
-//     1. Pegar a `reserva` do payload. 
-    public async handle(dados: { reserva: Reserva }) {
-        if(dados.reserva.status === 'APROVADA') {
-        //     2. Buscar a `sala` ligada a ela. 
-        await dados.reserva.load('sala')
-        //     3. Mudar `sala.status = 'OCUPADO'`.
-        dados.reserva.sala.status = 'OCUPADO'
-        //     4. Salvar a `sala`.
-        await dados.reserva.sala.save()
+  
+  public async handle({ reserva }: { reserva: Reserva }) {
+    if (reserva.status === 'APROVADA') {
+      await reserva.load('sala')
+
+      if (reserva.sala) {
+
+        const agora = DateTime.now()
+        const inicio = DateTime.fromJSDate(reserva.dataHoraInicio as unknown as Date)
+        const fim = DateTime.fromJSDate(reserva.dataHoraFim as unknown as Date)
+
+        if (agora >= inicio && agora <= fim) {
+            reserva.sala.status = 'OCUPADO'
+            await reserva.sala.save()
+            console.log(`Sala ${reserva.sala.nome} marcada como OCUPADA.`)
+        } else {
+            console.log(`Reserva aprovada para data futura. Status da sala mantido como DISPONIVEL.`)
         }
+      }
     }
+  }
 }

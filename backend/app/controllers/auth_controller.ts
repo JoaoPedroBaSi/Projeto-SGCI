@@ -1,4 +1,3 @@
-// eslint-disable prettier/prettier
 import type { HttpContext } from '@adonisjs/core/http'
 import { DateTime } from 'luxon'
 import User from '#models/user'
@@ -11,17 +10,11 @@ import mail from '@adonisjs/mail/services/main'
 
 export default class AuthController {
   
-  // ==========================================================
-  // 🔐 LOGIN 
-  // ==========================================================
   public async login({ request, response }: HttpContext) {
     const { email, password } = request.only(['email', 'password'])
 
     try {
-      // 1. Verifica credenciais
       const user = await User.verifyCredentials(email, password)
-
-      // 2. Cria token
       const token = await User.accessTokens.create(user)
 
       return response.ok({
@@ -30,40 +23,35 @@ export default class AuthController {
         user: {
             id: user.id,
             email: user.email,
-            perfil_tipo: user.perfil_tipo, 
+            perfilTipo: user.perfilTipo, // CORREÇÃO: perfilTipo
             name: user.fullName
         }
       })
-
     } catch (error) {
       return response.unauthorized({ message: 'Credenciais inválidas' })
     }
   }
 
-  // ==========================================================
-  // 📝 REGISTRO (CORRIGIDO name -> nome)
-  // ==========================================================
   public async register({ request, response }: HttpContext) {
-    // Validação
     const payload = await request.validateUsing(registerValidator)
-    const { fullName, email, password, perfil_tipo } = payload
+    // CORREÇÃO: Extraindo camelCase do payload validado
+    const { fullName, email, password, perfilTipo } = payload
 
-    // Verifica duplicação de email
     const existing = await User.findBy('email', email)
     if (existing) {
       return response.conflict({ message: 'Email já está em uso' })
     }
 
-    // Validações de campos obrigatórios específicos
-    if (perfil_tipo === 'cliente') {
-      const required = ['genero', 'dataNascimento', 'cpf', 'telefone']
+    // Validação lógica de campos obrigatórios baseada no perfilTipo
+    if (perfilTipo === 'cliente') {
+      const required = ['genero', 'dataNascimento', 'cpf', 'telefone'] as const
       for (const key of required) {
-        if ((payload as any)[key] === undefined || (payload as any)[key] === null) {
+        if (payload[key] === undefined || payload[key] === null) {
           return response.badRequest({ message: `Campo ${key} é obrigatório para clientes` })
         }
       }
-    } else if (perfil_tipo === 'profissional') {
-      const required = ['funcao_id', 'genero', 'dataNascimento', 'cpf', 'telefone', 'registro_conselho', 'conselho_uf']
+    } else if (perfilTipo === 'profissional') {
+      const required = ['funcaoId', 'genero', 'dataNascimento', 'cpf', 'telefone', 'registroConselho', 'conselhoUf'] as const
       for (const key of required) {
         if ((payload as any)[key] === undefined || (payload as any)[key] === null) {
           return response.badRequest({ message: `Campo ${key} é obrigatório para profissionais` })
@@ -71,7 +59,6 @@ export default class AuthController {
       }
     }
 
-    // Verifica CPF duplicado
     if (payload.cpf) {
       const cpfCliente = await Cliente.findBy('cpf', payload.cpf)
       const cpfProfissional = await Profissional.findBy('cpf', payload.cpf)
@@ -80,28 +67,23 @@ export default class AuthController {
       }
     }
 
-    // --- INÍCIO DA TRANSAÇÃO ---
     const trx = await db.transaction()
     
     try {
-      // 1. Cria o Usuário Base (Login)
       const user = new User()
       user.email = email
       user.password = password
       user.fullName = fullName  
-      user.perfil_tipo = perfil_tipo 
-      user.status = perfil_tipo === 'profissional' ? 'pendente' : 'ativo'
+      user.perfilTipo = perfilTipo // CORREÇÃO: perfilTipo
+      user.status = perfilTipo === 'profissional' ? 'pendente' : 'ativo'
 
       await user.useTransaction(trx).save()
-
-      // 2. Lógica de Criação dos Perfis
       
-      if (perfil_tipo === 'cliente') {
-        // CASO 1: É apenas Cliente
+      if (perfilTipo === 'cliente') {
         await Cliente.create({
             id: user.id, 
-            nome: fullName, // <--- CORRIGIDO AQUI (Era 'name')
-            genero: payload.genero,
+            nome: fullName,
+            genero: payload.genero as 'MASCULINO' | 'FEMININO',
             dataNascimento: payload.dataNascimento ? DateTime.fromJSDate(new Date(payload.dataNascimento)) : DateTime.now(),
             cpf: payload.cpf,
             telefone: payload.telefone,
@@ -109,34 +91,31 @@ export default class AuthController {
             senha: user.password
           }, { client: trx })
       } 
-      else if (perfil_tipo === 'profissional') {
-        // CASO 2: É Profissional (E TAMBÉM CLIENTE!)
-        
-        // A. Cria a ficha técnica do Profissional
+      else if (perfilTipo === 'profissional') {
         await Profissional.create({
             id: user.id,
-            funcaoId: payload.funcao_id,
+            funcaoId: payload.funcaoId, // CORREÇÃO: funcaoId
             nome: fullName,
-            genero: payload.genero,
+            genero: payload.genero as 'MASCULINO' | 'FEMININO',
             dataNascimento: payload.dataNascimento ? DateTime.fromJSDate(new Date(payload.dataNascimento)) : DateTime.now(),
             cpf: payload.cpf,
             telefone: payload.telefone,
             email: user.email,
             senha: user.password,
-            registro_conselho: payload.registro_conselho,
-            conselho_uf: payload.conselho_uf,
-            foto_perfil_url: payload.foto_perfil_url || null,
+            registroConselho: payload.registroConselho, // CORREÇÃO: registroConselho
+            conselhoUf: payload.conselhoUf, // CORREÇÃO: conselhoUf
+            fotoPerfilUrl: payload.fotoPerfilUrl || null, // CORREÇÃO: fotoPerfilUrl
             biografia: payload.biografia || null,
             status: 'pendente',
-            comprovante_credenciamento_url: payload.comprovante_credenciamento_url || null,
-            observacoes_admin: payload.observacoes_admin || null,
+            comprovanteCredenciamentoUrl: payload.comprovanteCredenciamentoUrl || null, // CORREÇÃO: comprovanteCredenciamentoUrl
+            observacoesAdmin: payload.observacoesAdmin || null, // CORREÇÃO: observacoesAdmin
           }, { client: trx })
 
-        // B. Cria AUTOMATICAMENTE a ficha de Cliente (Paciente)
+        // Criamos também o perfil de cliente para o profissional poder agendar para si se necessário
         await Cliente.create({
             id: user.id, 
-            nome: fullName, // <--- CORRIGIDO AQUI TAMBÉM (Era 'name')
-            genero: payload.genero,
+            nome: fullName,
+            genero: payload.genero as 'MASCULINO' | 'FEMININO',
             dataNascimento: payload.dataNascimento ? DateTime.fromJSDate(new Date(payload.dataNascimento)) : DateTime.now(),
             cpf: payload.cpf,
             telefone: payload.telefone,
@@ -147,7 +126,6 @@ export default class AuthController {
 
       await trx.commit()
 
-      // Gera o token
       const token = await User.accessTokens.create(user)
 
       return response.created({
@@ -157,29 +135,23 @@ export default class AuthController {
         user: { 
             id: user.id, 
             email: user.email,
-            perfil_tipo: user.perfil_tipo 
+            perfilTipo: user.perfilTipo 
         }
       })
 
-    } catch (error: any) { // Adicionado tipagem any para o erro
+    } catch (error: any) {
       await trx.rollback()
       console.error(error)
       return response.status(500).json({ message: 'Erro ao registrar usuário', error: error.message || error })
     }
   }
 
-  // ==========================================================
-  // 🚪 LOGOUT
-  // ==========================================================
   public async logout({ auth, response }: HttpContext) {
     const user = auth.getUserOrFail()
     await User.accessTokens.delete(user, user.currentAccessToken.identifier)
     return response.ok({ message: 'Deslogado com sucesso' })
   }
 
-  // ==========================================================
-  // 📧 RECUPERAÇÃO DE SENHA
-  // ==========================================================
   public async esqueciSenha({ request, response }: HttpContext) {
     try {
       const { email } = request.only(['email'])
@@ -188,11 +160,11 @@ export default class AuthController {
       const token = crypto.randomBytes(20).toString('hex')
       const expiresAt = DateTime.now().plus({ hours: 1 })
 
-      user.password_reset_token = token
-      user.password_reset_token_expires_at = expiresAt
+      // CORREÇÕES: CamelCase
+      user.passwordResetToken = token
+      user.passwordResetTokenExpiresAt = expiresAt
       await user.save()
 
-      // Envia email simulado ou real
       await mail.send((message) => {
         message
           .to(user.email)
@@ -215,13 +187,13 @@ export default class AuthController {
     try {
       const { token, password } = request.only(['token', 'password'])
       const user = await User.query()
-        .where('password_reset_token', token)
-        .where('password_reset_token_expires_at', '>', DateTime.now().toSQL())
+        .where('passwordResetToken', token) // CORREÇÃO: passwordResetToken
+        .where('passwordResetTokenExpiresAt', '>', DateTime.now().toSQL()) // CORREÇÃO: passwordResetTokenExpiresAt
         .firstOrFail()
 
       user.password = password
-      user.password_reset_token = null
-      user.password_reset_token_expires_at = null
+      user.passwordResetToken = null
+      user.passwordResetTokenExpiresAt = null
       await user.save()
 
       return response.ok({ message: 'Senha redefinida com sucesso' })

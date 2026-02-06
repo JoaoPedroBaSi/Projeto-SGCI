@@ -1,15 +1,13 @@
-/* eslint-disable prettier/prettier */
 import vine from '@vinejs/vine'
 
-//Validação para criação do objeto/store
 export const storeEspecializacaoValidator = vine.compile(
-    vine.object({
-        nome: vine.string().trim().toUpperCase().minLength(4).toUpperCase(),
-    })
+  vine.object({
+    nome: vine.string().trim().minLength(4).maxLength(100).toUpperCase(),
+  })
 )
-//Validação para atualização do objeto/update
+
 export const updateEspecializacaoValidator = vine.compile(
-    vine.object({
-        nome: vine.string().trim().toUpperCase().minLength(4).toUpperCase(),
-    })
+  vine.object({
+    nome: vine.string().trim().minLength(4).maxLength(100).toUpperCase().optional(),
+  })
 )

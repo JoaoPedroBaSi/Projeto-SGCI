@@ -1,86 +1,87 @@
-/* eslint-disable prettier/prettier */
 import vine from '@vinejs/vine'
+import { DateTime } from 'luxon'
 
-// Regra customizada: calcula a idade com base na data de nascimento
-const dataNascimentoRule = vine.createRule(async (value, _, field) => {
-  const nascimento = new Date(value as string | number | Date)
-  const hoje = new Date()
+const dataNascimentoRule = vine.createRule((value, _, field) => {
+  if (!value) return
 
-  // Cálculo da idade considerando mês e dia
-  const idade =
-    hoje.getFullYear() -
-    nascimento.getFullYear() -
-    (hoje < new Date(hoje.getFullYear(), nascimento.getMonth(), nascimento.getDate()) ? 1 : 0)
+  const nascimento = DateTime.fromJSDate(value as Date)
+  const hoje = DateTime.now()
 
-  // Verificações de validação
-  if (Number.isNaN(nascimento.getTime())) {
+  if (!nascimento.isValid) {
     field.report('Data de nascimento inválida', 'validation', field)
-  } else if (nascimento > hoje) {
+    return
+  }
+
+  if (nascimento > hoje) {
     field.report('A data de nascimento não pode ser futura', 'validation', field)
-  } else if (idade < 18) {
+    return
+  }
+
+  const idade = hoje.diff(nascimento, 'years').years
+
+  if (idade < 18) {
     field.report('O profissional deve ter no mínimo 18 anos', 'validation', field)
   } else if (idade > 120) {
     field.report('Idade máxima permitida é 120 anos', 'validation', field)
   }
 })
 
+
 export const storeProfissionalValidator = vine.compile(
   vine.object({
-    // REMOVIDO: funcao_id
-    // Motivo: O Controller do Admin define a função manualmente (ex: cria ou busca 'MEDICO')
-    // Se deixarmos obrigatório aqui, o cadastro falha porque o Front não envia ID.
-    funcao_id: vine.number().positive().optional(), 
+    funcaoId: vine.number().positive().optional(), 
     
-    // Nome e Sobrenome
-    nome: vine.string().trim().minLength(10).maxLength(40).toUpperCase(),
+    nome: vine.string().trim().minLength(3).maxLength(100).toUpperCase(),
     
-    // Genero
-    genero: vine.enum(['MASCULINO', 'FEMININO', 'OUTRO']), // Adicionei OUTRO para bater com seu Front
+    genero: vine.enum(['MASCULINO', 'FEMININO', 'OUTRO']),
     
-    // CPF
-    cpf: vine.string().trim().minLength(11).maxLength(14), // Ajustei para aceitar mascara se vier
+    cpf: vine.string().trim()
+      .regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/)
+      .transform((value) => value.replace(/\D/g, '')),
     
-    // Data de Nascimento
-    dataNascimento: vine.date().use(dataNascimentoRule()),
+    dataNascimento: vine.date({ formats: ['YYYY-MM-DD'] })
+      .use(dataNascimentoRule())
+      .transform((value) => DateTime.fromJSDate(value)),
     
-    // Contato
     telefone: vine.string().trim().minLength(10).maxLength(15),
 
-    // Opcionais
-    registro_conselho: vine.string().trim().maxLength(50).optional(),
-    conselho_uf: vine.string().trim().maxLength(2).optional(),
-    foto_perfil_url: vine.string().url().optional(),
+    registroConselho: vine.string().trim().maxLength(50).optional(),
+    conselhoUf: vine.string().trim().fixedLength(2).toUpperCase().optional(),
+    fotoPerfilUrl: vine.string().url().optional(),
     biografia: vine.string().trim().maxLength(1000).optional(),
     
-    // STATUS: Opcional (O Controller define como 'aprovado' automaticamente)
-    status: vine.enum(['pendente', 'aprovado', 'rejeitado']).optional(),
+    status: vine.enum(['pendente', 'aprovado', 'rejeitado', 'ativo', 'inativo']).optional(),
     
-    comprovante_credenciamento_url: vine.string().url().optional(),
-    observacoes_admin: vine.string().trim().maxLength(400).optional(),
-    
-    // Campos extras que seu Front pode mandar (para não dar erro)
-    especializacao: vine.string().optional(),
-    email: vine.string().email().optional(), // O email é validado no User, mas se vier aqui, aceita
-    senha: vine.string().optional(), // Mesma coisa
-    confirmarSenha: vine.string().optional()
+    comprovanteCredenciamentoUrl: vine.string().url().optional(),
+    observacoesAdmin: vine.string().trim().maxLength(400).optional(),
   })
 )
 
+
 export const updateProfissionalValidator = vine.compile(
   vine.object({
-    funcao_id: vine.number().positive().optional(),
-    nome: vine.string().trim().minLength(10).maxLength(40).toUpperCase(),
-    genero: vine.enum(['MASCULINO', 'FEMININO', 'OUTRO']),
-    cpf: vine.string().trim().minLength(11).maxLength(14),
-    dataNascimento: vine.date().use(dataNascimentoRule()),
+    funcaoId: vine.number().positive().optional(),
+    nome: vine.string().trim().minLength(3).maxLength(100).toUpperCase().optional(),
+    genero: vine.enum(['MASCULINO', 'FEMININO', 'OUTRO']).optional(),
+    
+    cpf: vine.string().trim()
+      .regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/)
+      .transform((value) => value.replace(/\D/g, ''))
+      .optional(),
+      
+    dataNascimento: vine.date({ formats: ['YYYY-MM-DD'] })
+      .use(dataNascimentoRule())
+      .transform((value) => DateTime.fromJSDate(value))
+      .optional(),
+      
     telefone: vine.string().trim().minLength(10).maxLength(15).optional(),
 
-    registro_conselho: vine.string().trim().maxLength(50).optional(),
-    conselho_uf: vine.string().trim().maxLength(2).optional(),
-    foto_perfil_url: vine.string().url().optional(),
+    registroConselho: vine.string().trim().maxLength(50).optional(),
+    conselhoUf: vine.string().trim().fixedLength(2).toUpperCase().optional(),
+    fotoPerfilUrl: vine.string().url().optional(),
     biografia: vine.string().trim().maxLength(1000).optional(),
-    status: vine.enum(['pendente', 'aprovado', 'rejeitado']).optional(),
-    comprovante_credenciamento_url: vine.string().url().optional(),
-    observacoes_admin: vine.string().trim().maxLength(500).optional(),
+    status: vine.enum(['pendente', 'aprovado', 'rejeitado', 'ativo', 'inativo']).optional(),
+    comprovanteCredenciamentoUrl: vine.string().url().optional(),
+    observacoesAdmin: vine.string().trim().maxLength(500).optional(),
   })
 )

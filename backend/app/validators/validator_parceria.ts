@@ -2,49 +2,51 @@ import vine from '@vinejs/vine'
 import { DateTime } from 'luxon'
 
 export const storeParceriaValidator = vine.compile(
-vine.object({
-        nome: vine.string().trim().maxLength(40),
-        ramo: vine.string().trim().maxLength(40),
-        cnpj: vine.string().trim().fixedLength(14),
-        cidade: vine.string().trim().maxLength(40),
-        bairro: vine.string().trim().maxLength(40),
-        rua: vine.string().trim().maxLength(40),
-        numero: vine.string().trim().maxLength(3),
-        //Garante que sejam apenas 8 digítos no cep
-        cep: vine.string().trim().fixedLength(8),
-        //.url() verifica se o formato da url é válido, já o activeUrl() verifica se o link existe na web
-        site_url: vine.string().url().nullable().optional(),
-        porcentagem_desconto: vine.number(),
-        tipo_convenio: vine.string().trim().maxLength(50),
-        tipo_relacionamento: vine.enum(['ENTRADA', 'SAIDA', 'MISTO', 'ESTRATEGICO']),
-        status_parceria: vine.enum(['ATIVO', 'INATIVO', 'EM NEGOCIACAO']),
-        //Quando o status da parceria for diferente de 'EM NEGOCIACAO', é obrigatório
-        //que o data_inicio seja preenchido
-        data_inicio: vine.date({ formats: ['iso8601'] }).nullable().optional()
-        .requiredWhen('status_parceria', '!=', 'EM NEGOCIACAO')
-        .transform((value) => {
-            //Se o valor existe e não é null, converta
-            if (value instanceof Date) {
-                return DateTime.fromJSDate(value)
-            }
-            return value //Retorna null ou undefined
-        }),
-    })
+  vine.object({
+    nome: vine.string().trim().maxLength(100),
+    ramo: vine.string().trim().maxLength(50),
+    
+    cnpj: vine.string().trim()
+      .regex(/^\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}$/)
+      .transform((value: string) => value.replace(/\D/g, '')),
+
+    cep: vine.string().trim().fixedLength(8),
+    
+    siteUrl: vine.string().url().optional(),
+    
+    porcentagemDesconto: vine.number().min(0).max(100),
+    
+    tipoConvenio: vine.string().trim().maxLength(50),
+    
+    tipoRelacionamento: vine.enum(['ENTRADA', 'SAIDA', 'MISTO', 'ESTRATEGICO']),
+    
+    statusParceria: vine.enum(['ATIVO', 'INATIVO', 'EM NEGOCIACAO']),
+
+    dataInicio: vine.date({ formats: ['YYYY-MM-DD'] })
+      .transform((value: Date) => DateTime.fromJSDate(value))
+      .optional(),
+  })
 )
 
-
 export const updateParceriaValidator = vine.compile(
-    vine.object({
-    nome: vine.string().trim().maxLength(40).optional(),
-    ramo: vine.string().trim().maxLength(40).optional(),
+  vine.object({
+    nome: vine.string().trim().maxLength(100).optional(),
+    ramo: vine.string().trim().maxLength(50).optional(),
+    
+    cnpj: vine.string().trim()
+      .regex(/^\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}$/)
+      .transform((value: string) => value.replace(/\D/g, ''))
+      .optional(),
+
     cep: vine.string().trim().fixedLength(8).optional(),
-    cidade: vine.string().trim().maxLength(40).optional(),
-    bairro: vine.string().trim().maxLength(40).optional(),
-    rua: vine.string().trim().maxLength(40).optional(),
-    numero: vine.string().trim().maxLength(3).optional(),
-    site_url: vine.string().url().activeUrl().optional(),
-    porcentagem_desconto: vine.number().optional(),
-    tipo_convenio: vine.string().trim().maxLength(50).optional(),
-    tipo_relacionamento: vine.enum(['ENTRADA', 'SAIDA', 'MISTO', 'ESTRATEGICO']).optional(),
-    }),
+    siteUrl: vine.string().url().optional(),
+    porcentagemDesconto: vine.number().min(0).max(100).optional(),
+    tipoConvenio: vine.string().trim().maxLength(50).optional(),
+    tipoRelacionamento: vine.enum(['ENTRADA', 'SAIDA', 'MISTO', 'ESTRATEGICO']).optional(),
+    statusParceria: vine.enum(['ATIVO', 'INATIVO', 'EM NEGOCIACAO']).optional(),
+    
+    dataInicio: vine.date({ formats: ['YYYY-MM-DD'] })
+      .transform((value: Date) => DateTime.fromJSDate(value))
+      .optional(),
+  })
 )

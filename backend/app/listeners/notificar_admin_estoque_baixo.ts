@@ -1,37 +1,42 @@
-import Inventario from "#models/inventario";
-import mail from "@adonisjs/mail/services/main";
-import User from "#models/user";
+import Inventario from "#models/inventario"
+import User from "#models/user"
+import mail from "@adonisjs/mail/services/main"
 
 export default class NotificarAdminEstoqueBaixo {
-    public async handle(dados: {item: Inventario}) {
-        if(dados.item.quantidade <= dados.item.pontoReposicao) {
+    
+    public async handle({ inventario }: { inventario: Inventario }) {
+        
+        if (inventario.quantidade <= inventario.pontoReposicao) {
+            
             const admins = await User.query().where('perfil_tipo', 'admin')
-            for (const admin of admins) {
-                await mail.send((message) => {
+
+            if (admins.length === 0) return
+
+            await Promise.all(admins.map(admin => {
+                return mail.send((message) => {
                     message
-                    .to(admin.email)
-                    .from('clinicassgci@gmail.com')
-                    .subject(`ALERTA: Estoque baixo para ${dados.item.nome}`)
-                    .text(`
-                    Olá ${admin.fullName}
+                        .to(admin.email)
+                        .subject(`ALERTA: Estoque Baixo - ${inventario.nome}`)
+                        .html(`
+                            <div style="font-family: Arial, sans-serif; color: #333;">
+                                <h2>Olá, ${admin.fullName}</h2>
+                                <p>O item <strong>"${inventario.nome}"</strong> atingiu o nível crítico de estoque.</p>
+                                
+                                <ul>
+                                    <li><strong>Quantidade Atual:</strong> ${inventario.quantidade} ${inventario.unidadeMedida}</li>
+                                    <li><strong>Ponto de Reposição:</strong> ${inventario.pontoReposicao}</li>
+                                </ul>
 
-                    O item "${dados.item.nome}" está com estoque baixo.
-
-                    Quantidade atual: ${dados.item.quantidade}
-                    Ponto de reposição: ${dados.item.pontoReposicao}
-
-                    Verifique a necessidade de reposição no sistema.
-
-                    Atenciosamente,
-                    Sistema SGCi
+                                <p style="color: red;">⚠️ Por favor, providencie a compra de novos itens.</p>
+                                
+                                <hr>
+                                <small>Sistema SGCI - Gestão Inteligente</small>
+                            </div>
                         `)
                 })
-            }
+            }))
             
-            
-            // console.log(`ALERTA: Estoque baixo para ${dados.item.nome}`)
+            console.log(`📧 E-mail de estoque baixo enviado para ${admins.length} admins.`)
         }
     }
-
-
-}   
+}

@@ -1,35 +1,42 @@
 import vine from '@vinejs/vine'
 
 export const storeTransacaoValidator = vine.compile(
-    vine.object({
-        atendimento_id: vine.number().positive(),
-        reserva_id: vine.number().positive(),
-        user_id: vine.number().positive(),
-        entidade_origem: vine.string().trim(),
-        entidade_id: vine.number().positive(),
-        destinatario_tipo: vine.string().trim().nullable().optional(),
-        destinatario_id: vine.number().positive().nullable().optional(),
-        valor: vine.number().positive(),
-        tipo: vine.enum(['ENTRADA', 'SAIDA']),
-        //finalidade é uma espécie de justificativa
-        finalidade: vine.string().trim(),
-        status: vine.enum(['PENDENTE', 'CONCLUIDA', 'FALHOU', 'ESTORNADA']),
-        referencia_externa: vine.string().trim().nullable().optional()
-    })
+  vine.object({
+    // IDs de vínculo devem ser opcionais, pois a transação pode ser de um Atendimento OU de uma Reserva
+    atendimentoId: vine.number().positive().optional(),
+    reservaId: vine.number().positive().optional(),
+    
+    userId: vine.number().positive(),
+    
+    // Polimorfismo (Quem pagou/recebeu)
+    entidadeOrigem: vine.string().trim(),
+    entidadeId: vine.number().positive(),
+    
+    destinatarioTipo: vine.string().trim().optional(),
+    destinatarioId: vine.number().positive().optional(),
+    
+    valor: vine.number().positive(),
+    tipo: vine.enum(['ENTRADA', 'SAIDA']),
+    
+    finalidade: vine.string().trim().maxLength(255),
+    
+    status: vine.enum(['PENDENTE', 'CONCLUIDA', 'FALHOU', 'ESTORNADA']),
+    
+    referenciaExterna: vine.string().trim().maxLength(100).optional(),
+  })
 )
 
 export const updateTransacaoValidator = vine.compile(
-    vine.object({
-        user_id: vine.number().positive().optional(),
-        entidade_origem: vine.string().trim().optional(),
-        entidade_id: vine.number().positive().optional(),
-        destinatario_tipo: vine.string().trim().nullable().optional(),
-        destinatario_id: vine.number().positive().nullable().optional(),
-        valor: vine.number().positive().optional(),
-        tipo: vine.enum(['ENTRADA', 'SAIDA']).optional(),
-        //finalidade é uma espécie de justificativa
-        finalidade: vine.string().trim().optional(),
-        status: vine.enum(['PENDENTE', 'CONCLUIDA', 'FALHOU', 'ESTORNADA']).optional(),
-        referencia_externa: vine.string().trim().nullable().optional()
-    })
+  vine.object({
+    userId: vine.number().positive().optional(),
+    entidadeOrigem: vine.string().trim().optional(),
+    entidadeId: vine.number().positive().optional(),
+    destinatarioTipo: vine.string().trim().optional(),
+    destinatarioId: vine.number().positive().optional(),
+    valor: vine.number().positive().optional(),
+    tipo: vine.enum(['ENTRADA', 'SAIDA']).optional(),
+    finalidade: vine.string().trim().maxLength(255).optional(),
+    status: vine.enum(['PENDENTE', 'CONCLUIDA', 'FALHOU', 'ESTORNADA']).optional(),
+    referenciaExterna: vine.string().trim().maxLength(100).optional(),
+  })
 )

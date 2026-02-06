@@ -4,23 +4,20 @@ import type { HasMany } from '@adonisjs/lucid/types/relations'
 import Profissional from '#models/profissional'
 
 export default class Funcao extends BaseModel {
-  // atualiza a tabela para seu nome correto
   public static table = 'funcoes'
 
-  //atributos
   @column({ isPrimary: true })
   declare id: number
 
   @column()
   declare nome: 'MEDICO' | 'DENTISTA' | 'TERAPEUTA' | 'PSICOLOGO' | 'UROLOGISTA' | 'GINECOLOGISTA' | 'NUTRICIONISTA'
 
-  //relacionamentos
-  @hasMany(() => Profissional)
-  declare profissionais: HasMany<typeof Profissional>
-
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
+
+  @hasMany(() => Profissional)
+  declare profissionais: HasMany<typeof Profissional>
 }

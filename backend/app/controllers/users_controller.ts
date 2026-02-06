@@ -4,70 +4,54 @@ import Cliente from '#models/cliente'
 import Profissional from '#models/profissional'
 
 export default class UsersController {
-  //TESTADO -> Lista todos os usuários. Somente aqueles com token podem visualizar
+  
   public async index({ auth, response }: HttpContext) {
     const usuario = auth.user!
 
-    //Se não for o administrador que está autenticado, retorna uma mensagem de erro
-    if (usuario.perfil_tipo !== 'admin') {
-      return response.unauthorized({ message: 'Apenas administradores podem acessar essa rota.' })
+    // CORREÇÃO: perfil_tipo -> perfilTipo
+    if (usuario.perfilTipo !== 'admin') {
+      return response.forbidden({ message: 'Acesso negado. Apenas administradores.' })
     }
-    return await User.all()
+
+    const users = await User.all()
+    return response.ok(users)
   }
-  //Lista atributos individuais
-  //Verifica se é cliente ou profissional
+
   public async show({ auth, params, response }: HttpContext) {
-    //Verifica o usuário que se autenticou
-    const usuario = auth.user!
+    const usuarioLogado = auth.user!
+    const idSolicitado = Number(params.id)
 
-    // Permite apenas o próprio usuário ver seus dados
-    if (usuario.id !== Number(params.id)) {
-      return response.unauthorized({ message: 'Você só pode visualizar seus próprios dados.' })
+    // CORREÇÃO: perfil_tipo -> perfilTipo
+    if (usuarioLogado.perfilTipo !== 'admin' && usuarioLogado.id !== idSolicitado) {
+      return response.forbidden({ message: 'Você não tem permissão para visualizar estes dados.' })
     }
-
-    const procura = await User.findOrFail(params.id)
-
-    if (procura.status !== 'ativo') {
-      return { message: 'Usuário inativo' }
-    }
-
-    if (procura.perfil_tipo === 'cliente') {
-      //retorna informações de cliente
-      return Cliente.query().where('id', params.id).first()
-    } else if (procura.perfil_tipo === 'profissional') {
-      //retorna informações de profissional
-      return Profissional.query()
-        .where('id', params.id)
-        .preload('especializacoes')
-        .preload('funcao')
-        .first()
-    } else {
-      return { message: 'Tipo de perfil desconhecido' }
-    }
-  }
-  //TESTADO
-  public async login({ request, response }: HttpContext) {
-    //Faz a requisição de um email e de uma senha
-    const email = request.input('email')
-    const senha = request.input('password')
 
     try {
-      //Verifica se o valores são correspondentes aos campos email e
-      //senha de algum usuário
-      const user = await User.verifyCredentials(email, senha)
+      const targetUser = await User.findOrFail(idSolicitado)
 
-      //Se o login for autorizado, gera um token para o usuário
-      const token = await User.accessTokens.create(user)
+      if (targetUser.status !== 'ativo') {
+        return response.badRequest({ message: 'Usuário inativo ou suspenso.' })
+      }
 
-      //Retorna uma mensagem de sucesso, juntamente com o token gerado
-      return response.status(200).send({
-        message: 'Login realizado com sucesso.',
-        token: token,
-      })
-      //Se o email e a senha não forem correspondentes a nenhum
-      //usuário, o login não acontece e portanto retorna uma mensagem de erro
-    } catch (error) {
-      return response.status(500).send({ error: error })
+      // CORREÇÃO: perfil_tipo -> perfilTipo
+      if (targetUser.perfilTipo === 'cliente') {
+        const cliente = await Cliente.query().where('id', targetUser.id).firstOrFail()
+        return response.ok(cliente)
+
+      } else if (targetUser.perfilTipo === 'profissional') {
+        const profissional = await Profissional.query()
+          .where('id', targetUser.id)
+          .preload('especializacoes')
+          .preload('funcao')
+          .firstOrFail()
+          
+        return response.ok(profissional)
+      } 
+      
+      return response.ok(targetUser)
+
+    } catch {
+      return response.notFound({ message: 'Usuário não encontrado.' })
     }
   }
 }

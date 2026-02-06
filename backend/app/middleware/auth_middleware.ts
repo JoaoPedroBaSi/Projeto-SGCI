@@ -16,12 +16,12 @@ export default class AuthMiddleware {
       guards?: (keyof Authenticators)[]
     } = {}
   ) {
-    // Libera o preflight OPTIONS
     if (ctx.request.method() === 'OPTIONS') {
       return next()
     }
 
     await ctx.auth.authenticateUsing(options.guards, { loginRoute: this.redirectTo })
+    
     return next()
   }
 }

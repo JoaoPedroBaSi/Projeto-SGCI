@@ -1,39 +1,121 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-  <title>Redefinir Senha</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redefinir Senha | SGCI</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; display: grid; place-items: center; min-height: 90vh; background-color: #f4f4f4; }
-    form { background: white; border: 1px solid #ddd; padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    h1 { margin-top: 0; }
-    div { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; font-weight: bold; }
-    input[type="password"] { width: 300px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-    button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
-    button:hover { background-color: #0056b3; }
+    /* Reset e Fontes */
+    * { box-sizing: border-box; }
+    body { 
+      font-family: 'Montserrat', sans-serif; 
+      padding: 20px; 
+      display: grid; 
+      place-items: center; 
+      min-height: 100vh; 
+      background-color: #f0fdfa; /* Fundo claro (Teal 50) */
+      margin: 0;
+      color: #134e4a;
+    }
+
+    /* Card Principal */
+    .card { 
+      background: white; 
+      width: 100%;
+      max-width: 450px;
+      padding: 40px; 
+      border-radius: 16px; 
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); 
+      border: 1px solid #ccfbf1;
+    }
+
+    /* Tipografia */
+    h1 { margin-top: 0; color: #0f766e; text-align: center; font-size: 24px; margin-bottom: 10px; }
+    p.subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 30px; }
+
+    /* Inputs */
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: #334155; }
+    input[type="password"] { 
+      width: 100%; 
+      padding: 12px 16px; 
+      border: 2px solid #e2e8f0; 
+      border-radius: 8px; 
+      font-size: 16px;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    input[type="password"]:focus { border-color: #2dd4bf; }
+
+    /* Botão */
+    button { 
+      width: 100%; 
+      padding: 14px; 
+      background-color: #0d9488; /* Teal 600 */
+      color: white; 
+      border: none; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      font-size: 16px; 
+      font-weight: bold;
+      transition: background-color 0.2s;
+      margin-top: 10px;
+    }
+    button:hover { background-color: #0f766e; }
+
+    /* Alertas de Erro */
+    .alert-error {
+      background-color: #fee2e2;
+      border: 1px solid #fca5a5;
+      color: #991b1b;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      text-align: center;
+    }
+    .field-error { color: #dc2626; font-size: 12px; margin-top: 5px; }
   </style>
 </head>
 <body>
-  <form action="/redefinir-senha" method="POST">
-    <h1>Crie sua nova senha</h1>
-    
-    <p>Olá! Digite sua nova senha abaixo para redefinir seu acesso.</p>
 
-    {{-- Este campo 'hidden' é crucial! Ele guarda o token que veio da URL --}}
-    {{-- e o envia junto com o formulário --}}
-    <input type="hidden" name="token" value="{{ token || '' }}" />
+  <div class="card">
+    <h1>Nova Senha</h1>
+    <p class="subtitle">Defina suas novas credenciais de acesso</p>
 
-    <div>
-      <label for="password">Nova Senha</label>
-      <input type="password" id="password" name="password" required />
-    </div>
-    
-    <div>
-      <label for="password_confirmation">Confirme a Nova Senha</label>
-      <input type="password" id="password_confirmation" name="password_confirmation" required />
-    </div>
+    {{-- Exibe erros globais (ex: token inválido) --}}
+    @if(flashMessages.has('notification'))
+      <div class="alert-error">
+        {{ flashMessages.get('notification.message') }}
+      </div>
+    @endif
 
-    <button type="submit">Salvar Nova Senha</button>
-  </form>
+    <form action="{{ route('auth.password.store') }}" method="POST">
+      
+      {{-- 🛡️ SEGURANÇA: Token CSRF Obrigatório no Adonis --}}
+      {{ csrfField() }}
+
+      {{-- Token que vem da URL --}}
+      <input type="hidden" name="token" value="{{ token }}" />
+
+      <div class="form-group">
+        <label for="password">Nova Senha</label>
+        <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres" required />
+        
+        {{-- Erro específico do campo --}}
+        @inputError('password')
+          <span class="field-error">{{ $messages.join(', ') }}</span>
+        @end
+      </div>
+      
+      <div class="form-group">
+        <label for="password_confirmation">Confirme a Nova Senha</label>
+        <input type="password" id="password_confirmation" name="password_confirmation" placeholder="Digite novamente" required />
+      </div>
+
+      <button type="submit">Alterar Senha</button>
+    </form>
+  </div>
+
 </body>
 </html>

@@ -1,12 +1,13 @@
 import { DateTime } from 'luxon'
 import { BaseModel, column, belongsTo } from '@adonisjs/lucid/orm'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
-
 import Sala from '#models/sala'
 import Profissional from '#models/profissional'
 import Transacao from '#models/transacao'
 
 export default class Reserva extends BaseModel {
+  public static table = 'reservas'
+
   @column({ isPrimary: true })
   declare id: number
 
@@ -25,27 +26,24 @@ export default class Reserva extends BaseModel {
   @column.dateTime({ columnName: 'data_hora_fim' })
   declare dataHoraFim: DateTime
 
-  @column({ columnName: 'valor_total' })
-  declare valorTotal: number
-
   @column()
   declare status: 'PENDENTE' | 'APROVADA' | 'REJEITADO'
+
+  @column({ columnName: 'valor_total' })
+  declare valorTotal: number
 
   @column({ columnName: 'pagamento_efetuado' })
   declare pagamentoEfetuado: boolean
 
-  @column()
+  @column({ columnName: 'forma_pagamento' }) 
   declare formaPagamento: 'PIX' | 'CREDITO' | 'DEBITO' | 'PENDENTE'
+
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
-
-  // ===========================================
-  // 🔗 RELACIONAMENTOS
-  // ===========================================
 
   @belongsTo(() => Sala)
   declare sala: BelongsTo<typeof Sala>

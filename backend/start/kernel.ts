@@ -24,7 +24,7 @@ server.errorHandler(() => import('#exceptions/handler'))
  */
 server.use([
   () => import('#middleware/container_bindings_middleware'),
-  () => import('#middleware/force_json_response_middleware'),
+  () => import('#middleware/force_json_response_middleware'), // Ótimo para API Vue.js!
   () => import('@adonisjs/cors/cors_middleware'),
 ])
 
@@ -42,8 +42,19 @@ router.use([
  * the routes or the routes group.
  */
 export const middleware = router.named({
-  clienteOrProfissionalOnly: () => import('#middleware/cliente_or_profissional_only_middleware'),
-  clienteOnly: () => import('#middleware/cliente_only_middleware'),
+  // Autenticação básica (verifica se tem token)
   auth: () => import('#middleware/auth_middleware'),
+  
+  // Visitantes (quem NÃO está logado)
+  guest: () => import('#middleware/guest_middleware'),
+
+  // ACL (Controle de Acesso)
   adminOnly: () => import('#middleware/admin_only_middleware'),
+  clienteOnly: () => import('#middleware/cliente_only_middleware'),
+  
+  // Permissões Combinadas
+  clienteOrProfissionalOnly: () => import('#middleware/cliente_or_profissional_only_middleware'),
+  
+  // NOVO: Necessário para as rotas de Estoque/Inventário
+  adminOrProfissionalOnly: () => import('#middleware/admin_or_profissional_only_middleware'),
 })

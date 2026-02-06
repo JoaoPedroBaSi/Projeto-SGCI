@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # O BANCO DE DADOS
+  db:
+    image: postgres:17.4-alpine3.20
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: adonis_user
+      POSTGRES_PASSWORD: adonis_password
+      POSTGRES_DB: clinic_db
+    ports:
+      - "5433:5432" # Você acessa no seu PC pela 5433, mas o app acessa pela 5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # A SUA APLICAÇÃO ADONIS
+  app:
+    build: .
+    container_name: adonis-app
+    ports:
+      - "3333:3333"
+    environment:
+      - NODE_ENV=development
+      - PORT=3333
+      - APP_KEY=NRldyaUzN1nHmZa-A56LL-Hlqp70SBVl
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=adonis_user
+      - DB_PASSWORD=adonis_password
+      - DB_DATABASE=clinic_db
+    depends_on:
+      - db
+
+  # INTERFACE PARA VER O BANCO (Acesse http://localhost:8080)
+  adminer:
+    image: adminer:latest
+    container_name: adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

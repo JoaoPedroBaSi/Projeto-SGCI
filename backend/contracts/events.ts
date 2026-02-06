@@ -1,10 +1,9 @@
-import Inventario from "#models/inventario";
-import Reserva from "#models/reserva";
+import Inventario from '#models/inventario'
+import Reserva from '#models/reserva'
 
 declare module '@adonisjs/core/types' {
-    interface EventsList {
-        'inventario:atualizado': { item: Inventario},
-        'reserva:aprovada': { reserva: Reserva}
-    }
-
+  interface EventsList {
+    'inventario:atualizado': { inventario: Inventario }
+    'reserva:aprovada': { reserva: Reserva }
+  }
 }

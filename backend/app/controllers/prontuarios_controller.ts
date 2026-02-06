@@ -2,102 +2,98 @@ import type { HttpContext } from '@adonisjs/core/http'
 import Atendimento from '#models/atendimento'
 import Prontuario from '#models/prontuario'
 import Profissional from '#models/profissional'
-// import ForceJsonResponseMiddleware from '#middleware/force_json_response_middleware'
 import Parceria from '#models/parceria'
 
 export default class ProntuariosController {
 
-    public async index({ auth, response }: HttpContext) {
-        const usuarioLogado = auth.user
+  public async index({ auth, response }: HttpContext) {
+    const usuarioLogado = auth.user!
 
-        // CORREÇÃO: Buscamos pelo 'id' direto, pois o ID do médico é igual ao do usuário
-        const profissional = await Profissional.findBy('id', usuarioLogado?.id)
+    const profissional = await Profissional.findBy('id', usuarioLogado.id)
 
-        if (!profissional) {
-            return response.notFound({ message: 'Perfil profissional não encontrado.' })
-        }
-
-        // 2. Busca no banco
-        const atendimentos = await Atendimento.query()
-            .where('profissionalId', profissional.id)
-            .preload('cliente')
-            .orderBy('data_hora_inicio', 'desc')
-
-        // 3. Formata os dados
-        const listaFormatada = atendimentos.map((atendimento) => {
-            const clienteData = atendimento.cliente as any
-            return {
-                id: atendimento.id,
-                nome: clienteData?.nome || 'Cliente Desconhecido',
-                cpf: atendimento.cliente?.cpf || '---',
-                data: atendimento.dataHoraInicio, // Lembra que corrigimos isso para camelCase?
-                status: atendimento.status
-            }
-        })
-
-        return response.ok(listaFormatada)
+    if (!profissional) {
+      return response.notFound({ message: 'Perfil profissional não encontrado.' })
     }
-    public async store({ request, response, auth, params }: HttpContext) {
-        const atendimentoId = params.id
 
-        const dadosProntuario = await request.only(['diagnostico', 'medicamentosPrescritos', 'recomendacoes', 'caminhoAnexo', 'descricao', 'parceriaId'])
+    const atendimentos = await Atendimento.query()
+      .where('profissionalId', profissional.id)
+      .preload('cliente')
+      .orderBy('data_hora_inicio', 'desc')
 
-        const profissionalLogadoId = await auth.user?.id
-        if (!profissionalLogadoId) {
-            return response.unauthorized({
-                message: "Acesso não autorizado. Faça login novamente"
-            })
-        }
+    const listaFormatada = atendimentos.map((atendimento) => {
+      return {
+        id: atendimento.id,
+        nome: atendimento.cliente?.nome || 'Cliente Desconhecido',
+        cpf: atendimento.cliente?.cpf || '---',
+        data: atendimento.dataHoraInicio, 
+        status: atendimento.status
+      }
+    })
 
-        try {
-            //Se o profissional tiver informado uma parceria, verifica se a parceria informada é válida
-            if (dadosProntuario.parceriaId) {
-                const parceria = await Parceria.query().where('id', dadosProntuario.parceriaId).first()
+    return response.ok(listaFormatada)
+  }
 
-                const statusParceriaInvalido = parceria?.statusParceria === 'INATIVO' || parceria?.statusParceria === 'EM NEGOCIACAO'
-                const relacionamentoParceriaInvalido = parceria?.tipoRelacionamento === 'SAIDA' || parceria?.tipoRelacionamento === 'ESTRATEGICO'
+  public async store({ request, response, auth, params }: HttpContext) {
+    const atendimentoId = params.id
+    const dadosProntuario = request.only([
+      'diagnostico', 
+      'medicamentosPrescritos', 
+      'recomendacoes', 
+      'caminhoAnexo', 
+      'descricao', 
+      'parceriaId'
+    ])
 
-                const parceriaInvalida = statusParceriaInvalido || relacionamentoParceriaInvalido
-                if (parceriaInvalida) {
-                    throw new Error()
-                }
-            }
-        } catch (error) {
-            return response.status(500).send('Por favor, informe uma parceria válida. Tente novamente.')
-        }
-
-        const perfilProfissional = await Profissional.findBy('id', profissionalLogadoId)
-
-        if (!perfilProfissional) {
-            return response.forbidden({
-                message: 'Este usuário não possui um perfil de profissional.'
-            })
-        }
-
-        console.log('ID do Profissional Logado:', profissionalLogadoId)
-        try {
-            const atendimento = await Atendimento.findByOrFail('id', atendimentoId)
-            // O erro "forbidden" no AdonisJS geralmente indica que o usuário não tem permissão para acessar um determinado recurso
-            if (atendimento.profissionalId !== perfilProfissional.id) {
-                return response.forbidden({
-                    message: "Acesso impedido"
-                })
-            }
-
-            const dadosParaSalvar = {
-                ...dadosProntuario,
-                atendimentoId: atendimentoId,
-                profissionalId: perfilProfissional.id,
-            }
-
-            const prontuario = await Prontuario.create(dadosParaSalvar)
-
-            return response.created(prontuario)
-
-        } catch {
-            return response.notFound({
-                message: "Atendimento não encontrado."
-            })
-        }
+    const profissionalLogadoId = auth.user?.id
+    if (!profissionalLogadoId) {
+      return response.unauthorized({ message: "Acesso não autorizado." })
     }
+
+    try {
+      if (dadosProntuario.parceriaId) {
+        const parceria = await Parceria.find(dadosProntuario.parceriaId)
+        
+        if (!parceria) {
+             return response.badRequest({ message: 'Parceria informada não existe.' })
+        }
+
+        const statusInvalido = ['INATIVO', 'EM NEGOCIACAO'].includes(parceria.statusParceria)
+        const tipoInvalido = ['SAIDA', 'ESTRATEGICO'].includes(parceria.tipoRelacionamento)
+
+        if (statusInvalido || tipoInvalido) {
+          return response.badRequest({ message: 'A parceria selecionada não é válida para este prontuário.' })
+        }
+      }
+
+      const perfilProfissional = await Profissional.findBy('id', profissionalLogadoId)
+      if (!perfilProfissional) {
+        return response.forbidden({ message: 'Este usuário não possui um perfil de profissional.' })
+      }
+
+      const atendimento = await Atendimento.findOrFail(atendimentoId)
+      
+      if (atendimento.profissionalId !== perfilProfissional.id) {
+        return response.forbidden({ message: "Você não tem permissão para criar prontuário deste atendimento." })
+      }
+
+      const dadosParaSalvar = {
+        ...dadosProntuario,
+        atendimentoId: atendimentoId,
+        profissionalId: perfilProfissional.id,
+      }
+
+      const prontuario = await Prontuario.create(dadosParaSalvar)
+
+      return response.created(prontuario)
+
+    } catch (error: any) {
+      if (error.code === 'E_ROW_NOT_FOUND') {
+         return response.notFound({ message: "Atendimento não encontrado." })
+      }
+      return response.badRequest({ 
+        message: "Erro ao criar prontuário.", 
+        error: error.message || error 
+      })
+    }
+  }
 }

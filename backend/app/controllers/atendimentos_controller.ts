@@ -30,11 +30,12 @@ export default class AtendimentosController {
         q.preload('disponibilidades')
       })
 
-    if (user.perfil_tipo === 'cliente') {
-      query.where('cliente_id', user.id)
-    } else if (user.perfil_tipo === 'profissional') {
-      query.where('profissional_id', user.id)
+    if (user.perfilTipo === 'cliente') {
+      query.where('clienteId', user.id)
+    } else if (user.perfilTipo === 'profissional') {
+      query.where('profissionalId', user.id)
     }
+    
     if (statusFiltrado) {
       query.where('status', statusFiltrado)
     }
@@ -42,13 +43,11 @@ export default class AtendimentosController {
     return await query.orderBy('id', 'desc')
   }
 
-  // --- CORREÇÃO AQUI: Removemos 'foto_perfil_url' para evitar Erro 500 ---
   public async show({ params }: HttpContext) {
     const atendimento = await Atendimento.query()
       .where('id', params.id)
       .preload('cliente', (query) => {
-        // Selecionamos apenas campos que EXISTEM no banco
-        query.select('id', 'nome', 'data_nascimento') 
+        query.select('id', 'nome', 'dataNascimento') 
       })
       .preload('profissional', (query) => query.select('id', 'nome'))
       .preload('prontuario')
@@ -64,7 +63,7 @@ export default class AtendimentosController {
       const query = Atendimento.query()
         .preload('cliente', (q) => q.select('id', 'nome'))
         .preload('profissional', (q) => q.select('id', 'nome'))
-        .orderBy('data_hora_inicio', 'asc')
+        .orderBy('dataHoraInicio', 'asc') // CORREÇÃO: dataHoraInicio
 
       if (status) {
         query.where('status', status)
@@ -85,14 +84,9 @@ export default class AtendimentosController {
   public async store({ request, response }: HttpContext) {
     try {
       const dados = await request.validateUsing(storeAtendimentoValidator)
-      const dataHoraInicioLuxon = DateTime.fromISO(dados.data_hora_inicio).setZone('America/Sao_Paulo')
-
-      if (!dataHoraInicioLuxon.isValid) {
-        return response.status(400).send({
-          message: 'O formato da data e hora é inválido.',
-          debug: dataHoraInicioLuxon.invalidReason
-        })
-      }
+      
+      // CORREÇÃO: dados.dataHoraInicio (o Validator também deve estar em CamelCase)
+      const dataHoraInicioLuxon = dados.dataHoraInicio.setZone('America/Sao_Paulo')
 
       const agoraBrasil = DateTime.now().setZone('America/Sao_Paulo')
       if (dataHoraInicioLuxon < agoraBrasil) {
@@ -100,9 +94,10 @@ export default class AtendimentosController {
       }
 
       const disponibilidade = await this.atendimentoService.temDisponibilidade(
-        dados.profissional_id,
+        dados.profissionalId,
         dataHoraInicioLuxon
       )
+
       if (!disponibilidade) {
         throw new Error('A solicitação de atendimento não está na disponibilidade do profissional.')
       }
@@ -110,13 +105,15 @@ export default class AtendimentosController {
       if (disponibilidade.status === 'OCUPADO') {
         throw new Error('O horário solicitado já está marcado para outro atendimento.')
       }
+      
       if (disponibilidade.status === 'BLOQUEADO') {
         throw new Error('O profissional se encontra indisponível para este horário.')
       }
 
       const salaReservada = await Reserva.query()
-        .where('profissional_id', dados.profissional_id)
+        .where('profissionalId', dados.profissionalId)
         .first()
+        
       if (!salaReservada) {
         throw new Error('O profissional escolhido para consulta não tem nenhum sala reservada.')
       }
@@ -129,7 +126,7 @@ export default class AtendimentosController {
 
       return response.status(201).send('Agendamento realizado com sucesso.')
     } catch (error: any) {
-      console.error("DEBUG ATENDIMENTO:", error.message || error)
+      console.error(error)
 
       if (error.status === 422) {
         return response.status(422).send({
@@ -177,7 +174,7 @@ export default class AtendimentosController {
       this.atendimentoService.atualizarAtendimento(dados, atendimento, usuarioLogado)
 
       return response.status(200).send('Agendamento atualizado com sucesso.')
-    } catch (error) {
+    } catch (error: any) {
       let message = 'Ocorreu um erro desconhecido.'
       let status = 500
 
@@ -201,8 +198,9 @@ export default class AtendimentosController {
     let justificativa = ''
     let statusDisponibilidade: 'LIVRE' | 'OCUPADO' | 'BLOQUEADO' | 'FINALIZADO' | 'RESERVADO' = 'LIVRE'
 
-    const profissionalLogado = usuarioLogado.perfil_tipo === 'profissional'
-    const clienteLogado = usuarioLogado.perfil_tipo === 'cliente'
+    // CORREÇÃO: perfilTipo
+    const profissionalLogado = usuarioLogado.perfilTipo === 'profissional'
+    const clienteLogado = usuarioLogado.perfilTipo === 'cliente'
 
     try {
       const atendimento = await Atendimento.findOrFail(params.id)
@@ -250,17 +248,18 @@ export default class AtendimentosController {
 
         if (atendimento.formaPagamento !== 'DINHEIRO') {
           await Transacao.query({ client: trx })
-            .where('atendimento_id', atendimento.id)
+            .where('atendimentoId', atendimento.id) 
             .update({ status: 'ESTORNADO' })
         }
       })
 
       return response.ok({ message: 'Cancelamento realizado com sucesso.' })
 
-    } catch (error) {
-      console.error("ERRO NO CONTROLLER:", error)
+    } catch (error: any) {
+      console.error(error)
       return response.status(500).send({
         message: 'Erro interno ao processar cancelamento.',
+        debug: error.message
       })
     }
   }
@@ -286,8 +285,8 @@ export default class AtendimentosController {
       }
 
       const temReserva = await Reserva.query()
-        .where('profissional_id', Number(profissionalLogado.id))
-        .where('sala_id', Number(salaEscolhida))
+        .where('profissionalId', Number(profissionalLogado.id)) 
+        .where('salaId', Number(salaEscolhida)) 
         .first()
 
       if (!temReserva) {
@@ -301,7 +300,7 @@ export default class AtendimentosController {
       await db.transaction(async (trx) => {
         await Disponibilidade.query({ client: trx })
           .where('id', atendimento.disponibilidadeId)
-          .where('profissional_id', profissionalLogado.id)
+          .where('profissionalId', profissionalLogado.id)
           .update({ status: 'OCUPADO' })
 
         if (atendimento.formaPagamento !== 'DINHEIRO') {
@@ -331,7 +330,7 @@ export default class AtendimentosController {
 
       return response.ok({ message: 'Atendimento aprovado e agenda atualizada.' })
 
-    } catch (error) {
+    } catch (error: any) {
       if (error.message === 'FALHA_GATEWAY') {
         return response.badRequest({ message: 'Erro ao processar gateway de pagamento.' })
       }
@@ -373,7 +372,7 @@ export default class AtendimentosController {
       const mensagem = await db.transaction(async (trx) => {
         const atendimento = await Atendimento.query({ client: trx })
           .where('id', params.id)
-          .where('profissional_id', profissionalLogado.id)
+          .where('profissionalId', profissionalLogado.id) 
           .firstOrFail()
 
         if (atendimento.status === 'CONCLUIDO') {
@@ -413,7 +412,7 @@ export default class AtendimentosController {
       })
 
       return response.ok({ message: mensagem })
-    } catch (error) {
+    } catch (error: any) {
       return response.badRequest({
         message: error.message || 'Erro ao concluir atendimento.'
       })

@@ -3,176 +3,110 @@ import router from '@adonisjs/core/services/router'
 import { middleware } from './kernel.js'
 import User from '#models/user'
 import hash from '@adonisjs/core/services/hash'
-const ProntuariosController = () => import('#controllers/prontuarios_controller')
-
 
 // --- ROTA RAIZ ---
 router.get('/', async () => {
-  return { hello: 'world' }
+  return { 
+    sistema: 'SGCI API', 
+    status: 'online', 
+    versao: '1.0.0' 
+  }
 })
 
-router.patch('/user/:id/admin', '#controllers/users_controller.criarAdmin')
+// =======================================================
+// 🔐 AUTENTICAÇÃO E REGISTRO (PÚBLICAS / GUEST)
+// =======================================================
+router.group(() => {
+  router.post('/login', '#controllers/auth_controller.login')
+  router.post('/register', '#controllers/auth_controller.register')
+  router.post('/esqueci-senha', '#controllers/auth_controller.esqueciSenha')
+  router.post('/redefinir-senha', '#controllers/auth_controller.redefinirSenha')
+}).use(middleware.guest()) // 🛡️ Impede logados de acessarem
 
-// =======================================================
-// 🔐 AUTENTICAÇÃO E REGISTRO (PÚBLICAS)
-// =======================================================
-router.post('/login', '#controllers/auth_controller.login')
-router.post('/register', '#controllers/auth_controller.register') // Registro de Pacientes
-router.post('/esqueci-senha', '#controllers/auth_controller.esqueciSenha')
-router.post('/redefinir-senha', '#controllers/auth_controller.redefinirSenha')
+// Rota para renderizar a página (Backend)
 router.get('/redefinir-senha', '#controllers/auth_controller.showRedefinirSenha')
 
 // =======================================================
-// 👤 PERFIL DO USUÁRIO LOGADO (PROTEGIDAS)
+// 👤 PERFIL E CONTA (PROTEGIDAS)
 // =======================================================
 router.group(() => {
-  // Apontando para o 'perfils_controller'
   router.get('/me', '#controllers/perfils_controller.show')
   router.put('/me', '#controllers/perfils_controller.update')
-
   router.put('/auth/change-password', '#controllers/auth_controller.changePassword')
 }).use(middleware.auth())
 
 // =======================================================
-// 📦 RECURSOS BÁSICOS (CRUDs)
+// 📦 RECURSOS BÁSICOS (ADMIN OU PROFISSIONAL)
 // =======================================================
-router.resource('/funcao', '#controllers/funcoes_controller').except(['create', 'edit'])
-router.resource('/especializacao', '#controllers/especializacoes_controller').except(['create', 'edit'])
-router.resource('/cliente', '#controllers/clientes_controller').except(['create', 'edit'])
+router.group(() => {
+  router.resource('/funcao', '#controllers/funcoes_controller').except(['create', 'edit'])
+  router.resource('/especializacao', '#controllers/especializacoes_controller').except(['create', 'edit'])
+}).use([middleware.auth(), middleware.adminOnly()])
 
 // =======================================================
-// 🩺 PROFISSIONAIS (CADASTRO RESTRITO AO ADMIN)
+// 🩺 PROFISSIONAIS
 // =======================================================
 router.resource('/profissionais', '#controllers/profissionais_controller')
       .except(['create', 'edit'])
-      // CORREÇÃO: Usamos chamadas encadeadas (2 argumentos cada) para satisfazer o TypeScript
-      .middleware('*', middleware.auth())          // 1. Aplica Auth em TODAS as rotas
-      .middleware('store', middleware.adminOnly()) // 2. Adiciona AdminOnly APENAS no store
-
-// Rotas extras de Profissional
-router.put('/profissionais/:id/especializacoes', '#controllers/profissionais_controller.associarEspecializacao')
-      .middleware(middleware.auth())
+      .middleware('*', middleware.auth())
+      .middleware('store', middleware.adminOnly())
 
 router.patch('/profissionais/:id/status', '#controllers/profissionais_controller.atualizarStatus')
       .middleware([middleware.auth(), middleware.adminOnly()])
-// --- ROTAS DE PRONTUÁRIO (Adicionadas manualmente) ---
-router.group(() => {
-  // Lista de prontuários
-  router.get('/profissional/prontuarios', [ProntuariosController, 'index'])
-  
-  // // Salvar prontuário
-  // router.post('/atendimentos/:id/prontuario', [ProntuariosController, 'store'])
-})
-.use(middleware.auth())
-
 
 // =======================================================
-// 🏢 SALAS E INVENTÁRIO
+// 🏢 SALAS, RESERVAS E INVENTÁRIO
 // =======================================================
-router.resource('/sala', '#controllers/salas_controller').except(['create', 'edit'])
+router.resource('/sala', '#controllers/salas_controller').except(['create', 'edit']).use('*', middleware.auth())
+
+// Reservas (Apenas Profissionais podem reservar salas)
 router.resource('/reserva', '#controllers/reservas_controller').except(['create', 'edit']).use('*', middleware.auth())
-router.resource('/disponibilidade', '#controllers/disponibilidades_controller').except(['create', 'edit'])
-router.resource('/inventario', '#controllers/inventarios_controller').except(['create', 'edit'])
-router.resource('/mov_inventario', '#controllers/mov_inventarios_controller').except(['create', 'edit']).use('*', middleware.auth())
+
+// 🛠️ INVENTÁRIO (Liberado para Admin e Profissional)
+router.group(() => {
+  router.resource('/inventario', '#controllers/inventarios_controller').except(['create', 'edit'])
+  router.resource('/mov_inventario', '#controllers/mov_inventarios_controller').except(['create', 'edit'])
+}).use([middleware.auth(), middleware.adminOrProfissionalOnly()])
 
 // =======================================================
-// 🚑 ATENDIMENTOS
+// 🚑 ATENDIMENTOS E PRONTUÁRIOS
 // =======================================================
 router.group(() => {
-    // ALTERAÇÃO IMPORTANTE: Liberado para Admin ver histórico (removido clienteOrProfissionalOnly)
-    router.get('/atendimento', '#controllers/atendimentos_controller.index').use(middleware.auth())
-
-    router.get('/atendimento/:id', '#controllers/atendimentos_controller.show').middleware(middleware.clienteOrProfissionalOnly())
-    router.post('/atendimento', '#controllers/atendimentos_controller.store').middleware(middleware.clienteOnly())
-    router.patch('/atendimento/:id', '#controllers/atendimentos_controller.update')
-    router.delete('/atendimento/:id', '#controllers/atendimentos_controller.destroy').middleware(middleware.clienteOrProfissionalOnly())
-    router.patch('/atendimento/:id/recusar', '#controllers/atendimentos_controller.recusar')
+    router.get('/atendimento', '#controllers/atendimentos_controller.index')
+    router.get('/atendimento/:id', '#controllers/atendimentos_controller.show')
+    
+    router.post('/atendimento', '#controllers/atendimentos_controller.store').use(middleware.clienteOnly())
+    
     router.patch('/atendimento/:id/aprovar', '#controllers/atendimentos_controller.aprovar')
-    router.patch('/atendimento/:id/cancelar', '#controllers/atendimentos_controller.cancelar')
     router.patch('/atendimento/:id/concluir', '#controllers/atendimentos_controller.concluir')
-
-    // Prontuário
+    
+    // Prontuários (Apenas quem atende pode criar)
     router.post('/atendimentos/:id/prontuario', '#controllers/prontuarios_controller.store')
+    router.get('/profissional/prontuarios', '#controllers/prontuarios_controller.index')
 }).use(middleware.auth())
 
 // =======================================================
-// 💰 FINANCEIRO E ESTOQUE
+// 💰 FINANCEIRO
 // =======================================================
-router.post('/pagamento/processar', '#controllers/transacoes_controller.realizarPagamento').middleware(middleware.auth())
-
-router.get('/transacoes/saldo', 'TransacoesController.contarSaldo').use(middleware.auth())
-
 router.group(() => {
-    // --- Rotas do Profissional ---
-    router.get('/minhas-financas', '#controllers/transacoes_controller.minhasDividas')
-    router.post('/transacao/:id/pagar', '#controllers/transacoes_controller.pagar')
-    // -----------------------------
-
+    router.get('/transacoes/saldo', '#controllers/transacoes_controller.contarSaldo')
     router.get('/transacao', '#controllers/transacoes_controller.index')
-    router.get('/transacao/:id', '#controllers/transacoes_controller.show')
-    router.post('/transacao', '#controllers/transacoes_controller.store').middleware(middleware.adminOnly())
+    router.post('/pagamento/processar', '#controllers/transacoes_controller.realizarPagamento')
+    
+    router.get('/minhas-financas', '#controllers/transacoes_controller.minhasDividas')
 }).use(middleware.auth())
 
-// Pedidos de Reposição
-router.post('/pedidos-reposicao', '#controllers/pedido_reposicaos_controller.store').middleware(middleware.auth())
-router.get('/pedidos-reposicao', '#controllers/pedido_reposicaos_controller.index').middleware([middleware.auth()])
-
 // =======================================================
-// 🤝 PARCERIAS (ADMIN)
+// 🤝 ADMINISTRAÇÃO GERAL
 // =======================================================
 router.group(() => {
-    router.get('/parceria', '#controllers/parcerias_controller.index')
-    router.get('/parceria/:id', '#controllers/parcerias_controller.show')
-    router.post('/parceria', '#controllers/parcerias_controller.store')
-    router.patch('/parceria/:id', '#controllers/parcerias_controller.destroy')
-}).use([middleware.auth()])
+    router.resource('/parceria', '#controllers/parcerias_controller').except(['create', 'edit'])
+    router.get('/user', '#controllers/users_controller.index')
+    router.patch('/user/:id/admin', '#controllers/users_controller.criarAdmin')
+}).use([middleware.auth(), middleware.adminOnly()])
+
 
 // =======================================================
-// ⚙️ ADMINISTRAÇÃO DE USUÁRIOS
+// 🕵️‍♂️ DEBUG (REMOVER EM PRODUÇÃO)
 // =======================================================
-router.get('/user', '#controllers/users_controller.index').middleware([middleware.auth(), middleware.adminOnly()])
-router.get('/user/:id', '#controllers/users_controller.show').middleware([middleware.auth()])
-
-// =======================================================
-// 🕵️‍♂️ ROTAS DE DEBUG
-// =======================================================
-router.get('/espiar-senha/:email', async ({ params, request }) => {
-  const user = await User.findBy('email', params.email)
-  if (!user) return { erro: 'Usuário não encontrado.' }
-
-  const senhaParaTestar = request.input('senha')
-  let resultado_teste = "❓ Digite a senha na URL para testar (ex: ?senha=suasenha)"
-
-  if (senhaParaTestar) {
-    const bateu = await hash.verify(user.password, senhaParaTestar)
-    resultado_teste = bateu
-      ? "✅ SUCESSO! A senha bate com o hash."
-      : "❌ FALHA! A senha informada não gera esse hash."
-  }
-
-  return {
-    email: user.email,
-    status_conta: user.status,
-    teste_login: resultado_teste,
-    hash_no_banco: user.password.substring(0, 50) + "..."
-  }
-})
-
-// ☢️ ROTA NUCLEAR (MARRETA)
-router.get('/marreta/:email/:senhaNova', async ({ params }) => {
-  try {
-    const user = await User.findByOrFail('email', params.email)
-    user.password = params.senhaNova
-    await user.save()
-
-    return {
-      sucesso: true,
-      mensagem: 'SENHA ALTERADA NA FORÇA BRUTA!',
-      email: user.email,
-      nova_senha_definida: params.senhaNova,
-      hash_gerado: user.password
-    }
-  } catch (error) {
-    return { erro: 'Usuário não encontrado ou erro ao salvar.', detalhe: error.message }
-  }
-})
+router.get('/espiar-senha/:email', '#controllers/debug_controller.espiar').use(middleware.adminOnly())

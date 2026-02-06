@@ -8,11 +8,9 @@ export default class AdminOrProfissionalOnlyMiddleware {
       return response.unauthorized({ message: 'Usuário não autenticado.' })
     }
 
-    const temPermissao = user.perfilTipo === 'admin' || user.perfilTipo === 'profissional'
-
-    if (!temPermissao) {
+    if (user.perfilTipo !== 'admin' && user.perfilTipo !== 'profissional') {
       return response.forbidden({
-        message: 'Acesso negado. Apenas administradores ou profissionais podem gerenciar o estoque.',
+        message: 'Acesso negado. Apenas administradores ou profissionais podem acessar esta rota.',
       })
     }
 

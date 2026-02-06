@@ -1,36 +1,37 @@
-import Disponibilidade from '#models/disponibilidade'
-import Atendimento from '#models/atendimento'
+import { inject } from '@adonisjs/core'
 import db from '@adonisjs/lucid/services/db'
-import { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import { DateTime } from 'luxon'
+
+import Atendimento from '#models/atendimento'
+import Disponibilidade from '#models/disponibilidade'
 import Sala from '#models/sala'
 import User from '#models/user'
 import { TransacaoService } from './transacao_service.js'
-import { inject } from '@adonisjs/core'
 
 @inject()
 export class AtendimentoService {
   constructor(protected transacaoService: TransacaoService) {}
+
+
   public async criarAtendimento(
-    dados: any,
+    dados: { profissionalId: number; clienteId: number; observacoes?: string; formaPagamento: string },
     dataHoraInicioLuxon: DateTime,
     disponibilidade: Disponibilidade
   ) {
-    await db.transaction(async (trx: TransactionClientContract) => {
-      // Criando uma variável/objeto, responsável por armazenar os valores criados para o atendimento
+    await db.transaction(async (trx) => {
+      
       const atendimentoData = {
-        profissionalId: dados.profissional_id,
-        clienteId: dados.cliente_id,
+        profissionalId: dados.profissionalId,
+        clienteId: dados.clienteId,
         disponibilidadeId: disponibilidade.id,
         observacoes: dados.observacoes,
-        formaPagamento: dados.forma_pagamento,
+        formaPagamento: dados.formaPagamento as 'DINHEIRO' | 'PIX' | 'CREDITO' | 'DEBITO', 
         dataHoraInicio: dataHoraInicioLuxon,
-        //Se tem disponibilidade nesse horário, é definido que o final do atendimento será
-        //Igual ao final do slot
         dataHoraFim: disponibilidade.dataHoraFim,
+        status: 'PENDENTE' as const, 
+        statusPagamento: 'PENDENTE' as const
       }
 
-      // O status da disponibilidade muda para RESERVADO para evitar que outras solicitações sejam feitas para o mesmo horário
       disponibilidade.status = 'RESERVADO'
       disponibilidade.useTransaction(trx)
       await disponibilidade.save()
@@ -39,135 +40,111 @@ export class AtendimentoService {
     })
   }
 
-  public async atualizarAtendimento(dados: any, atendimento: Atendimento, usuarioLogado: User) {
-    // Obter os dados atuais do slot antigo para eventual liberação
-    const slotAntigo = await this.temDisponibilidade(
-      atendimento.profissionalId,
-      atendimento.dataHoraInicio
-    )
 
-    let disponibilidadeSlotNovo = null
-    let dadosParaUpdate = { ...dados } as any
+  public async atualizarAtendimento(
+    dados: any, 
+    atendimento: Atendimento, 
+    usuarioLogado: User
+  ) {
+    let disponibilidadeSlotNovo: Disponibilidade | null = null
+    const dadosParaUpdate: any = { ...dados }
 
-    //Verifica se o usuário informou uma nova data hora para começar o atendimento
-    const horarioMudou =
-      dados.data_hora_inicio &&
-      DateTime.fromJSDate(dados.data_hora_inicio).toSeconds() !==
-        atendimento.dataHoraInicio.toSeconds()
+    const novaDataInicio = dados.dataHoraInicio ? (dados.dataHoraInicio as DateTime) : null
+    const horarioMudou = novaDataInicio && novaDataInicio.toSeconds() !== atendimento.dataHoraInicio.toSeconds()
 
-    // Se o horário ou profissional mudou, precisamos validar o novo slot
-    if (horarioMudou) {
-      const dataHoraInicioLuxon = DateTime.fromJSDate(
-        dados.data_hora_inicio || atendimento.dataHoraInicio.toJSDate()
-      )
-
+    if (horarioMudou && novaDataInicio) {
+      
       disponibilidadeSlotNovo = await this.temDisponibilidade(
-        atendimento.id,
-        dataHoraInicioLuxon
+        atendimento.profissionalId,
+        novaDataInicio
       )
 
-      if (!disponibilidadeSlotNovo)
-        throw new Error('O novo horário solicitado não está na disponibilidade do profissional.')
-      if (disponibilidadeSlotNovo.status === 'OCUPADO')
-        throw new Error('O horário solicitado já está marcado para outro atendimento.')
-      if (disponibilidadeSlotNovo.status === 'BLOQUEADO')
-        throw new Error('O profissional se encontra indisponível para este horário.')
+      if (!disponibilidadeSlotNovo) {
+        throw new Error('O novo horário solicitado não existe na agenda do profissional.')
+      }
+      
+      if (disponibilidadeSlotNovo.status !== 'LIVRE') {
+        throw new Error('O novo horário solicitado não está livre.')
+      }
 
-      const salaReservada = await Sala.query().where('profissional_id', atendimento.profissionalId).first()
-      if (!salaReservada) throw new Error('Este profissional não tem nenhum sala reservada.')
+      const salaReservada = await Sala.query()
+        .whereHas('profissionais', (query) => { 
+          query.where('id', atendimento.profissionalId)
+        })
+        .first()
 
-      //Adiciona informações do novo slot ao update
-      dadosParaUpdate.salaId = salaReservada.id
-      dadosParaUpdate.dataHoraInicio = dataHoraInicioLuxon
+      if (!salaReservada) {
+         const salaDireta = await Sala.query().where('id', atendimento.salaId || 0).first()
+         if(!salaDireta) throw new Error('Não foi possível alocar uma sala para este profissional.')
+         dadosParaUpdate.salaId = salaDireta.id
+      } else {
+         dadosParaUpdate.salaId = salaReservada.id
+      }
+
+      dadosParaUpdate.dataHoraInicio = novaDataInicio
       dadosParaUpdate.dataHoraFim = disponibilidadeSlotNovo.dataHoraFim
       dadosParaUpdate.disponibilidadeId = disponibilidadeSlotNovo.id
     }
 
-    await db.transaction(async (trx: TransactionClientContract) => {
-      const precisaManipularSlots = horarioMudou
-      //Libera o Slot Antigo (Se houve mudança de tempo)
-      if (slotAntigo && precisaManipularSlots) {
-        //Apenas liberamos se ele estava ocupado
-        if (slotAntigo?.status === 'OCUPADO') {
-          await Disponibilidade.query({ client: trx })
-            .where('id', slotAntigo.id)
-            .update({ status: 'LIVRE' })
+    await db.transaction(async (trx) => {
+      
+      if (horarioMudou && disponibilidadeSlotNovo) {
+        if (atendimento.disponibilidadeId) {
+            const slotAntigo = await Disponibilidade.find(atendimento.disponibilidadeId, { client: trx })
+            if (slotAntigo && slotAntigo.status === 'RESERVADO') {
+                slotAntigo.status = 'LIVRE'
+                slotAntigo.useTransaction(trx)
+                await slotAntigo.save()
+            }
         }
-      }
-      //Ocupa o Slot Novo (Se houve mudança de tempo)
-      if (disponibilidadeSlotNovo && precisaManipularSlots) {
-        await Disponibilidade.query({ client: trx })
-          .where('id', disponibilidadeSlotNovo.id)
-          .update({ status: 'RESERVADO' })
+
+        disponibilidadeSlotNovo.status = 'RESERVADO'
+        disponibilidadeSlotNovo.useTransaction(trx)
+        await disponibilidadeSlotNovo.save()
       }
 
-      atendimento.status = 'PENDENTE'
-      //Salvando o atendimento
+      if (dadosParaUpdate.status) {
+         dadosParaUpdate.status = dadosParaUpdate.status as 'PENDENTE' | 'CONFIRMADO' | 'CANCELADO' | 'CONCLUIDO'
+      }
+
       atendimento.merge(dadosParaUpdate)
       atendimento.useTransaction(trx)
       await atendimento.save()
     })
   }
+
   public async temDisponibilidade(
-    profissional_id: number,
-    data_hora_inicio: DateTime
+    profissionalId: number,
+    dataHoraInicio: DateTime
   ): Promise<Disponibilidade | null> {
-    //Faz a procura pelas informações da disponibilidade
-    //Traz as disponibilidades de um profissional específico, a partir da tentativa de inserção
-    //Na tabela de Atendimento. Depois disso, com os dados da disponibilidade do profissional
-    //Da qual o cliente tá querendo se relacionar via atendimento, verifica a disponibilidade
-    const horaConvertidaSql = data_hora_inicio.toSQL()
+    
+    if (!dataHoraInicio.isValid) return null
 
-    if (!horaConvertidaSql) {
-      console.error(
-        'Data hora de início é inválida após validação:',
-        data_hora_inicio.invalidExplanation
-      )
-      return null
-    }
-
-    const disponibilidade = await Disponibilidade.query()
-      .where('profissional_id', profissional_id)
-      .where('data_hora_inicio', horaConvertidaSql)
+    return await Disponibilidade.query()
+      .where('profissionalId', profissionalId)
+      .where('dataHoraInicio', dataHoraInicio.toSQL()!) 
       .first()
-
-    return disponibilidade
   }
-  //Obs: o parametro "ignorarId" é opcional, já que somente é necessário para a operação de update
+
   public async temConflito(
-    profissional_id: number,
-    data_hora_inicio: DateTime,
-    data_hora_fim: DateTime,
-    ignorarId?: number
+    profissionalId: number,
+    dataHoraInicio: DateTime,
+    dataHoraFim: DateTime,
+    ignorarAtendimentoId?: number
   ) {
-    //Verifca se os valores passados (DateTime), são válidos
-    if (!data_hora_inicio.isValid || !data_hora_fim.isValid) {
-      console.error('Data(s) inválida(s) no Service. Abortando consulta.')
-      return null
-    }
+    if (!dataHoraInicio.isValid || !dataHoraFim.isValid) return null 
 
-    //Converte para SQL para garantir que o query ocorra bem
-    const inicioSQL = data_hora_inicio.toSQL()
-    const fimSQL = data_hora_fim.toSQL()
-
-    if (!inicioSQL || !fimSQL) {
-      return null
-    }
-
-    //Busca atendimentos que estão no mesmo dia, com o mesmo profissional e que tem conflito de horário.
-    const conflito = await Atendimento.query()
-      .where('profissional_id', profissional_id)
-      //Esse trecho só é executado se encontrar o "ignorarId"
-      .if(ignorarId, (query) => {
-        query.whereNot('id', ignorarId!)
+    return await Atendimento.query()
+      .where('profissionalId', profissionalId)
+      .where('status', '!=', 'CANCELADO') 
+      .if(ignorarAtendimentoId, (query) => {
+        query.whereNot('id', ignorarAtendimentoId!)
       })
       .where((query) => {
-        //Nessa parte, verifica se o horário de começo e fim e do atendimento entra
-        //em interseção com outra consulta.
-        query.where('data_hora_inicio', '<', fimSQL).andWhere('data_hora_fim', '>', inicioSQL)
+        query
+          .where('dataHoraInicio', '<', dataHoraFim.toSQL()!)
+          .andWhere('dataHoraFim', '>', dataHoraInicio.toSQL()!)
       })
       .first()
-
-    return conflito
   }
 }
